@@ -1,0 +1,70 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "buildit-platform.fullname" . }}-api
+  labels:
+    {{- include "buildit-platform.labels" . | nindent 4 }}
+    app.kubernetes.io/component: api
+spec:
+  replicas: {{ .Values.replicaCount.api }}
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+  selector:
+    matchLabels:
+      {{- include "buildit-platform.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: api
+  template:
+    metadata:
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "8000"
+        prometheus.io/path: "/metrics"
+      labels:
+        {{- include "buildit-platform.selectorLabels" . | nindent 8 }}
+        app.kubernetes.io/component: api
+    spec:
+      {{- include "buildit-platform.imagePullSecrets" . | nindent 6 }}
+      affinity:
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+            - weight: 100
+              podAffinityTerm:
+                labelSelector:
+                  matchExpressions:
+                    - key: app.kubernetes.io/component
+                      operator: In
+                      values:
+                        - api
+                topologyKey: kubernetes.io/hostname
+      containers:
+        - name: api
+          image: {{ include "buildit-platform.image" . }}
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          command:
+            - uvicorn
+          args:
+            - "seo_platform.main:app"
+            - "--host"
+            - "0.0.0.0"
+            - "--port"
+            - "8000"
+            - "--workers"
+            - "4"
+          ports:
+            - containerPort: 8000
+              name: http
+              protocol: TCP
+          {{- include "buildit-platform.envFrom" . | nindent 10 }}
+          {{- include "buildit-platform.probes" . | nindent 10 }}
+          resources:
+            {{- toYaml .Values.resources.api | nindent 12 }}
+          lifecycle:
+            preStop:
+              exec:
+                command:
+                  - /bin/sh
+                  - -c
+                  - "sleep 10 && kill -TERM 1"

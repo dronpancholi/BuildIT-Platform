@@ -1,0 +1,190 @@
+# =============================================================================
+# buildit-platform — Helm Values
+# =============================================================================
+# Environment-specific overrides:
+#   helm install -f values-staging.yaml buildit-platform .
+# =============================================================================
+
+global:
+  environment: production
+  imageRegistry: ""
+  imagePullSecrets: []
+
+# ---------------------------------------------------------------------------
+# Image Configuration
+# ---------------------------------------------------------------------------
+image:
+  repository: buildit/seo-platform
+  tag: latest
+  pullPolicy: Always
+
+# ---------------------------------------------------------------------------
+# Service Replicas
+# ---------------------------------------------------------------------------
+replicaCount:
+  api: 2
+  worker:
+    onboarding: 2
+    ai_orchestration: 2
+    seo_intelligence: 2
+    backlink_engine: 2
+    communication: 2
+    reporting: 2
+
+# ---------------------------------------------------------------------------
+# Resource Limits & Requests
+# ---------------------------------------------------------------------------
+resources:
+  api:
+    requests:
+      cpu: 500m
+      memory: 1Gi
+    limits:
+      cpu: 1
+      memory: 2Gi
+  worker:
+    requests:
+      cpu: 250m
+      memory: 512Mi
+    limits:
+      cpu: 500m
+      memory: 1Gi
+
+# ---------------------------------------------------------------------------
+# Autoscaling (HorizontalPodAutoscaler)
+# ---------------------------------------------------------------------------
+autoscaling:
+  api:
+    enabled: true
+    minReplicas: 2
+    maxReplicas: 10
+    targetCPUUtilizationPercentage: 70
+  worker:
+    enabled: true
+    minReplicas: 2
+    maxReplicas: 8
+    targetCPUUtilizationPercentage: 75
+
+# ---------------------------------------------------------------------------
+# Service Configuration
+# ---------------------------------------------------------------------------
+service:
+  api:
+    type: ClusterIP
+    port: 8000
+    targetPort: 8000
+
+ingress:
+  enabled: true
+  className: nginx
+  annotations:
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+    cert-manager.io/cluster-issuer: letsencrypt-prod
+  hosts:
+    - host: api.buildit-platform.io
+      paths:
+        - path: /
+          pathType: Prefix
+  tls:
+    - secretName: buildit-platform-tls
+      hosts:
+        - api.buildit-platform.io
+  frontendHost: app.buildit-platform.io
+  frontendTlsSecret: buildit-platform-frontend-tls
+  corsOrigin: "https://app.buildit-platform.io"
+
+networkPolicy:
+  enabled: true
+  internalCIDR: 10.0.0.0/8
+
+pdb:
+  enabled: true
+  api:
+    minAvailable: 1
+  worker:
+    minAvailable: 1
+
+serviceAccount:
+  create: true
+  name: ""
+  automount: true
+  annotations: {}
+
+securityContext:
+  api:
+    runAsNonRoot: true
+    runAsUser: 1000
+    runAsGroup: 1000
+    fsGroup: 1000
+    readOnlyRootFilesystem: true
+    capabilities:
+      drop:
+        - ALL
+    allowPrivilegeEscalation: false
+  worker:
+    runAsNonRoot: true
+    runAsUser: 1000
+    runAsGroup: 1000
+    fsGroup: 1000
+    readOnlyRootFilesystem: true
+    capabilities:
+      drop:
+        - ALL
+    allowPrivilegeEscalation: false
+
+# ---------------------------------------------------------------------------
+# Environment Variables (per environment)
+# ---------------------------------------------------------------------------
+env:
+  common:
+    APP_NAME: "SEO Operations Platform"
+    APP_LOG_LEVEL: "INFO"
+    APP_DEBUG: "false"
+    PYTHONUNBUFFERED: "1"
+    PYTHONDONTWRITEBYTECODE: "1"
+    PYTHONPATH: "/app/src"
+
+  dev:
+    APP_ENV: "development"
+    APP_DEBUG: "true"
+    APP_LOG_LEVEL: "DEBUG"
+
+  staging:
+    APP_ENV: "staging"
+    APP_DEBUG: "false"
+    APP_LOG_LEVEL: "INFO"
+
+  prod:
+    APP_ENV: "production"
+    APP_DEBUG: "false"
+    APP_LOG_LEVEL: "INFO"
+
+# ---------------------------------------------------------------------------
+# Database
+# ---------------------------------------------------------------------------
+database:
+  host: postgres
+  port: 5432
+  name: seo_platform
+
+# ---------------------------------------------------------------------------
+# Redis
+# ---------------------------------------------------------------------------
+redis:
+  host: redis
+  port: 6379
+  db: 0
+
+# ---------------------------------------------------------------------------
+# Kafka
+# ---------------------------------------------------------------------------
+kafka:
+  bootstrapServers: kafka:9092
+
+# ---------------------------------------------------------------------------
+# Temporal
+# ---------------------------------------------------------------------------
+temporal:
+  host: temporal
+  port: 7233
+  namespace: default

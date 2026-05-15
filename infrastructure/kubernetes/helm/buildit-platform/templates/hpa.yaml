@@ -1,0 +1,50 @@
+{{- if .Values.autoscaling.api.enabled }}
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: {{ include "buildit-platform.fullname" . }}-api
+  labels:
+    {{- include "buildit-platform.labels" . | nindent 4 }}
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: {{ include "buildit-platform.fullname" . }}-api
+  minReplicas: {{ .Values.autoscaling.api.minReplicas }}
+  maxReplicas: {{ .Values.autoscaling.api.maxReplicas }}
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: {{ .Values.autoscaling.api.targetCPUUtilizationPercentage }}
+{{- end }}
+
+{{- if .Values.autoscaling.worker.enabled }}
+{{- $workerQueues := dict "onboarding" "seo-platform-onboarding" "ai-orchestration" "seo-platform-ai-orchestration" "seo-intelligence" "seo-platform-seo-intelligence" "backlink-engine" "seo-platform-backlink-engine" "communication" "seo-platform-communication" "reporting" "seo-platform-reporting" }}
+{{- range $name, $queue := $workerQueues }}
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: {{ include "buildit-platform.fullname" $ }}-worker-{{ $name }}
+  labels:
+    {{- include "buildit-platform.labels" $ | nindent 4 }}
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: {{ include "buildit-platform.fullname" $ }}-worker-{{ $name }}
+  minReplicas: {{ $.Values.autoscaling.worker.minReplicas }}
+  maxReplicas: {{ $.Values.autoscaling.worker.maxReplicas }}
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: {{ $.Values.autoscaling.worker.targetCPUUtilizationPercentage }}
+{{- end }}
+{{- end }}

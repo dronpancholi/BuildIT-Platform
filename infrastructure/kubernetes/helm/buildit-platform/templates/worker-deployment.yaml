@@ -1,0 +1,70 @@
+{{- $workerQueues := dict "onboarding" "seo-platform-onboarding" "ai-orchestration" "seo-platform-ai-orchestration" "seo-intelligence" "seo-platform-seo-intelligence" "backlink-engine" "seo-platform-backlink-engine" "communication" "seo-platform-communication" "reporting" "seo-platform-reporting" }}
+{{- range $name, $queue := $workerQueues }}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "buildit-platform.fullname" $ }}-worker-{{ $name }}
+  labels:
+    {{- include "buildit-platform.labels" $ | nindent 4 }}
+    app.kubernetes.io/component: worker
+    app.kubernetes.io/task-queue: {{ $queue | quote }}
+spec:
+  replicas: {{ index $.Values.replicaCount.worker $name | default 2 }}
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+  selector:
+    matchLabels:
+      {{- include "buildit-platform.selectorLabels" $ | nindent 6 }}
+      app.kubernetes.io/component: worker
+      app.kubernetes.io/task-queue: {{ $queue | quote }}
+  template:
+    metadata:
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "8000"
+        prometheus.io/path: "/metrics"
+      labels:
+        {{- include "buildit-platform.selectorLabels" $ | nindent 8 }}
+        app.kubernetes.io/component: worker
+        app.kubernetes.io/task-queue: {{ $queue | quote }}
+    spec:
+      {{- include "buildit-platform.imagePullSecrets" $ | nindent 6 }}
+      containers:
+        - name: worker
+          image: {{ include "buildit-platform.image" $ }}
+          imagePullPolicy: {{ $.Values.image.pullPolicy }}
+          command:
+            - python
+          args:
+            - "-m"
+            - "seo_platform.workflows.worker"
+            - {{ $queue | quote }}
+          ports:
+            - containerPort: 8000
+              name: metrics
+              protocol: TCP
+          {{- include "buildit-platform.envFrom" $ | nindent 10 }}
+          readinessProbe:
+            exec:
+              command:
+                - python
+                - "-c"
+                - "import os; exit(0 if os.path.exists('/tmp/worker_ready') else 1)"
+            initialDelaySeconds: 10
+            periodSeconds: 15
+            timeoutSeconds: 5
+            failureThreshold: 3
+          resources:
+            {{- toYaml $.Values.resources.worker | nindent 12 }}
+          lifecycle:
+            preStop:
+              exec:
+                command:
+                  - /bin/sh
+                  - -c
+                  - "sleep 10 && kill -TERM 1"
+{{- end }}
