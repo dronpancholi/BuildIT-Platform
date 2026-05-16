@@ -74,6 +74,10 @@ class AhrefsClient:
             client.get, "/v3/site-explorer/domain-rating",
             params={"target": domain, "output": "json"},
         )
+        if response.status_code == 429:
+            raise AhrefsRateLimitError(f"Ahrefs rate limit exceeded for domain rating: {domain}")
+        if response.status_code == 401 or response.status_code == 403:
+            raise AhrefsAuthError(f"Ahrefs authentication failed for domain rating: {domain}")
         response.raise_for_status()
         data = response.json()
         return {
@@ -91,6 +95,10 @@ class AhrefsClient:
             client.get, "/v3/site-explorer/backlinks",
             params={"target": domain, "mode": mode, "limit": limit, "output": "json"},
         )
+        if response.status_code == 429:
+            raise AhrefsRateLimitError(f"Ahrefs rate limit exceeded for backlinks: {domain}")
+        if response.status_code == 401 or response.status_code == 403:
+            raise AhrefsAuthError(f"Ahrefs authentication failed for backlinks: {domain}")
         response.raise_for_status()
         data = response.json()
         return data.get("backlinks", [])
@@ -104,6 +112,10 @@ class AhrefsClient:
             client.get, "/v3/site-explorer/referring-domains",
             params={"target": domain, "limit": limit, "output": "json"},
         )
+        if response.status_code == 429:
+            raise AhrefsRateLimitError(f"Ahrefs rate limit exceeded for referring domains: {domain}")
+        if response.status_code == 401 or response.status_code == 403:
+            raise AhrefsAuthError(f"Ahrefs authentication failed for referring domains: {domain}")
         response.raise_for_status()
         data = response.json()
         return data.get("referring_domains", [])

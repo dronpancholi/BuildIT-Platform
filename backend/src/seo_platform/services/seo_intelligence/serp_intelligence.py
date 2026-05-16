@@ -164,7 +164,7 @@ class _PAAIntentSchema(BaseModel):
 
 class _SERPIntentEEATSchema(BaseModel):
     dominant_intent: str
-    intent_confidence: float
+    intent_confidence: float = Field(ge=0.0, le=1.0)
     entity_associations: list[str]
     competitor_eeat_signals: list[dict[str, Any]]
     recommended_content_pivot: str

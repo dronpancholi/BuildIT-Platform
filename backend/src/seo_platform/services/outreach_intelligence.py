@@ -845,12 +845,19 @@ class OutreachIntelligenceService:
         except Exception as e:
             logger.warning("bespoke_pitch_generation_failed", error=str(e))
             # Elite deterministic fallback avoiding generic AI footprints
+            def _truncate_words(text: str, max_chars: int = 50) -> str:
+                if len(text) <= max_chars:
+                    return text
+                truncated = text[:max_chars]
+                last_space = truncated.rfind(" ")
+                return truncated[:last_space] + "..." if last_space > 0 else truncated + "..."
+
             first_name = author_name.split()[0] if author_name else "there"
             fallback_subj = f"Quick question regarding your recent thoughts on {client_context.get('industry', 'industry trends')}"
             fallback_body = (
                 f"Hi {first_name},\n\n"
-                f"I really enjoyed your recent commentary regarding {social_signal.lower()[:50]}. It's rare to see someone address the nuances so directly.\n\n"
-                f"We recently compiled some exclusive benchmark data at {client_name} specifically exploring {value_add_asset.lower()[:50]}. "
+                f"I really enjoyed your recent commentary regarding {_truncate_words(social_signal.lower())}. It's rare to see someone address the nuances so directly.\n\n"
+                f"We recently compiled some exclusive benchmark data at {client_name} specifically exploring {_truncate_words(value_add_asset.lower())}. "
                 f"I thought the custom charts might be a perfect drop-in addition for your upcoming pieces to give your readers an extra visual edge.\n\n"
                 f"Would you be open to me sending over a quick preview link to see if it aligns?\n\n"
                 f"Best regards,\n{client_name} Team"

@@ -922,7 +922,8 @@ Respond with JSON containing:
         domain_authority = 40.0
         domain_clean_parts = domain_clean.split(".")
         if len(domain_clean_parts) > 1:
-            seed = abs(hash(domain_clean_parts[0])) % 60 + 20
+            import hashlib
+            seed = int(hashlib.sha256(domain_clean_parts[0].encode()).hexdigest()[:8], 16) % 60 + 20
             domain_authority = min(100.0, float(seed))
 
         composite_authority = (
