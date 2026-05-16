@@ -359,6 +359,7 @@ async def generate_outreach_emails_activity(
     from seo_platform.services.seo_intelligence.serp_intelligence import SERPIntelligenceEngine
     from seo_platform.services.outreach_intelligence import outreach_intelligence
     from seo_platform.services.client_persona.service import client_persona_service
+    from seo_platform.services.data_journalism.service import data_journalism_service
 
     persona_context = await client_persona_service.get_active_persona_context(
         tenant_id=UUID(tenant_id),
@@ -510,6 +511,28 @@ Requirements:
                         )
             return None
 
+        # Phase 10: Tier-1 Data Journalism Bespoke Asset Pitching (DR >= 75)
+        domain_authority = prospect.get("domain_authority", 40)
+        bespoke_asset_pitch = None
+        value_add_asset = f"Proprietary benchmark data, custom infographics, and {content_pivot.lower()}"
+        if domain_authority >= 75:
+            try:
+                bespoke_asset_pitch = await data_journalism_service.generate_bespoke_asset_pitch(
+                    tenant_id=tenant_uuid,
+                    campaign_id=UUID(campaign_id),
+                    prospect_domain=domain,
+                    prospect_dr=domain_authority,
+                )
+                if bespoke_asset_pitch:
+                    value_add_asset = (
+                        f"Exclusive Data Journalism Asset: '{bespoke_asset_pitch.asset_title}' "
+                        f"featuring counter-intuitive hook '{bespoke_asset_pitch.editorial_angle.counter_intuitive_hook}' "
+                        f"and custom {bespoke_asset_pitch.asset_type} chart embed."
+                    )
+                    logger.info("tier1_data_asset_generated", domain=domain, asset=bespoke_asset_pitch.asset_title)
+            except Exception as e:
+                logger.warning("tier1_asset_generation_failed", domain=domain, error=str(e))
+
         # Phase 6 & 7: Elite Social Graph Bespoke Pitching
         bespoke_pitch = await outreach_intelligence.generate_humanized_bespoke_pitch(
             tenant_id=tenant_uuid,
@@ -520,7 +543,7 @@ Requirements:
             },
             client_context={
                 "client_name": campaign_name or "Our Enterprise Platform",
-                "value_add_asset": f"Proprietary benchmark data, custom infographics, and {content_pivot.lower()}",
+                "value_add_asset": value_add_asset,
             },
         )
 
