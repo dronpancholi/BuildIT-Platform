@@ -9,7 +9,7 @@ creation, and closed-won revenue attribution.
 from __future__ import annotations
 
 import json
-from typing import Any
+from typing import Any, Final, Literal, TypedDict
 from uuid import UUID
 
 from pydantic import BaseModel, Field, model_validator
@@ -17,6 +17,8 @@ from pydantic import BaseModel, Field, model_validator
 from seo_platform.core.logging import get_logger
 
 logger = get_logger(__name__)
+
+CRMStage = Literal["lead", "qualified", "proposal", "closed_won"]
 
 
 # ---------------------------------------------------------------------------
@@ -27,9 +29,9 @@ logger = get_logger(__name__)
 class AttributedDeal(BaseModel):
     """A CRM deal attributed to a specific campaign's SEO influence."""
 
-    deal_id: str
-    deal_name: str
-    crm_stage: str = "lead"  # lead, qualified, proposal, closed_won
+    deal_id: str = Field(..., min_length=1)
+    deal_name: str = Field(default="Unnamed Deal", max_length=500)
+    crm_stage: CRMStage = Field(default="lead")
     amount: float = Field(..., gt=0.0)
     attributed_percentage: float = Field(..., ge=0.0, le=1.0)
     associated_campaign_id: UUID
@@ -75,45 +77,54 @@ class CampaignROISummary(BaseModel):
 # Industry benchmarks
 # ---------------------------------------------------------------------------
 
-_KEYWORD_CLUSTER_BENCHMARKS: dict[str, dict[str, Any]] = {
-    "enterprise_seo": {
-        "avg_monthly_search_volume": 4800,
-        "cpc_usd": 45.00,
-        "ctr_position_1": 0.28,
-        "ctr_position_5": 0.08,
-        "ctr_position_10": 0.03,
-    },
-    "saas_growth": {
-        "avg_monthly_search_volume": 3200,
-        "cpc_usd": 38.00,
-        "ctr_position_1": 0.30,
-        "ctr_position_5": 0.09,
-        "ctr_position_10": 0.04,
-    },
-    "content_marketing": {
-        "avg_monthly_search_volume": 8500,
-        "cpc_usd": 22.00,
-        "ctr_position_1": 0.25,
-        "ctr_position_5": 0.07,
-        "ctr_position_10": 0.02,
-    },
-    "link_building": {
-        "avg_monthly_search_volume": 2200,
-        "cpc_usd": 55.00,
-        "ctr_position_1": 0.32,
-        "ctr_position_5": 0.10,
-        "ctr_position_10": 0.04,
-    },
-    "general": {
-        "avg_monthly_search_volume": 5000,
-        "cpc_usd": 30.00,
-        "ctr_position_1": 0.27,
-        "ctr_position_5": 0.08,
-        "ctr_position_10": 0.03,
-    },
+
+class KeywordClusterBenchmark(TypedDict, total=False):
+    avg_monthly_search_volume: int
+    cpc_usd: float
+    ctr_position_1: float
+    ctr_position_5: float
+    ctr_position_10: float
+
+
+_KEYWORD_CLUSTER_BENCHMARKS: Final[dict[str, KeywordClusterBenchmark]] = {
+    "enterprise_seo": KeywordClusterBenchmark(
+        avg_monthly_search_volume=4800,
+        cpc_usd=45.00,
+        ctr_position_1=0.28,
+        ctr_position_5=0.08,
+        ctr_position_10=0.03,
+    ),
+    "saas_growth": KeywordClusterBenchmark(
+        avg_monthly_search_volume=3200,
+        cpc_usd=38.00,
+        ctr_position_1=0.30,
+        ctr_position_5=0.09,
+        ctr_position_10=0.04,
+    ),
+    "content_marketing": KeywordClusterBenchmark(
+        avg_monthly_search_volume=8500,
+        cpc_usd=22.00,
+        ctr_position_1=0.25,
+        ctr_position_5=0.07,
+        ctr_position_10=0.02,
+    ),
+    "link_building": KeywordClusterBenchmark(
+        avg_monthly_search_volume=2200,
+        cpc_usd=55.00,
+        ctr_position_1=0.32,
+        ctr_position_5=0.10,
+        ctr_position_10=0.04,
+    ),
+    "general": KeywordClusterBenchmark(
+        avg_monthly_search_volume=5000,
+        cpc_usd=30.00,
+        ctr_position_1=0.27,
+        ctr_position_5=0.08,
+        ctr_position_10=0.03,
+    ),
 }
 
-_TIER_1_AUTHORITY_MULTIPLIER = 1.5
+_TIER_1_AUTHORITY_MULTIPLIER: Final[float] = 1.5
 
 
 # ---------------------------------------------------------------------------
@@ -243,7 +254,7 @@ class RevenueAttributionService:
         return surge
 
     @staticmethod
-    def _ctr_for_position(position: int, benchmark: dict[str, Any]) -> float:
+    def _ctr_for_position(position: int, benchmark: KeywordClusterBenchmark) -> float:
         """Estimate CTR for a given position using benchmark decay.
 
         Positions 1-10 use standard benchmark CTRs with linear interpolation.

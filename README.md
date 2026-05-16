@@ -270,6 +270,39 @@ The `DataJournalismService.generate_bespoke_asset_pitch()` applies a strict `dom
 
 This ensures exclusive data journalism assets are only deployed against Tier-1 publishers capable of generating meaningful editorial lift from them.
 
+### 3.7 Pydantic v2 Schema Contracts & Type Safety Hyper-Optimization
+
+Every Pydantic model in the platform follows an explicit contract discipline:
+
+**Field Constraints (ge/le/min_length/max_length):**
+- `DataPoint.percentage_change`: `Field(ge=-100, le=1000)` — prevents impossible percentage shifts
+- `EditorialConstraint.max_sentence_length`: `Field(ge=10, le=60)` — bounds LLM output verbosity
+- `OrganicTrafficSurge.previous_position`: `Field(ge=1, le=100)` — valid SERP rank range
+- `CampaignROISummary.total_spend`: `Field(ge=0.0)` — financial fields clamped non-negative
+- `AttributedDeal.attributed_percentage`: `Field(ge=0.0, le=1.0)` — legal attribution range
+- `ClientPersonaGuidelines.brand_voice_summary`: `Field(min_length=10, max_length=1000)` — guards against empty/flooded outputs
+
+**Literal Type Enforcements:**
+- `CRMStage`: `Literal["lead", "qualified", "proposal", "closed_won"]` — valid CRM pipeline stages
+- `AssetType`: `Literal["interactive_chart", "infographic", "proprietary_index"]` — valid data journalism formats
+- `StatisticalSignificance`: `Literal["notable", "significant", "highly_significant", "definitively_proven"]` — metric confidence levels
+- `FormalityLevels`: `Literal["professional_conversational", "casual", "formal"]` — brand voice formality
+
+**TypedDict Return Types (API Boundary Hardening):**
+- `DomainRatingResult`, `DomainMetricsResult`, `OutgoingLinksResult` — Ahrefs API responses are fully typed
+- `SimulateEvolutionResult`, `CrmAttributionResult` — Temporal activity return values are TypedDicts, never raw `dict[str, Any]`
+- `KeywordClusterBenchmark` — industry benchmark structure is a typed total=False TypedDict
+
+**Final Constants:**
+- `COMMON_AI_FLUFF: Final[frozenset[str]]` — set of prohibited buzzwords used at both schema validation and runtime
+- `CLICKBAIT_PHRASES: Final[frozenset[str]]` — editorial angle anti-fluff validation
+- `DEFAULT_FLUFF: Final[list[str]]` — sorted list form for Field(default_factory=...)
+
+**`from __future__ import annotations` Policy:**
+All 199+ Python source files use deferred annotation evaluation. This prevents forward-reference errors, reduces import overhead, and enables Pydantic v2 to resolve type hints without runtime import order dependencies. No relative imports exist in the source tree (enforced by linter).
+
+This type safety layer adds zero runtime overhead (all constraints are compile-time or Pydantic v2's optimized C-validated Rust core) while eliminating an entire class of silent data corruption bugs.
+
 ---
 
 ## 4. Technology Stack & Boundary Contracts

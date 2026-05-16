@@ -102,7 +102,7 @@ class TestSchemaValidation:
     async def test_insufficient_data_points_raises(self):
         with pytest.raises(ValueError, match="at least 3 items"):
             EditorialAngle(
-                headline="Test",
+                headline="Test Headline",
                 counter_intuitive_hook="Valid hook with actual data insight",
                 supporting_data_points=[
                     DataPoint(metric_name="Only one", metric_value="1"),
@@ -112,7 +112,7 @@ class TestSchemaValidation:
     async def test_fluff_hook_raises(self):
         with pytest.raises(ValueError, match="generic fluff"):
             EditorialAngle(
-                headline="Test",
+                headline="Test Headline",
                 counter_intuitive_hook="You won't believe this shocking data about SEO!",
                 supporting_data_points=[
                     DataPoint(metric_name="A", metric_value="1"),
@@ -256,7 +256,7 @@ class TestEmbedSnippet:
 
     async def test_embed_contains_metric_values(self):
         angle = EditorialAngle(
-            headline="Test",
+            headline="Test Headline",
             counter_intuitive_hook="Data-driven insight challenging conventional wisdom",
             supporting_data_points=[
                 DataPoint(metric_name="Growth", metric_value="340%", percentage_change=340.0),

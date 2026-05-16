@@ -9,7 +9,7 @@ outreach with zero generic AI footprints.
 from __future__ import annotations
 
 import json
-from typing import Any
+from typing import Any, Final, Literal
 from uuid import UUID
 
 from pydantic import BaseModel, Field, model_validator
@@ -18,36 +18,76 @@ from seo_platform.core.logging import get_logger
 
 logger = get_logger(__name__)
 
+# ---------------------------------------------------------------------------
+# Constants
+# ---------------------------------------------------------------------------
+
+COMMON_AI_FLUFF: Final[frozenset[str]] = frozenset({
+    "delve", "testament", "beacon", "seamless", "tapestry",
+    "synergy", "game-changer", "revolutionary", "cutting-edge",
+})
+DEFAULT_FLUFF: Final[list[str]] = [
+    *sorted(COMMON_AI_FLUFF),
+    "state-of-the-art", "best-in-class", "thought leadership",
+]
 
 # ---------------------------------------------------------------------------
 # Pydantic v2 Schemas
 # ---------------------------------------------------------------------------
 
+
+class FormalityLevel:
+    PROFESSIONAL_CONVERSATIONAL: Final[str] = "professional_conversational"
+    CASUAL: Final[str] = "casual"
+    FORMAL: Final[str] = "formal"
+
+
+FormalityLevels = Literal[
+    "professional_conversational", "casual", "formal",
+]
+
+
 class EditorialConstraint(BaseModel):
     """Editorial rules that govern all client-facing content."""
 
     prohibited_words: list[str] = Field(
-        default_factory=lambda: [
-            "delve", "testament", "beacon", "seamless", "tapestry",
-            "synergy", "game-changer", "revolutionary", "cutting-edge",
-            "state-of-the-art", "best-in-class", "thought leadership",
-        ],
-        description="Words/buzzwords that must NEVER appear in outreach",
+        default_factory=lambda: list(DEFAULT_FLUFF),
+        min_length=5,
+        description="Buzzwords that must NEVER appear in outreach",
     )
     mandatory_tone_markers: list[str] = Field(
         default_factory=list,
         description="Required tone characteristics (e.g. 'warm', 'direct', 'data-driven')",
     )
-    max_sentence_length: int = 25
-    formality_level: str = "professional_conversational"
+    max_sentence_length: int = Field(
+        default=25,
+        ge=10,
+        le=60,
+        description="Maximum allowed sentence length in words",
+    )
+    formality_level: FormalityLevels = Field(
+        default=FormalityLevel.PROFESSIONAL_CONVERSATIONAL,
+        description="Overall formality of client-facing communications",
+    )
 
 
 class NegativePersona(BaseModel):
     """Description of a buyer persona to explicitly avoid targeting."""
 
-    job_titles: list[str] = Field(default_factory=list)
-    company_types: list[str] = Field(default_factory=list)
-    exclusion_reason: str = ""
+    job_titles: list[str] = Field(
+        default_factory=list,
+        min_length=1,
+        description="Job titles that should be excluded",
+    )
+    company_types: list[str] = Field(
+        default_factory=list,
+        description="Company types to exclude (e.g. 'SEO agencies')",
+    )
+    exclusion_reason: str = Field(
+        default="",
+        max_length=500,
+        description="Why this persona should be excluded",
+    )
 
 
 class ClientPersonaGuidelines(BaseModel):
@@ -57,6 +97,8 @@ class ClientPersonaGuidelines(BaseModel):
     client_id: UUID
     brand_voice_summary: str = Field(
         ...,
+        min_length=10,
+        max_length=1000,
         description="1-3 sentence summary of the client's brand voice",
     )
     editorial_constraints: EditorialConstraint = Field(
@@ -65,6 +107,7 @@ class ClientPersonaGuidelines(BaseModel):
     negative_personas: list[NegativePersona] = Field(default_factory=list)
     historical_email_samples: list[str] = Field(
         default_factory=list,
+        min_length=0,
         description="Past high-converting email examples for tone matching",
     )
 
@@ -75,9 +118,8 @@ class ClientPersonaGuidelines(BaseModel):
                 "At least 2 historical email samples are required for tone matching. "
                 f"Got {len(self.historical_email_samples)}."
             )
-        common_ai_fluff = {"delve", "testament", "beacon", "seamless", "tapestry"}
         prohibited = {w.lower().strip() for w in self.editorial_constraints.prohibited_words}
-        missing = common_ai_fluff - prohibited
+        missing = COMMON_AI_FLUFF - prohibited
         if missing:
             raise ValueError(
                 f"Prohibited words must include common AI fluff terms: {', '.join(sorted(missing))}."

@@ -11,13 +11,64 @@ No mock data fallback — all calls execute against live API or raise.
 
 from __future__ import annotations
 
-from typing import Any
+from typing import Any, TypedDict
 
 import httpx
 
 from seo_platform.config import get_settings
 from seo_platform.core.logging import get_logger
 from seo_platform.core.reliability import CircuitBreaker
+
+
+class DomainRatingResult(TypedDict):
+    domain: str
+    domain_rating: int
+    ahrefs_rank: int
+
+
+class DomainMetricsResult(TypedDict):
+    domain: str
+    domain_rating: int
+    ref_domains: int
+    backlinks: int
+    organic_keywords: int
+    organic_traffic: int
+
+
+class OutgoingLinksResult(TypedDict):
+    domain: str
+    outgoing_linked_domains: int
+    outgoing_external_links: int
+    outgoing_dofollow_links: int
+
+
+class BacklinkEntry(TypedDict, total=False):
+    domain: str
+    domain_rating: int
+    url_from: str
+    url_to: str
+    anchor: str
+    dofollow: bool
+    first_seen: str
+
+
+class ReferringDomainEntry(TypedDict, total=False):
+    domain: str
+    domain_rating: int
+    backlinks: int
+    first_seen: str
+
+
+class AnchorTextEntry(TypedDict, total=False):
+    anchor: str
+    backlinks: int
+    domain_rating: int
+
+
+class TrafficHistoryEntry(TypedDict, total=False):
+    date: str
+    organic_traffic: int
+    referring_domains: int
 
 logger = get_logger(__name__)
 
@@ -67,7 +118,7 @@ class AhrefsClient:
             )
         return self._client
 
-    async def get_domain_rating(self, domain: str) -> dict[str, Any]:
+    async def get_domain_rating(self, domain: str) -> DomainRatingResult:
         """Get Domain Rating (DR) for a domain."""
         client = await self._get_client()
         response = await _circuit.call(
@@ -88,7 +139,7 @@ class AhrefsClient:
 
     async def get_backlinks(
         self, domain: str, limit: int = 100, mode: str = "exact",
-    ) -> list[dict[str, Any]]:
+    ) -> list[BacklinkEntry]:
         """Get backlinks pointing to a domain."""
         client = await self._get_client()
         response = await _circuit.call(
@@ -105,7 +156,7 @@ class AhrefsClient:
 
     async def get_referring_domains(
         self, domain: str, limit: int = 100,
-    ) -> list[dict[str, Any]]:
+    ) -> list[ReferringDomainEntry]:
         """Get referring domains for competitor analysis."""
         client = await self._get_client()
         response = await _circuit.call(
@@ -120,7 +171,7 @@ class AhrefsClient:
         data = response.json()
         return data.get("referring_domains", [])
 
-    async def get_domain_metrics(self, domain: str) -> dict[str, Any]:
+    async def get_domain_metrics(self, domain: str) -> DomainMetricsResult:
         """Get comprehensive domain metrics from Ahrefs API."""
         client = await self._get_client()
         response = await _circuit.call(
@@ -144,7 +195,7 @@ class AhrefsClient:
             "organic_traffic": data.get("organic_traffic", 0),
         }
 
-    async def get_traffic_history(self, domain: str, months: int = 24) -> list[dict[str, Any]]:
+    async def get_traffic_history(self, domain: str, months: int = 24) -> list[TrafficHistoryEntry]:
         """
         Get monthly organic traffic and referring domains history over the last N months.
         Used to detect Google Helpful Content Update (HCU) penalties and declining trajectories.
@@ -164,7 +215,7 @@ class AhrefsClient:
         data = response.json()
         return data.get("metrics_history", [])
 
-    async def get_outgoing_links_summary(self, domain: str) -> dict[str, Any]:
+    async def get_outgoing_links_summary(self, domain: str) -> OutgoingLinksResult:
         """
         Get total outgoing linked domains vs referring domains.
         Used to calculate outbound-to-inbound link ratio (detecting link farms).
@@ -189,7 +240,7 @@ class AhrefsClient:
             "outgoing_dofollow_links": data.get("outgoing_dofollow_links", 0),
         }
 
-    async def get_anchor_text_profile(self, domain: str, limit: int = 100) -> list[dict[str, Any]]:
+    async def get_anchor_text_profile(self, domain: str, limit: int = 100) -> list[AnchorTextEntry]:
         """
         Get top anchor texts pointing to the domain.
         Used to detect toxic anchor text profiles (e.g. gambling/pharmaceutical injection).

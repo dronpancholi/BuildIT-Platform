@@ -89,7 +89,9 @@ def missing_ai_fluff_guidelines(tenant_id: UUID, client_id: UUID) -> dict:
         "client_id": client_id,
         "brand_voice_summary": "Test brand.",
         "editorial_constraints": {
-            "prohibited_words": ["synergy", "game-changer"],
+            "prohibited_words": [
+        "delve", "testament", "beacon", "seamless", "synergy",
+    ],
             "mandatory_tone_markers": [],
             "max_sentence_length": 25,
             "formality_level": "professional_conversational",

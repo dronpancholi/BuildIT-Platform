@@ -9,10 +9,10 @@ updates CRM attribution records with simulated revenue impact.
 from __future__ import annotations
 
 from datetime import timedelta
-from typing import Any
+from typing import Any, TypedDict
 from uuid import UUID
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from temporalio import activity, workflow
 
 from seo_platform.core.logging import get_logger
@@ -26,11 +26,21 @@ logger = get_logger(__name__)
 # ---------------------------------------------------------------------------
 
 
+class SimulateEvolutionResult(TypedDict, total=False):
+    success: bool
+    campaign_id: str
+    previous_position: int
+    new_position: int
+    estimated_monthly_clicks: int
+    traffic_value_usd: float
+    error: str
+
+
 @activity.defn(name="simulate_campaign_evolution")
 async def simulate_campaign_evolution_activity(
     tenant_id: str,
     campaign_id: str,
-) -> dict[str, Any]:
+) -> SimulateEvolutionResult:
     """Simulate authority propagation and organic ranking shift from acquired links.
 
     Invokes RevenueAttributionService to model traffic surges from backlink
@@ -109,12 +119,23 @@ async def simulate_campaign_evolution_activity(
         }
 
 
+class CrmAttributionResult(TypedDict, total=False):
+    success: bool
+    campaign_id: str
+    roi_percentage: float
+    total_closed_won: float
+    total_pipeline_created: float
+    organic_traffic_value_added: float
+    attributed_deals: int
+    error: str
+
+
 @activity.defn(name="update_crm_attribution")
 async def update_crm_attribution_activity(
     tenant_id: str,
     campaign_id: str,
     simulated_spend: float = 5000.0,
-) -> dict[str, Any]:
+) -> CrmAttributionResult:
     """Calculate and persist CRM attribution for a campaign.
 
     Invokes RevenueAttributionService to correlate backlink publication
@@ -269,7 +290,12 @@ class _CampaignEvolutionInput(BaseModel):
 
     tenant_id: str
     campaign_id: str
-    simulated_spend: float = 5000.0
+    simulated_spend: float = Field(default=5000.0, ge=0.0)
+
+
+class CreateEventResult(TypedDict, total=False):
+    success: bool
+    iteration: int
 
 
 @activity.defn(name="create_evolution_event")
@@ -277,9 +303,9 @@ async def _create_evolution_event(
     tenant_id: str,
     campaign_id: str,
     iteration: int,
-    evolution: dict[str, Any],
-    attribution: dict[str, Any],
-) -> dict[str, Any]:
+    evolution: SimulateEvolutionResult,
+    attribution: CrmAttributionResult,
+) -> CreateEventResult:
     """Record an evolution cycle event for observability."""
     try:
         from seo_platform.core.database import get_tenant_session

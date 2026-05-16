@@ -75,9 +75,9 @@ class OutreachThreadInput(BaseModel):
     prospect_domain: str
     contact_email: str
     contact_name: str = "there"
-    initial_email: dict = Field(default_factory=dict)
-    followup_1: dict = Field(default_factory=dict)
-    followup_2: dict = Field(default_factory=dict)
+    initial_email: dict[str, Any] = Field(default_factory=dict)
+    followup_1: dict[str, Any] = Field(default_factory=dict)
+    followup_2: dict[str, Any] = Field(default_factory=dict)
 
 
 class OutreachThreadOutput(BaseModel):
@@ -88,7 +88,7 @@ class OutreachThreadOutput(BaseModel):
     followup_1_sent: bool = False
     followup_2_sent: bool = False
     reply_received: bool = False
-    reply_data: dict = Field(default_factory=dict)
+    reply_data: dict[str, Any] = Field(default_factory=dict)
     cancelled: bool = False
 
 
@@ -809,7 +809,7 @@ class BacklinkCampaignWorkflow:
 
     def __init__(self) -> None:
         self._approval_decision: str | None = None
-        self._approval_data: dict = {}
+        self._approval_data: dict[str, Any] = {}
 
     @workflow.signal(name="approval_decision")
     async def on_approval_decision(self, decision_json: str) -> None:
@@ -1031,7 +1031,7 @@ class OutreachThreadWorkflow:
         self._reply_received = False
         self._is_cancelled = False
         self._thread_status = "pending"
-        self._reply_data: dict = {}
+        self._reply_data: dict[str, Any] = {}
 
     @workflow.signal(name="reply_received")
     async def on_reply_received(self, reply_json: str) -> None:

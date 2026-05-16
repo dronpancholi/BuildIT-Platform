@@ -9,7 +9,7 @@ hallucination metric validation.
 from __future__ import annotations
 
 import json
-from typing import Any
+from typing import Any, Final, Literal
 from uuid import UUID
 
 from pydantic import BaseModel, Field, model_validator
@@ -18,37 +18,54 @@ from seo_platform.core.logging import get_logger
 
 logger = get_logger(__name__)
 
+# ---------------------------------------------------------------------------
+# Constants
+# ---------------------------------------------------------------------------
+
+CLICKBAIT_PHRASES: Final[frozenset[str]] = frozenset({
+    "you won't believe", "shocking", "mind-blowing", "this will blow your mind",
+    "incredible", "amazing", "unbelievable", "groundbreaking",
+})
 
 # ---------------------------------------------------------------------------
 # Pydantic v2 Asset Schemas
 # ---------------------------------------------------------------------------
 
 
+StatisticalSignificance = Literal[
+    "notable", "significant", "highly_significant", "definitively_proven",
+]
+
+
 class DataPoint(BaseModel):
     """A single verified metric from the client dataset."""
 
-    metric_name: str
+    metric_name: str = Field(..., min_length=1, max_length=200)
     metric_value: float | str
-    percentage_change: float | None = None
-    statistical_significance: str = "notable"
+    percentage_change: float | None = Field(default=None, ge=-100, le=1000)
+    statistical_significance: StatisticalSignificance = Field(
+        default="notable",
+        description="Confidence level of this metric",
+    )
 
 
 class EditorialAngle(BaseModel):
     """A counter-intuitive editorial angle extracted from client data."""
 
-    headline: str
-    counter_intuitive_hook: str
+    headline: str = Field(..., min_length=5, max_length=200)
+    counter_intuitive_hook: str = Field(..., min_length=20, max_length=500)
     supporting_data_points: list[DataPoint] = Field(..., min_length=3)
-    target_journalist_beat: str = "technology"
+    target_journalist_beat: str = Field(
+        default="technology",
+        min_length=2,
+        max_length=100,
+        description="The news beat this angle targets (e.g. technology, finance, healthcare)",
+    )
 
     @model_validator(mode="after")
     def _validate_hook_and_metrics(self) -> EditorialAngle:
-        fluff_phrases = [
-            "you won't believe", "shocking", "mind-blowing", "this will blow your mind",
-            "incredible", "amazing", "unbelievable", "groundbreaking",
-        ]
         hook_lower = self.counter_intuitive_hook.lower()
-        for phrase in fluff_phrases:
+        for phrase in CLICKBAIT_PHRASES:
             if phrase in hook_lower:
                 raise ValueError(
                     f"Counter-intuitive hook contains generic fluff: '{phrase}'. "
@@ -57,15 +74,21 @@ class EditorialAngle(BaseModel):
         return self
 
 
+AssetType = Literal["interactive_chart", "infographic", "proprietary_index"]
+
+
 class BespokeAssetPitch(BaseModel):
     """A complete data journalism asset pitch for a Tier-1 editorial prospect."""
 
     tenant_id: UUID
     campaign_id: UUID
-    asset_title: str
-    asset_type: str = "interactive_chart"  # interactive_chart, infographic, proprietary_index
+    asset_title: str = Field(..., min_length=5, max_length=200)
+    asset_type: AssetType = Field(
+        default="interactive_chart",
+        description="Visual format of the data journalism asset",
+    )
     editorial_angle: EditorialAngle
-    embed_code_snippet: str
+    embed_code_snippet: str = Field(..., min_length=1)
 
 
 # ---------------------------------------------------------------------------
