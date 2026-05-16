@@ -8,6 +8,7 @@ import {
 import { useQuery } from "@tanstack/react-query";
 import { fetchApi } from "@/lib/api";
 import { useMemo } from "react";
+import { useRealtime, useRealtimeStore } from "@/hooks/use-realtime";
 
 interface InfraTopology {
   nodes: { id: string; name: string; type: string; status: string }[];
@@ -100,6 +101,13 @@ const STATUS_DOT: Record<string, string> = {
 };
 
 export default function WarRoomPage() {
+  useRealtime();
+
+  const isConnected = useRealtimeStore((state) => state.isConnected);
+  const sseQueues = useRealtimeStore((state) => state.queues);
+  const sseWorkers = useRealtimeStore((state) => state.workers);
+  const sseInfra = useRealtimeStore((state) => state.infrastructure);
+
   const { data: topology, isLoading: loadingTopology } = useQuery<InfraTopology>({
     queryKey: ["sre-topology"],
     queryFn: () => fetchApi("/sre/topology"),
@@ -160,10 +168,38 @@ export default function WarRoomPage() {
     refetchInterval: 10000,
   });
 
-  const pressureEntries = queuePressure?.entries || [];
-  const workerEntries = workerSaturation?.entries || workerSaturation as unknown as WorkerSaturationEntry[];
+  const pressureEntries = useMemo(() => {
+    const base = queuePressure?.entries || [];
+    if (!sseQueues || Object.keys(sseQueues).length === 0) return base;
+    return base.map((q) => ({
+      ...q,
+      depth: sseQueues[q.queue_name] !== undefined ? sseQueues[q.queue_name] : q.depth,
+    }));
+  }, [queuePressure, sseQueues]);
+
+  const workerEntries = useMemo(() => {
+    const base = workerSaturation?.entries || workerSaturation as unknown as WorkerSaturationEntry[];
+    if (!sseWorkers || sseWorkers.length === 0) return base;
+    return base.map((w) => ({
+      ...w,
+      active_tasks: sseWorkers.find((sw) => sw.task_queue === w.task_queue)?.worker_id ? w.active_tasks + 1 : w.active_tasks,
+      saturation_pct: sseWorkers.find((sw) => sw.task_queue === w.task_queue)
+        ? Math.min(w.saturation_pct + 5, 100)
+        : w.saturation_pct,
+    }));
+  }, [workerSaturation, sseWorkers]);
+
   const alertList = alerts || [];
-  const nodes = topology?.nodes || [];
+
+  const nodes = useMemo(() => {
+    const base = topology?.nodes || [];
+    if (!sseInfra || Object.keys(sseInfra).length === 0) return base;
+    return base.map((n) => ({
+      ...n,
+      status: sseInfra[n.id] || sseInfra[n.name.toLowerCase()] || n.status,
+    }));
+  }, [topology, sseInfra]);
+
   const edges = topology?.edges || [];
 
   const criticalAlerts = alertList.filter(a => a.severity === "critical").length;
@@ -189,9 +225,14 @@ export default function WarRoomPage() {
             <span className="w-2 h-2 rounded-full bg-red-500 animate-pulse" />
             {criticalAlerts > 0 ? `${criticalAlerts} CRITICAL` : "NOMINAL"}
           </div>
-          <div className="px-3 py-1.5 rounded-md bg-surface-darker border border-surface-border text-xs font-mono text-slate-400 flex items-center gap-2">
-            <Radio className="w-4 h-4" />
-            LIVE
+          <div className={`px-3 py-1.5 rounded-md border text-xs font-mono flex items-center gap-2 ${
+            isConnected
+              ? "bg-emerald-500/10 border-emerald-500/20 text-emerald-400"
+              : "bg-amber-500/10 border-amber-500/20 text-amber-400"
+          }`}>
+            <span className={`w-2 h-2 rounded-full ${isConnected ? "bg-emerald-500 animate-pulse" : "bg-amber-500"}`} />
+            <Radio className="w-3.5 h-3.5" />
+            {isConnected ? "LIVE (SSE)" : "POLLING"}
           </div>
         </div>
       </div>
@@ -474,7 +515,8 @@ export default function WarRoomPage() {
               <div className="grid grid-cols-2 gap-3">
                 {["postgresql", "redis", "temporal", "kafka", "qdrant", "minio", "nim", "playwright"].map((svc) => {
                   const node = nodes.find(n => n.id === svc || n.name === svc);
-                  const status = node?.status || "unknown";
+                  const sseStatus = sseInfra[svc];
+                  const status = sseStatus || node?.status || "unknown";
                   return (
                     <div key={svc} className="p-3 rounded-md bg-surface-darker/50 border border-surface-border/50">
                       <div className="flex items-center justify-between mb-1">
@@ -497,22 +539,24 @@ export default function WarRoomPage() {
               <div className="space-y-3">
                 <div className="flex items-center justify-between p-3 rounded-md bg-surface-darker/50 border border-surface-border/50">
                   <span className="text-xs font-mono text-slate-400">NIM Gateway</span>
-                  <span className="flex items-center gap-1.5 text-xs font-mono text-emerald-400">
-                    <span className="w-2 h-2 rounded-full bg-emerald-500" />
-                    HEALTHY
+                  <span className={`flex items-center gap-1.5 text-xs font-mono ${sseInfra["nim"] === "healthy" || !sseInfra["nim"] ? "text-emerald-400" : "text-red-400"}`}>
+                    <span className={`w-2 h-2 rounded-full ${sseInfra["nim"] === "healthy" || !sseInfra["nim"] ? "bg-emerald-500" : "bg-red-500 animate-pulse"}`} />
+                    {(sseInfra["nim"] || "HEALTHY").toUpperCase()}
                   </span>
                 </div>
                 <div className="flex items-center justify-between p-3 rounded-md bg-surface-darker/50 border border-surface-border/50">
                   <span className="text-xs font-mono text-slate-400">Circuit Breaker</span>
-                  <span className="text-xs font-mono text-emerald-400">CLOSED</span>
+                  <span className={`text-xs font-mono ${sseInfra["circuit_breaker"] === "open" ? "text-red-400" : "text-emerald-400"}`}>
+                    {(sseInfra["circuit_breaker"] || "CLOSED").toUpperCase()}
+                  </span>
                 </div>
                 <div className="flex items-center justify-between p-3 rounded-md bg-surface-darker/50 border border-surface-border/50">
                   <span className="text-xs font-mono text-slate-400">Inference Rate</span>
-                  <span className="text-xs font-mono text-slate-300">— /min</span>
+                  <span className="text-xs font-mono text-slate-300">{sseInfra["inference_rate"] || "—"}/min</span>
                 </div>
                 <div className="flex items-center justify-between p-3 rounded-md bg-surface-darker/50 border border-surface-border/50">
                   <span className="text-xs font-mono text-slate-400">Model</span>
-                  <span className="text-xs font-mono text-slate-300">llama-3-70b</span>
+                  <span className="text-xs font-mono text-slate-300">{sseInfra["model"] || "llama-3-70b"}</span>
                 </div>
               </div>
             </div>

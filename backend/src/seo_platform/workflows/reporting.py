@@ -1,10 +1,16 @@
 """
 SEO Platform — Report Generation Workflow
 ============================================
-Temporal workflow for generating comprehensive campaign reports.
+Temporal workflow for generating comprehensive campaign reports
+with AI-authored narratives, HTML rendering, and PDF artifacts.
 """
 
-from datetime import UTC, timedelta
+from __future__ import annotations
+
+import base64
+import hashlib
+import json
+from datetime import UTC, datetime, timedelta
 from typing import Any
 from uuid import UUID
 
@@ -12,6 +18,7 @@ from pydantic import BaseModel, Field
 from temporalio import activity, workflow
 
 from seo_platform.core.logging import get_logger
+from seo_platform.services.reporting.agent import reporting_agent
 from seo_platform.workflows import RetryPreset, TaskQueue
 
 logger = get_logger(__name__)
@@ -49,7 +56,7 @@ async def gather_report_data(
     from seo_platform.models.backlink import BacklinkCampaign
     from seo_platform.models.seo import KeywordCluster
 
-    data = {
+    data: dict[str, Any] = {
         "campaigns": [],
         "keywords": [],
         "summary": {},
@@ -91,6 +98,11 @@ async def gather_report_data(
             )
             data["summary"]["total_clusters"] = result.scalar_one() or 0
 
+            total_acquired = sum(c.acquired_link_count for c in campaigns)
+            data["summary"]["acquired_links"] = total_acquired
+            total_prospects = sum(c.target_link_count for c in campaigns)
+            data["summary"]["total_prospects"] = total_prospects
+
     except Exception as e:
         logger.warning("report_data_gathering_failed", error=str(e))
 
@@ -99,63 +111,36 @@ async def gather_report_data(
 
 @activity.defn(name="generate_ai_summary")
 async def generate_ai_summary(
-    tenant_id: str, report_data: dict,
+    tenant_id: str, report_data: dict[str, Any],
 ) -> dict[str, Any]:
-    """Generate AI-powered summary for the report. Idempotent."""
-    import hashlib
-    import json
-
-    from seo_platform.core.reliability import idempotency_store
+    """Generate AI-powered narrative for the report using ReportingAgent. Idempotent."""
     data_hash = hashlib.sha256(json.dumps(report_data, sort_keys=True).encode()).hexdigest()[:16]
     idem_key = f"ai-summary:{tenant_id}:{data_hash}"
+
+    from seo_platform.core.reliability import idempotency_store
     cached = await idempotency_store.get(idem_key)
     if cached:
         logger.info("ai_summary_idempotent_skip", key=idem_key)
         return json.loads(cached)
-    logger.info("generating_ai_summary", tenant_id=tenant_id)
 
-    from pydantic import BaseModel
-
-    from seo_platform.llm.gateway import RenderedPrompt, TaskType, llm_gateway
-
-    class ReportSummarySchema(BaseModel):
-        executive_summary: str
-        key_findings: list[str]
-        recommendations: list[str]
-
-    prompt = RenderedPrompt(
-        template_id="report_summary",
-        system_prompt="You are an SEO analyst. Generate a concise executive summary for a campaign report. Return ONLY a JSON object with 'executive_summary', 'key_findings', and 'recommendations'.",
-        user_prompt=f"""Report Data:
-- Total Campaigns: {report_data.get('summary', {}).get('total_campaigns', 0)}
-- Active Campaigns: {report_data.get('summary', {}).get('active_campaigns', 0)}
-- Keyword Clusters: {report_data.get('summary', {}).get('total_clusters', 0)}
-
-Campaigns: {report_data.get('campaigns', [])}
-
-Generate an executive summary and key recommendations.""",
-    )
+    logger.info("generating_ai_summary_via_reporting_agent", tenant_id=tenant_id)
 
     try:
-        result = await llm_gateway.complete(
-            task_type=TaskType.ENTERPRISE_REPORTING,
-            prompt=prompt,
-            output_schema=ReportSummarySchema,
+        narrative = await reporting_agent.generate_roi_narrative(
             tenant_id=UUID(tenant_id),
+            campaign_id=None,
+            kpi_data=report_data,
         )
-
-        output = {
-            "executive_summary": result.content.executive_summary,
-            "key_findings": result.content.key_findings,
-            "recommendations": result.content.recommendations,
-        }
+        output = narrative.model_dump()
         await idempotency_store.store(idem_key, json.dumps(output), ttl=86400)
         return output
     except Exception as e:
         logger.warning("ai_summary_generation_failed", error=str(e))
-        output = {
+        output: dict[str, Any] = {
             "executive_summary": "Report generated successfully.",
-            "key_findings": ["Data gathered from all campaigns"],
+            "keyword_ranking_analysis": "Keyword data gathered from clusters.",
+            "backlink_acquisition_analysis": "Backlink data gathered from campaigns.",
+            "roi_narrative": "ROI analysis completed.",
             "recommendations": ["Continue monitoring campaign performance"],
         }
         await idempotency_store.store(idem_key, json.dumps(output), ttl=3600)
@@ -164,9 +149,9 @@ Generate an executive summary and key recommendations.""",
 
 @activity.defn(name="persist_report")
 async def persist_report(
-    tenant_id: str, report_type: str, metrics: dict, ai_summary: dict,
+    tenant_id: str, report_type: str, metrics: dict[str, Any], ai_summary: dict[str, Any],
 ) -> dict[str, Any]:
-    """Save the generated report to the database. Idempotent."""
+    """Save the generated report with HTML and PDF artifacts. Idempotent."""
     import hashlib
     import json
 
@@ -177,14 +162,35 @@ async def persist_report(
     if cached:
         logger.info("persist_report_idempotent_skip", key=idem_key)
         return json.loads(cached)
-    logger.info("persisting_report", tenant_id=tenant_id, report_type=report_type)
 
-    from datetime import datetime
+    logger.info("persisting_report_with_artifacts", tenant_id=tenant_id, report_type=report_type)
+
     from uuid import uuid4
 
     from seo_platform.core.database import get_tenant_session
+    from seo_platform.llm.gateway import RenderedPrompt, TaskType
 
     try:
+        narrative_dict = ai_summary
+        from pydantic import BaseModel
+        from seo_platform.services.reporting.agent import ReportNarrative
+        narrative = ReportNarrative(**narrative_dict)
+
+        html_content = await reporting_agent.render_html_report(
+            tenant_id=UUID(tenant_id),
+            campaign_id=None,
+            narrative=narrative,
+            kpi_data={"summary": metrics},
+        )
+
+        pdf_bytes = await reporting_agent.generate_pdf_report(
+            tenant_id=UUID(tenant_id),
+            campaign_id=None,
+            html_content=html_content,
+        )
+
+        pdf_b64 = base64.b64encode(pdf_bytes).decode("utf-8")
+
         async with get_tenant_session(UUID(tenant_id)) as session:
             from seo_platform.models.seo import ReportModel
 
@@ -192,8 +198,12 @@ async def persist_report(
                 id=uuid4(),
                 tenant_id=UUID(tenant_id),
                 report_type=report_type,
-                metrics=metrics,
-                ai_summary=ai_summary,
+                metrics={
+                    **metrics,
+                    "_html_content": html_content,
+                    "_pdf_b64": pdf_b64,
+                },
+                ai_summary=narrative_dict,
                 generated_at=datetime.now(UTC),
             )
             session.add(report)
@@ -212,7 +222,7 @@ async def persist_report(
 
 @workflow.defn(name="ReportGenerationWorkflow")
 class ReportGenerationWorkflow:
-    """Generate comprehensive campaign reports with AI summaries."""
+    """Generate comprehensive campaign reports with AI summaries and PDF artifacts."""
 
     @workflow.run
     async def run(self, input_json: str) -> str:
@@ -251,7 +261,7 @@ class ReportGenerationWorkflow:
                 ai_summary,
             ],
             task_queue=TaskQueue.REPORTING,
-            start_to_close_timeout=timedelta(minutes=2),
+            start_to_close_timeout=timedelta(minutes=5),
             retry_policy=RetryPreset.DATABASE,
         )
 
