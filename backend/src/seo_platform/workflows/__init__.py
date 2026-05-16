@@ -69,6 +69,14 @@ class RetryPreset:
         non_retryable_error_types=NON_RETRYABLE_ERROR_TYPES,
     )
 
+    TRANSIENT_IDEMPOTENT = RetryPolicy(
+        initial_interval=timedelta(seconds=2),
+        backoff_coefficient=1.5,
+        maximum_interval=timedelta(seconds=30),
+        maximum_attempts=10,
+        non_retryable_error_types=NON_RETRYABLE_ERROR_TYPES,
+    )
+
 
 # ---------------------------------------------------------------------------
 # Task Queues

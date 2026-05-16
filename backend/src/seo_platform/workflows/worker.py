@@ -153,6 +153,7 @@ def get_workflows_and_activities(task_queue: str) -> tuple[list, list]:
     )
     from seo_platform.workflows.backlink_campaign import (
         BacklinkCampaignWorkflow,
+        OutreachThreadWorkflow,
         create_approval_request_activity,
         discover_contacts_activity,
         discover_prospects_activity,
@@ -160,6 +161,7 @@ def get_workflows_and_activities(task_queue: str) -> tuple[list, list]:
         generate_outreach_emails_activity,
         score_prospects_activity,
         send_outreach_batch_activity,
+        send_single_email_activity,
         update_campaign_status_activity,
     )
     from seo_platform.workflows.citation import (
@@ -267,8 +269,12 @@ def get_workflows_and_activities(task_queue: str) -> tuple[list, list]:
         ]
 
     elif task_queue == TaskQueue.COMMUNICATION:
+        workflows = [
+            OutreachThreadWorkflow,
+        ]
         activities = [
             send_outreach_batch_activity,
+            send_single_email_activity,
             update_campaign_status_activity,
         ]
 

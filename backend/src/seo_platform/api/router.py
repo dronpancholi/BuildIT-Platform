@@ -86,6 +86,7 @@ from seo_platform.api.endpoints.realtime_telemetry import router as realtime_tel
 from seo_platform.api.endpoints.business_intelligence import router as business_intelligence_router
 from seo_platform.api.endpoints.intelligence_queries import router as intelligence_queries_router
 from seo_platform.api.endpoints.providers import router as providers_router
+from seo_platform.api.endpoints.webhooks import router as webhooks_router
 
 # Root API router — all service routers mount here
 api_router = APIRouter(prefix="/api/v1")
@@ -168,3 +169,4 @@ api_router.include_router(realtime_telemetry_router, prefix="/queue-telemetry", 
 api_router.include_router(operations_feed_router, prefix="/operations", tags=["operations-feed"])
 api_router.include_router(business_intelligence_router, prefix="/business-intelligence", tags=["business-intelligence"])
 api_router.include_router(providers_router)
+api_router.include_router(webhooks_router)

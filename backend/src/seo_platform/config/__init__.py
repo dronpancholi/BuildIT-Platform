@@ -213,6 +213,25 @@ class HunterSettings(BaseSettings):
     api_key: str = ""
 
 
+class MailgunSettings(BaseSettings):
+    """Mailgun API configuration for email delivery."""
+
+    model_config = SettingsConfigDict(env_prefix="MAILGUN_")
+
+    api_key: str = ""
+    domain: str = ""
+    webhook_signing_key: str = ""
+
+
+class ResendSettings(BaseSettings):
+    """Resend API configuration for email delivery."""
+
+    model_config = SettingsConfigDict(env_prefix="RESEND_")
+
+    api_key: str = ""
+    webhook_signing_key: str = ""
+
+
 class ObservabilitySettings(BaseSettings):
     """OpenTelemetry and observability configuration."""
 
@@ -274,10 +293,15 @@ class Settings(BaseSettings):
     dataforseo: DataForSEOSettings = Field(default_factory=DataForSEOSettings)
     ahrefs: AhrefsSettings = Field(default_factory=AhrefsSettings)
     hunter: HunterSettings = Field(default_factory=HunterSettings)
+    mailgun: MailgunSettings = Field(default_factory=MailgunSettings)
+    resend: ResendSettings = Field(default_factory=ResendSettings)
 
     # --- Email / SMTP (MailHog for dev) ---
     smtp_host: str = "localhost"
     smtp_port: int = 1025
+
+    # Shared webhook signing key (used by Mailgun/Resend webhook verification)
+    email_webhook_signing_key: str = Field(default="", description="HMAC key for email webhook signature verification")
 
     # --- Operational Modes (Zero-Cost / Production Toggles) ---
     use_mock_providers: bool = Field(default=True, description="Toggle between local scrapers and paid APIs")

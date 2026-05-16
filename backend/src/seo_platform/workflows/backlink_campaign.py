@@ -18,6 +18,7 @@ Flow:
 
 from __future__ import annotations
 
+import asyncio
 from datetime import UTC, timedelta
 from typing import Any
 from uuid import UUID
@@ -56,9 +57,39 @@ class BacklinkCampaignOutput(BaseModel):
     prospects_approved: int = 0
     emails_generated: int = 0
     emails_sent: int = 0
+    threads_contacted: int = 0
+    threads_replied: int = 0
+    threads_completed: int = 0
     total_cost_usd: float = 0.0
     status: str = "complete"
     errors: list[str] = Field(default_factory=list)
+
+
+# ---------------------------------------------------------------------------
+# Child Workflow Input/Output
+# ---------------------------------------------------------------------------
+class OutreachThreadInput(BaseModel):
+    tenant_id: UUID
+    campaign_id: UUID
+    thread_id: str = ""
+    prospect_domain: str
+    contact_email: str
+    contact_name: str = "there"
+    initial_email: dict = Field(default_factory=dict)
+    followup_1: dict = Field(default_factory=dict)
+    followup_2: dict = Field(default_factory=dict)
+
+
+class OutreachThreadOutput(BaseModel):
+    thread_id: str
+    prospect_domain: str
+    status: str = "pending"
+    initial_sent: bool = False
+    followup_1_sent: bool = False
+    followup_2_sent: bool = False
+    reply_received: bool = False
+    reply_data: dict = Field(default_factory=dict)
+    cancelled: bool = False
 
 
 # ---------------------------------------------------------------------------
@@ -229,7 +260,7 @@ async def generate_outreach_emails_activity(
     tenant_id: str, campaign_id: str, prospects: list[dict],
     campaign_type: str,
 ) -> dict[str, Any]:
-    """Generate personalized outreach emails using LLM. Idempotent."""
+    """Generate initial + 2 follow-up outreach emails per prospect using LLM."""
     import hashlib
     import json
 
@@ -261,7 +292,7 @@ async def generate_outreach_emails_activity(
     from seo_platform.services.content_analyzer import website_analyzer
     from seo_platform.services.relationship_store import relationship_store
 
-    emails = []
+    email_sequences = []
 
     templates = {
         "guest_post": "We'd love to contribute a high-quality guest post to your site.",
@@ -273,19 +304,16 @@ async def generate_outreach_emails_activity(
         domain = prospect.get("domain", "")
         contact_name = prospect.get("contact_name") or "there"
 
-        # Skip prospects without verified contacts or email
         contact_email = prospect.get("contact_email")
         if not contact_email:
             logger.info("skipping_unverified_prospect", domain=domain)
             continue
 
-        # Analyze website content for outreach context
         site_context = await website_analyzer.analyze(domain)
         site_title = site_context.get("site_title", "")
         site_desc = site_context.get("site_description", "")
         recent_articles = site_context.get("recent_articles", [])
         topical_focus = site_context.get("topical_focus", [])
-        content_tone = site_context.get("content_tone", "professional")
 
         site_context_str = f"Site title: {site_title}\n" if site_title else ""
         if site_desc:
@@ -298,30 +326,15 @@ async def generate_outreach_emails_activity(
         if not site_context_str:
             site_context_str = "Site content could not be analyzed.\n"
 
-        # Relationship intelligence
         tenant_uuid = UUID(tenant_id)
         rel = relationship_store.get_or_create(domain, tenant_uuid)
-        relationship_history = relationship_store.get_outreach_history(domain, tenant_uuid)
 
-        if relationship_history:
-            system_prompt = f"""You are an elite outreach specialist for a premium SEO agency. You are following up with a prior contact.
+        def _build_prompt(stage: str, extra_instructions: str) -> RenderedPrompt:
+            system = f"""You are an elite outreach specialist for a premium SEO agency. Generate a {stage} outreach email.
 Return ONLY a JSON object with 'subject', 'body_html', and 'personalized_opening' fields.
-CRITICAL: This is NOT a first email. Reference your prior outreach naturally. Be warmer and more direct since you have a prior relationship.
-Keep the tone professional but conversational — like continuing a thread."""
-        else:
-            system_prompt = """You are an elite outreach specialist for a premium SEO agency. Generate personalized, professional outreach emails.
-Return ONLY a JSON object with 'subject', 'body_html', and 'personalized_opening' fields.
-The email must be:
-- Highly personalized to the recipient's website and content
-- Professional and respectful in tone
-- Clear about the value proposition
-- Concise (2-3 paragraphs)
-- Not generic or spammy
-- Relevant to the specific domain
+CRITICAL: Reference the recipient's actual site content. Make it feel like a human wrote it."""
 
-CRITICAL: This email must reference the actual content of the recipient's site. Make it feel like a human who has actually visited their website wrote it."""
-
-        user_prompt = f"""CONTEXT:
+            user = f"""CONTEXT:
 - Recipient name: {contact_name}
 - Target domain: {domain}
 - Domain authority: {prospect.get('domain_authority', 40)}/100
@@ -331,84 +344,95 @@ CRITICAL: This email must reference the actual content of the recipient's site. 
 
 WEBSITE CONTENT:
 {site_context_str}
-RELATIONSHIP HISTORY:
-{relationship_history if relationship_history else "First contact with this prospect."}"""
 
-        if not relationship_history:
-            user_prompt += """
-
-TASK:
-Write a personalized FIRST outreach email that:
-1. Opens with a genuine compliment that references their actual site content
-2. Explains why you're reaching out (value-oriented)
-3. Offers something specific that aligns with their content
-4. Ends with a clear, low-friction call to action"""
-        else:
-            days_since = rel.days_since_last_contact
-            if days_since < 7:
-                user_prompt += """
-
-TASK:
-Write a warm, short follow-up email. You already contacted them recently.
-- Reference your previous email naturally
-- Add a new piece of value (a relevant article, data point, or idea)
-- Keep it brief and respectful of their time
-- Don't re-send the same pitch"""
-            elif days_since < 21:
-                user_prompt += """
-
-TASK:
-Write a thoughtful re-engagement email. It's been a couple of weeks since your last contact.
-- Open with a new angle or value-add relevant to their site
-- Reference your prior outreach briefly
-- Offer something new and specific
-- Low pressure, high value"""
-            else:
-                user_prompt += """
-
-TASK:
-Write a gentle re-engagement email. It's been a while since your last contact.
-- Fresh approach with a new value proposition
-- Briefly acknowledge the time gap
-- Focus entirely on what you can offer them now
-- No pressure, no hard sell"""
-
-        user_prompt += """
+{extra_instructions}
 
 Requirements:
 - Subject under 60 characters
 - Professional HTML body
-- Human-sounding, not templated
-- Reference their actual site content naturally"""
+- Human-sounding, not templated"""
+            return RenderedPrompt(
+                template_id="outreach_email_generation",
+                system_prompt=system,
+                user_prompt=user,
+            )
 
-        prompt = RenderedPrompt(
-            template_id="outreach_email_generation",
-            system_prompt=system_prompt,
-            user_prompt=user_prompt,
+        initial_prompt = _build_prompt(
+            "first",
+            "TASK: Write a personalized FIRST outreach email that opens with a genuine compliment referencing their actual site content, explains value, and ends with a low-friction CTA."
         )
+        followup_1_prompt = _build_prompt(
+            "follow-up",
+            "TASK: Write a warm follow-up email. Reference your previous outreach naturally. Add a new piece of value. Keep it brief."
+        )
+        followup_2_prompt = _build_prompt(
+            "re-engagement",
+            "TASK: Write a gentle re-engagement email. It's been some time. Fresh approach with a new angle. Low pressure."
+        )
+
+        initial_email = None
+        followup_1 = None
+        followup_2 = None
 
         try:
             result = await llm_gateway.complete(
                 task_type=TaskType.SEO_ANALYSIS,
-                prompt=prompt,
+                prompt=initial_prompt,
                 output_schema=OutreachEmailSchema,
                 tenant_id=UUID(tenant_id),
             )
-
-            emails.append({
-                "prospect_domain": domain,
-                "to_email": prospect.get("contact_email", ""),
+            initial_email = {
                 "subject": result.content.subject,
                 "body_html": result.content.body_html,
                 "personalized_opening": result.content.personalized_opening,
-                "confidence_score": result.confidence_score,
-            })
-            rel.record_outreach(result.content.subject, result.content.body_html)
+            }
         except Exception as e:
-            logger.warning("llm_outreach_generation_failed", domain=domain, error=str(e))
+            logger.warning("llm_initial_email_failed", domain=domain, error=str(e))
 
-    logger.info("outreach_emails_generated", count=len(emails))
-    result = {"emails": emails, "count": len(emails)}
+        if initial_email:
+            try:
+                result = await llm_gateway.complete(
+                    task_type=TaskType.SEO_ANALYSIS,
+                    prompt=followup_1_prompt,
+                    output_schema=OutreachEmailSchema,
+                    tenant_id=UUID(tenant_id),
+                )
+                followup_1 = {
+                    "subject": result.content.subject,
+                    "body_html": result.content.body_html,
+                    "personalized_opening": result.content.personalized_opening,
+                }
+            except Exception as e:
+                logger.warning("llm_followup_1_failed", domain=domain, error=str(e))
+
+        if followup_1:
+            try:
+                result = await llm_gateway.complete(
+                    task_type=TaskType.SEO_ANALYSIS,
+                    prompt=followup_2_prompt,
+                    output_schema=OutreachEmailSchema,
+                    tenant_id=UUID(tenant_id),
+                )
+                followup_2 = {
+                    "subject": result.content.subject,
+                    "body_html": result.content.body_html,
+                    "personalized_opening": result.content.personalized_opening,
+                }
+            except Exception as e:
+                logger.warning("llm_followup_2_failed", domain=domain, error=str(e))
+
+        if initial_email:
+            email_sequences.append({
+                "prospect_domain": domain,
+                "to_email": contact_email,
+                "contact_name": contact_name,
+                "initial_email": initial_email,
+                "followup_1": followup_1,
+                "followup_2": followup_2,
+            })
+
+    logger.info("outreach_sequences_generated", count=len(email_sequences))
+    result = {"email_sequences": email_sequences, "count": len(email_sequences)}
     await idempotency_store.store(idem_key, json.dumps(result), ttl=86400)
     return result
 
@@ -465,6 +489,49 @@ async def send_outreach_batch_activity(
 
     logger.info("outreach_batch_sent", campaign_id=campaign_id, sent=sent_count, failed=len(failed))
     return {"sent_count": sent_count, "provider": "sendgrid", "failed": len(failed)}
+
+
+@activity.defn(name="send_single_email_activity")
+async def send_single_email_activity(
+    tenant_id: str, campaign_id: str, thread_id: str,
+    to_email: str, subject: str, body_html: str,
+) -> dict[str, Any]:
+    """Send a single outreach email within a thread. Idempotent."""
+    from uuid import UUID
+
+    from seo_platform.core.kill_switch import kill_switch_service
+    from seo_platform.core.reliability import idempotency_store
+
+    ks = await kill_switch_service.is_blocked("email_sending", tenant_id=UUID(tenant_id))
+    if ks.blocked:
+        logger.warning("email_sending_blocked", reason=ks.reason)
+        return {"sent": False, "provider": "blocked", "reason": ks.reason}
+
+    idem_key = f"email-single:{thread_id}"
+    if await idempotency_store.exists(idem_key):
+        logger.info("single_email_idempotent_skip", thread_id=thread_id)
+        return {"sent": True, "cached": True}
+
+    from seo_platform.services.email_provider import email_provider
+
+    try:
+        result = await email_provider.send_email(
+            to_email=to_email,
+            subject=subject,
+            body=body_html,
+            campaign_id=campaign_id,
+            tenant_id=tenant_id,
+            prospect_id=thread_id,
+        )
+
+        if result.get("success"):
+            await idempotency_store.store(idem_key, "sent", ttl=604800)
+            return {"sent": True}
+        else:
+            return {"sent": False, "error": result.get("error", "unknown")}
+    except Exception as e:
+        logger.warning("single_email_send_failed", thread_id=thread_id, error=str(e))
+        return {"sent": False, "error": str(e)}
 
 
 @activity.defn(name="create_approval_request_activity")
@@ -710,7 +777,15 @@ class BacklinkCampaignWorkflow:
             approved_prospects = self._approval_data.get("prospects", enriched_prospects)
             output.prospects_approved = len(approved_prospects)
 
-            # --- Phase 4: Outreach Generation (with approved prospects) ---
+            # --- Phase 4: Outreach Email Generation (3-email sequences) ---
+            await workflow.execute_activity(
+                update_campaign_status_activity,
+                args=[str(input_data.tenant_id), str(input_data.campaign_id), "generating_emails"],
+                task_queue=TaskQueue.BACKLINK_ENGINE,
+                start_to_close_timeout=timedelta(seconds=30),
+                retry_policy=RetryPreset.DATABASE,
+            )
+
             emails_result = await workflow.execute_activity(
                 generate_outreach_emails_activity,
                 args=[str(input_data.tenant_id), str(input_data.campaign_id),
@@ -721,7 +796,7 @@ class BacklinkCampaignWorkflow:
             )
             output.emails_generated = emails_result["count"]
 
-            # --- Phase 5: Campaign Launch ---
+            # --- Phase 5: Spawn Child Outreach Threads ---
             await workflow.execute_activity(
                 update_campaign_status_activity,
                 args=[str(input_data.tenant_id), str(input_data.campaign_id), "active"],
@@ -730,15 +805,47 @@ class BacklinkCampaignWorkflow:
                 retry_policy=RetryPreset.DATABASE,
             )
 
-            send_result = await workflow.execute_activity(
-                send_outreach_batch_activity,
-                args=[str(input_data.tenant_id), str(input_data.campaign_id),
-                      emails_result["emails"]],
-                task_queue=TaskQueue.COMMUNICATION,
-                start_to_close_timeout=timedelta(minutes=30),
-                retry_policy=RetryPreset.EMAIL_SEND,
-            )
-            output.emails_sent = send_result["sent_count"]
+            child_futures = []
+            for seq in emails_result.get("email_sequences", []):
+                thread_id = f"outreach_{input_data.campaign_id}_{seq['prospect_domain']}"
+                thread_input = OutreachThreadInput(
+                    tenant_id=input_data.tenant_id,
+                    campaign_id=input_data.campaign_id,
+                    thread_id=thread_id,
+                    prospect_domain=seq["prospect_domain"],
+                    contact_email=seq["to_email"],
+                    contact_name=seq.get("contact_name", "there"),
+                    initial_email=seq.get("initial_email", {}),
+                    followup_1=seq.get("followup_1", {}),
+                    followup_2=seq.get("followup_2", {}),
+                )
+                future = workflow.execute_child_workflow(
+                    OutreachThreadWorkflow.run,
+                    args=[thread_input.model_dump_json()],
+                    id=thread_id,
+                    task_queue=TaskQueue.COMMUNICATION,
+                    retry_policy=RetryPreset.TRANSIENT_IDEMPOTENT,
+                )
+                child_futures.append((seq["prospect_domain"], future))
+
+            child_results = await asyncio.gather(*[f for _, f in child_futures])
+
+            threads_contacted = 0
+            threads_replied = 0
+            threads_completed = 0
+            for i, result_json in enumerate(child_results):
+                child_out = OutreachThreadOutput.model_validate_json(result_json)
+                if child_out.initial_sent:
+                    threads_contacted += 1
+                if child_out.reply_received:
+                    threads_replied += 1
+                if child_out.status in ("completed_no_reply", "replied"):
+                    threads_completed += 1
+
+            output.threads_contacted = threads_contacted
+            output.threads_replied = threads_replied
+            output.threads_completed = threads_completed
+            output.emails_sent = threads_contacted
 
             # --- Phase 6: Complete ---
             await workflow.execute_activity(
@@ -760,3 +867,122 @@ class BacklinkCampaignWorkflow:
                          error=str(e))
 
         return output.model_dump_json()
+
+
+# ---------------------------------------------------------------------------
+# Child Workflow — Individual Outreach Thread
+# ---------------------------------------------------------------------------
+@workflow.defn(name="OutreachThreadWorkflow")
+class OutreachThreadWorkflow:
+    """
+    Manages a single prospect outreach thread with 3-stage sequence:
+    1. Initial email → wait 3 days (or until reply/cancel)
+    2. Follow-up 1 → wait 7 days (or until reply/cancel)
+    3. Follow-up 2 → thread complete
+    """
+
+    def __init__(self) -> None:
+        self._reply_received = False
+        self._is_cancelled = False
+        self._thread_status = "pending"
+        self._reply_data: dict = {}
+
+    @workflow.signal(name="reply_received")
+    async def on_reply_received(self, reply_json: str) -> None:
+        import json
+        self._reply_received = True
+        self._thread_status = "replied"
+        self._reply_data = json.loads(reply_json)
+
+    @workflow.signal(name="cancel_thread")
+    async def on_cancel_thread(self, reason_json: str = "{}") -> None:
+        import json
+        self._is_cancelled = True
+        self._thread_status = "cancelled"
+        self._reply_data = json.loads(reason_json)
+
+    def _build_output(self) -> str:
+        return OutreachThreadOutput(
+            thread_id=self._reply_data.get("thread_id", ""),
+            prospect_domain=self._reply_data.get("prospect_domain", ""),
+            status=self._thread_status,
+            reply_received=self._reply_received,
+            reply_data=self._reply_data,
+            cancelled=self._is_cancelled,
+        ).model_dump_json()
+
+    @workflow.run
+    async def run(self, input_json: str) -> str:
+        inp = OutreachThreadInput.model_validate_json(input_json)
+        output = OutreachThreadOutput(
+            thread_id=inp.thread_id,
+            prospect_domain=inp.prospect_domain,
+        )
+
+        try:
+            # Stage 1: Send initial email
+            send_result = await workflow.execute_activity(
+                send_single_email_activity,
+                args=[str(inp.tenant_id), str(inp.campaign_id),
+                      inp.thread_id, inp.contact_email,
+                      inp.initial_email.get("subject", ""),
+                      inp.initial_email.get("body_html", "")],
+                task_queue=TaskQueue.COMMUNICATION,
+                start_to_close_timeout=timedelta(minutes=5),
+                retry_policy=RetryPreset.EMAIL_SEND,
+            )
+            output.initial_sent = send_result.get("sent", False)
+            output.status = "contacted"
+
+            # Wait up to 3 days for reply or cancellation
+            await workflow.wait_condition(
+                lambda: self._reply_received or self._is_cancelled,
+                timeout=timedelta(days=3),
+            )
+            if self._reply_received or self._is_cancelled:
+                return self._build_output() if self._reply_received else output.model_dump_json()
+
+            # Stage 2: Send follow-up 1
+            if inp.followup_1:
+                send_result = await workflow.execute_activity(
+                    send_single_email_activity,
+                    args=[str(inp.tenant_id), str(inp.campaign_id),
+                          inp.thread_id, inp.contact_email,
+                          inp.followup_1.get("subject", ""),
+                          inp.followup_1.get("body_html", "")],
+                    task_queue=TaskQueue.COMMUNICATION,
+                    start_to_close_timeout=timedelta(minutes=5),
+                    retry_policy=RetryPreset.EMAIL_SEND,
+                )
+                output.followup_1_sent = send_result.get("sent", False)
+                output.status = "followup_1_sent"
+
+            # Wait up to 7 days for reply or cancellation
+            await workflow.wait_condition(
+                lambda: self._reply_received or self._is_cancelled,
+                timeout=timedelta(days=7),
+            )
+            if self._reply_received or self._is_cancelled:
+                return self._build_output() if self._reply_received else output.model_dump_json()
+
+            # Stage 3: Send follow-up 2
+            if inp.followup_2:
+                send_result = await workflow.execute_activity(
+                    send_single_email_activity,
+                    args=[str(inp.tenant_id), str(inp.campaign_id),
+                          inp.thread_id, inp.contact_email,
+                          inp.followup_2.get("subject", ""),
+                          inp.followup_2.get("body_html", "")],
+                    task_queue=TaskQueue.COMMUNICATION,
+                    start_to_close_timeout=timedelta(minutes=5),
+                    retry_policy=RetryPreset.EMAIL_SEND,
+                )
+                output.followup_2_sent = send_result.get("sent", False)
+                output.status = "completed_no_reply"
+
+        except Exception as e:
+            output.status = "failed"
+            logger.error("outreach_thread_failed", thread_id=inp.thread_id, error=str(e))
+
+        return output.model_dump_json()
+
