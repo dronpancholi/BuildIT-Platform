@@ -130,20 +130,19 @@ async def discover_prospects_activity(
             logger.warning("ahrefs_failed_for_domain", domain=domain, error=str(e))
 
     if not prospects and competitor_domains:
-        logger.info("ahrefs_returned_no_prospects_trying_backlink_scraper")
+        logger.info("ahrefs_returned_no_prospects_trying_link_intersect")
         try:
-            scraped = await backlink_scraper.discover_backlinks(competitor_domains[0])
-            for sd in scraped[:30]:
-                if sd not in seen_domains:
-                    seen_domains.add(sd)
-                    prospects.append({
-                        "domain": sd,
-                        "url": f"https://{sd}/",
-                        "source_competitor": competitor_domains[0],
-                        "domain_rating": 30,
-                    })
+            scraped_prospects = await backlink_scraper.discover_link_intersect_prospects(
+                competitor_domains=competitor_domains,
+                topical_niche="enterprise",
+            )
+            for sp in scraped_prospects:
+                dom = sp.get("domain", "")
+                if dom and dom not in seen_domains:
+                    seen_domains.add(dom)
+                    prospects.append(sp)
         except Exception as e:
-            logger.warning("backlink_scraper_failed", error=str(e))
+            logger.warning("link_intersect_scraper_failed", error=str(e))
 
     return {"prospects": prospects, "count": len(prospects)}
 
