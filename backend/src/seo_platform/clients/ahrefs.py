@@ -5,6 +5,8 @@ Backlink analysis, domain metrics, and competitor research.
 
 Design: Circuit breaker with 5-failure threshold.
 DA data cached 7 days (changes slowly).
+
+No mock data fallback — all calls execute against live API or raise.
 """
 
 from __future__ import annotations
@@ -18,6 +20,23 @@ from seo_platform.core.logging import get_logger
 from seo_platform.core.reliability import CircuitBreaker
 
 logger = get_logger(__name__)
+
+
+class AhrefsError(Exception):
+    """Base exception for Ahrefs API errors."""
+
+
+class AhrefsRateLimitError(AhrefsError):
+    """Raised when Ahrefs returns 429 Too Many Requests."""
+
+
+class AhrefsAPIError(AhrefsError):
+    """Raised when Ahrefs returns a non-2xx response."""
+
+
+class AhrefsAuthError(AhrefsError):
+    """Raised when API key is invalid or unauthorized."""
+
 
 _circuit = CircuitBreaker("ahrefs", failure_threshold=5, recovery_timeout=30)
 
@@ -90,35 +109,28 @@ class AhrefsClient:
         return data.get("referring_domains", [])
 
     async def get_domain_metrics(self, domain: str) -> dict[str, Any]:
-        """Get comprehensive domain metrics."""
+        """Get comprehensive domain metrics from Ahrefs API."""
         client = await self._get_client()
+        response = await _circuit.call(
+            client.get, "/v3/site-explorer/overview",
+            params={"target": domain, "output": "json"},
+        )
 
-        try:
-            response = await _circuit.call(
-                client.get, "/v3/site-explorer/overview",
-                params={"target": domain, "output": "json"},
-            )
-            response.raise_for_status()
-            data = response.json()
+        if response.status_code == 429:
+            raise AhrefsRateLimitError(f"Ahrefs rate limit exceeded for domain: {domain}")
+        if response.status_code == 401 or response.status_code == 403:
+            raise AhrefsAuthError(f"Ahrefs authentication failed for domain: {domain}")
+        response.raise_for_status()
 
-            return {
-                "domain": domain,
-                "domain_rating": data.get("domain_rating", 0),
-                "ref_domains": data.get("referring_domains", 0),
-                "backlinks": data.get("backlinks", 0),
-                "organic_keywords": data.get("organic_keywords", 0),
-                "organic_traffic": data.get("organic_traffic", 0),
-            }
-        except Exception as e:
-            logger.warning("ahrefs_metrics_failed", domain=domain, error=str(e))
-            return {
-                "domain": domain,
-                "domain_rating": 40,
-                "ref_domains": 50,
-                "backlinks": 200,
-                "organic_keywords": 100,
-                "organic_traffic": 500,
-            }
+        data = response.json()
+        return {
+            "domain": domain,
+            "domain_rating": data.get("domain_rating", 0),
+            "ref_domains": data.get("referring_domains", 0),
+            "backlinks": data.get("backlinks", 0),
+            "organic_keywords": data.get("organic_keywords", 0),
+            "organic_traffic": data.get("organic_traffic", 0),
+        }
 
     async def close(self) -> None:
         if self._client:

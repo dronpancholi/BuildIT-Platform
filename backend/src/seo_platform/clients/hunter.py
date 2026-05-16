@@ -5,6 +5,8 @@ Contact email discovery from domain data.
 
 Design: Cache lookups per domain for 30 days.
 Only query if prospect passes spam filter (don't waste on junk domains).
+
+No mock data fallback — all calls execute against live API or raise.
 """
 
 from __future__ import annotations
@@ -18,6 +20,23 @@ from seo_platform.core.logging import get_logger
 from seo_platform.core.reliability import CircuitBreaker
 
 logger = get_logger(__name__)
+
+
+class HunterError(Exception):
+    """Base exception for Hunter.io API errors."""
+
+
+class HunterRateLimitError(HunterError):
+    """Raised when Hunter returns 429 Too Many Requests."""
+
+
+class HunterAPIError(HunterError):
+    """Raised when Hunter returns a non-2xx response."""
+
+
+class HunterAuthError(HunterError):
+    """Raised when API key is invalid or unauthorized."""
+
 
 _circuit = CircuitBreaker("hunter_io", failure_threshold=10, recovery_timeout=30)
 
@@ -54,7 +73,13 @@ class HunterClient:
             client.get, "/v2/domain-search",
             params={"domain": domain, "api_key": self.api_key, "limit": limit},
         )
+
+        if response.status_code == 429:
+            raise HunterRateLimitError(f"Hunter rate limit exceeded for domain: {domain}")
+        if response.status_code in (401, 403):
+            raise HunterAuthError(f"Hunter authentication failed for domain: {domain}")
         response.raise_for_status()
+
         data = response.json()
         emails = data.get("data", {}).get("emails", [])
         logger.info("hunter_domain_search", domain=domain, results=len(emails))
@@ -82,7 +107,13 @@ class HunterClient:
                 "api_key": self.api_key,
             },
         )
+
+        if response.status_code == 429:
+            raise HunterRateLimitError(f"Hunter rate limit exceeded for {domain}")
+        if response.status_code in (401, 403):
+            raise HunterAuthError(f"Hunter authentication failed")
         response.raise_for_status()
+
         data = response.json().get("data", {})
         return {
             "email": data.get("email", ""),
@@ -97,7 +128,13 @@ class HunterClient:
             client.get, "/v2/email-verifier",
             params={"email": email, "api_key": self.api_key},
         )
+
+        if response.status_code == 429:
+            raise HunterRateLimitError(f"Hunter rate limit exceeded for {email}")
+        if response.status_code in (401, 403):
+            raise HunterAuthError(f"Hunter authentication failed")
         response.raise_for_status()
+
         data = response.json().get("data", {})
         return {
             "email": email,

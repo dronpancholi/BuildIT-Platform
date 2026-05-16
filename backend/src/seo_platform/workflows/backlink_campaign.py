@@ -68,61 +68,53 @@ class BacklinkCampaignOutput(BaseModel):
 async def discover_prospects_activity(
     tenant_id: str, campaign_id: str, competitor_domains: list[str],
 ) -> dict[str, Any]:
-    """Discover prospect websites from competitor backlink profiles."""
+    """Discover prospect websites from competitor backlink profiles via real APIs."""
     logger.info("discovering_prospects", campaign_id=campaign_id,
                 competitors=len(competitor_domains))
 
+    from seo_platform.clients.ahrefs import AhrefsRateLimitError
+    from seo_platform.services.scraping.engines.backlinks import backlink_scraper
+
     prospects = []
+    seen_domains: set[str] = set()
 
-    try:
-        from seo_platform.clients.ahrefs import ahrefs_client
-        from seo_platform.services.scraping.engines.backlinks import backlink_scraper
-
-        for domain in competitor_domains:
-            try:
-                referring_domains = await ahrefs_client.get_referring_domains(domain)
-                for rd in referring_domains[:50]:
+    for domain in competitor_domains:
+        try:
+            from seo_platform.clients.ahrefs import ahrefs_client
+            referring_domains = await ahrefs_client.get_referring_domains(domain)
+            for rd in referring_domains[:50]:
+                dom = rd.get("domain", "")
+                if dom and dom not in seen_domains:
+                    seen_domains.add(dom)
                     prospects.append({
-                        "domain": rd.get("domain", ""),
-                        "url": f"https://{rd.get('domain', '')}/",
+                        "domain": dom,
+                        "url": f"https://{dom}/",
                         "source_competitor": domain,
                         "domain_rating": rd.get("domain_rating", 0),
                     })
-            except Exception as e:
-                logger.warning("ahrefs_failed_for_domain", domain=domain, error=str(e))
+        except AhrefsRateLimitError:
+            logger.warning("ahrefs_rate_limited", domain=domain)
+            raise
+        except Exception as e:
+            logger.warning("ahrefs_failed_for_domain", domain=domain, error=str(e))
 
-        if not prospects:
-            scraped = await backlink_scraper.discover_backlinks(competitor_domains[0] if competitor_domains else "example.com")
+    if not prospects and competitor_domains:
+        logger.info("ahrefs_returned_no_prospects_trying_backlink_scraper")
+        try:
+            scraped = await backlink_scraper.discover_backlinks(competitor_domains[0])
             for sd in scraped[:30]:
-                prospects.append({
-                    "domain": sd,
-                    "url": f"https://{sd}/",
-                    "source_competitor": competitor_domains[0] if competitor_domains else "",
-                    "domain_rating": 30,
-                })
+                if sd not in seen_domains:
+                    seen_domains.add(sd)
+                    prospects.append({
+                        "domain": sd,
+                        "url": f"https://{sd}/",
+                        "source_competitor": competitor_domains[0],
+                        "domain_rating": 30,
+                    })
+        except Exception as e:
+            logger.warning("backlink_scraper_failed", error=str(e))
 
-    except Exception as e:
-        logger.warning("prospect_discovery_failed", error=str(e))
-        from urllib.parse import urlparse
-        for domain in competitor_domains:
-            try:
-                parsed = urlparse(f"//{domain}")
-                base = parsed.netloc or parsed.path
-            except Exception:
-                base = domain
-            prospects.append({
-                "domain": base,
-                "url": f"https://{base}/",
-                "source_competitor": base,
-                "domain_rating": 30,
-            })
-
-    unique_domains = {}
-    for p in prospects:
-        if p["domain"] not in unique_domains:
-            unique_domains[p["domain"]] = p
-
-    return {"prospects": list(unique_domains.values()), "count": len(unique_domains)}
+    return {"prospects": prospects, "count": len(prospects)}
 
 
 @activity.defn(name="score_prospects_activity")
@@ -130,118 +122,61 @@ async def score_prospects_activity(
     tenant_id: str, campaign_id: str, prospects: list[dict],
     min_da: float, max_spam: float, target_niche: str = "",
 ) -> dict[str, Any]:
-    """Score prospects using multi-signal composite scoring with intelligence."""
+    """Score prospects using multi-signal composite scoring via live Ahrefs data."""
     logger.info("scoring_prospects", campaign_id=campaign_id, count=len(prospects))
 
+    from seo_platform.clients.ahrefs import ahrefs_client, AhrefsRateLimitError
     from seo_platform.services.backlink_engine.intelligence import backlink_intelligence
 
     scored = []
     filtered_out = 0
 
-    try:
-        from seo_platform.clients.ahrefs import ahrefs_client
+    for prospect in prospects:
+        try:
+            metrics = await ahrefs_client.get_domain_metrics(prospect["domain"])
+            dr = metrics.get("domain_rating", 0)
+            ref_domains = metrics.get("ref_domains", 0)
+            backlinks = metrics.get("backlinks", 0)
+            traffic = metrics.get("organic_traffic", 0)
 
-        for prospect in prospects:
-            try:
-                metrics = await ahrefs_client.get_domain_metrics(prospect["domain"])
-                dr = metrics.get("domain_rating", 0)
-                ref_domains = metrics.get("ref_domains", 0)
-                backlinks = metrics.get("backlinks", 0)
-                traffic = metrics.get("organic_traffic", 0)
+            prospect_with_metrics = {
+                **prospect,
+                "domain_authority": dr,
+                "ref_domain_count": ref_domains,
+                "backlinks": backlinks,
+                "organic_traffic": traffic,
+            }
 
-                prospect_with_metrics = {
-                    **prospect,
-                    "domain_authority": dr,
-                    "ref_domain_count": ref_domains,
-                    "backlinks": backlinks,
-                    "organic_traffic": traffic,
-                }
+            target_domain = prospect.get("source_competitor", "")
+            analysis = backlink_intelligence.analyze_prospect(
+                prospect_with_metrics, target_domain, target_niche
+            )
 
-                target_domain = prospect.get("source_competitor", "")
-                analysis = backlink_intelligence.analyze_prospect(
-                    prospect_with_metrics, target_domain, target_niche
-                )
-
-                score = {
-                    **prospect,
-                    "domain_authority": analysis.get("authority_score", 0) * 100,
-                    "spam_score": analysis.get("spam_score", 0) * 100,
-                    "relevance_score": analysis.get("relevance_score", 0),
-                    "composite_score": analysis.get("composite_score", 0),
-                    "is_spam": analysis.get("is_spam", False),
-                    "authority_classification": analysis.get("authority_classification", "low"),
-                    "spam_flags": analysis.get("spam_flags", []),
-                    "relevance_flags": analysis.get("relevance_flags", []),
-                }
-
-                if analysis.get("is_viable", False) and score["composite_score"] >= 0.35:
-                    scored.append(score)
-                else:
-                    filtered_out += 1
-
-            except Exception as e:
-                logger.warning("scoring_failed_for_prospect", domain=prospect.get("domain"), error=str(e))
-                score = {
-                    **prospect,
-                    "domain_authority": prospect.get("domain_rating", 40),
-                    "spam_score": 3.0,
-                    "relevance_score": 0.7,
-                    "traffic_score": 0.6,
-                    "composite_score": 0.65,
-                    "is_spam": False,
-                }
-                if score["domain_authority"] >= min_da and score["spam_score"] <= max_spam:
-                    scored.append(score)
-                else:
-                    filtered_out += 1
-
-    except Exception as e:
-        logger.warning("ahrefs_scoring_failed", error=str(e))
-        import hashlib
-        for prospect in prospects:
-            domain = prospect.get("domain", "unknown")
-            da = prospect.get("domain_rating", 40) or 40
-            h = int(hashlib.md5(domain.encode()).hexdigest()[:8], 16)
-            spam = 1 + (h % int(max_spam * 10)) / 10
-            relevance = 0.6 + (h % 35) / 100
-            traffic = 0.5 + ((h >> 8) % 40) / 100
-            composite = round((da / 100) * 0.4 + (1 - spam / 100) * 0.6, 3)
             score = {
                 **prospect,
-                "domain_authority": da,
-                "spam_score": spam,
-                "relevance_score": round(relevance, 2),
-                "traffic_score": round(traffic, 2),
-                "composite_score": composite,
-                "is_spam": spam > 30,
+                "domain_authority": analysis.get("authority_score", 0) * 100,
+                "spam_score": analysis.get("spam_score", 0) * 100,
+                "relevance_score": analysis.get("relevance_score", 0),
+                "composite_score": analysis.get("composite_score", 0),
+                "is_spam": analysis.get("is_spam", False),
+                "authority_classification": analysis.get("authority_classification", "low"),
+                "spam_flags": analysis.get("spam_flags", []),
+                "relevance_flags": analysis.get("relevance_flags", []),
             }
-            if score["domain_authority"] >= min_da and score["spam_score"] <= max_spam:
+
+            if analysis.get("is_viable", False) and score["composite_score"] >= 0.35:
                 scored.append(score)
             else:
                 filtered_out += 1
 
+        except AhrefsRateLimitError:
+            logger.warning("ahrefs_rate_limited_during_scoring")
+            raise
+        except Exception as e:
+            logger.warning("scoring_failed_for_prospect", domain=prospect.get("domain"), error=str(e))
+            filtered_out += 1
+
     logger.info("prospects_scored", viable=len(scored), filtered=filtered_out)
-
-    if not scored and prospects:
-        logger.warning("no_viable_prospects_after_scoring_using_fallback")
-        import hashlib
-        for prospect in prospects:
-            domain = prospect.get("domain", "unknown")
-            da = prospect.get("domain_rating", 50) or 50
-            h = int(hashlib.md5(domain.encode()).hexdigest()[:8], 16)
-            spam = 1 + (h % 30) / 10
-            relevance = 0.6 + (h % 35) / 100
-            composite = round((da / 100) * 0.5 + (1 - spam / 100) * 0.3 + relevance * 0.2, 3)
-            score = {
-                **prospect,
-                "domain_authority": da,
-                "spam_score": spam,
-                "relevance_score": round(relevance, 2),
-                "composite_score": composite,
-                "is_spam": spam > 30,
-            }
-            scored.append(score)
-
     return {"scored_prospects": scored, "filtered_out": filtered_out}
 
 
@@ -249,7 +184,7 @@ async def score_prospects_activity(
 async def discover_contacts_activity(
     tenant_id: str, prospects: list[dict],
 ) -> dict[str, Any]:
-    """Find contact emails for scored prospects via Hunter.io."""
+    """Find contact emails for scored prospects via Hunter.io. No synthetic fallback."""
     logger.info("discovering_contacts", count=len(prospects))
 
     from seo_platform.clients.hunter import hunter_client
@@ -267,7 +202,7 @@ async def discover_contacts_activity(
                 enriched.append({
                     **prospect,
                     "contact_email": primary.get("email", ""),
-                    "contact_name": f"{primary.get('first_name', '')} {primary.get('last_name', '')}".strip() or "Editor",
+                    "contact_name": f"{primary.get('first_name', '')} {primary.get('last_name', '')}".strip(),
                     "contact_position": primary.get("position", ""),
                     "contact_confidence": primary.get("confidence", 0),
                     "contact_source": "hunter",
@@ -276,13 +211,14 @@ async def discover_contacts_activity(
         except Exception as e:
             logger.warning("hunter_search_failed", domain=domain, error=str(e))
 
+        # No verified contact found — mark as unverified, do not invent names
         enriched.append({
             **prospect,
-            "contact_email": f"contact@{domain}",
-            "contact_name": _derive_contact_name(domain),
-            "contact_position": _derive_contact_position(domain),
-            "contact_confidence": 0.3,
-            "contact_source": "fallback",
+            "contact_email": None,
+            "contact_name": None,
+            "contact_position": None,
+            "contact_confidence": 0.0,
+            "contact_source": "unverified",
         })
 
     return {"enriched_prospects": enriched}
@@ -335,7 +271,13 @@ async def generate_outreach_emails_activity(
 
     for prospect in prospects[:20]:
         domain = prospect.get("domain", "")
-        contact_name = prospect.get("contact_name", "there")
+        contact_name = prospect.get("contact_name") or "there"
+
+        # Skip prospects without verified contacts or email
+        contact_email = prospect.get("contact_email")
+        if not contact_email:
+            logger.info("skipping_unverified_prospect", domain=domain)
+            continue
 
         # Analyze website content for outreach context
         site_context = await website_analyzer.analyze(domain)
@@ -464,31 +406,6 @@ Requirements:
             rel.record_outreach(result.content.subject, result.content.body_html)
         except Exception as e:
             logger.warning("llm_outreach_generation_failed", domain=domain, error=str(e))
-
-            domain_parts = domain.replace("www.", "").split(".")
-            domain_name = domain_parts[0] if domain_parts else domain
-            topic = domain_name.replace("-", " ").title()
-            niche_signals = prospect.get("relevance_score", 0.5)
-            da = prospect.get("domain_authority", 40)
-
-            if niche_signals > 0.7:
-                compliment = f"I've been following {topic} and really appreciate the depth of your content."
-                offer = f"I have a well-researched article on {'related SEO strategies' if da > 50 else 'practical SEO tactics'} that I believe would resonate with your audience."
-            elif da > 60:
-                compliment = f"Your site has excellent authority in the {topic} space."
-                offer = f"I'd like to propose a content collaboration that would add value for your readers."
-            else:
-                compliment = f"I came across {domain} while researching {topic} and was impressed by your content."
-                offer = f"I have a guest post idea that I think would be a great fit for your audience."
-
-            emails.append({
-                "prospect_domain": domain,
-                "to_email": prospect.get("contact_email", ""),
-                "subject": f"Content collaboration idea for {topic}",
-                "body_html": f"<p>Hi {contact_name},</p><p>{compliment}</p><p>{offer}</p><p>Would you be open to discussing this further? Happy to share some topic ideas.</p><p>Best regards,<br/>Content Team</p>",
-                "personalized_opening": f"Hi {contact_name}",
-                "confidence_score": round(0.3 + niche_signals * 0.4, 2),
-            })
 
     logger.info("outreach_emails_generated", count=len(emails))
     result = {"emails": emails, "count": len(emails)}
@@ -620,54 +537,6 @@ async def update_campaign_status_activity(
     return {"campaign_id": campaign_id, "status": status}
 
 
-def _derive_contact_name(domain: str) -> str:
-    """Derive a realistic contact name from a domain."""
-    import hashlib
-    names = [
-        "Sarah Chen", "James Wilson", "Maria Garcia", "Alex Thompson",
-        "Emma Davis", "Michael Brown", "Sophie Martin", "David Kim",
-        "Lisa Anderson", "Tom Richards", "Anna Patel", "Chris Miller",
-        "Rachel Lee", "Daniel Taylor", "Hannah Wright", "Ryan Cooper",
-        "Olivia Adams", "Ben Foster", "Grace Mitchell", "Jack Turner",
-        "Priya Sharma", "Ethan Brooks", "Zoe Campbell", "Nathan Reed",
-        "Isabella Torres", "Liam Murphy", "Mia Sullivan", "Noah Bennett",
-        "Charlotte Fisher", "Lucas Hayes", "Amelia Porter", "Mason Cole",
-        "Harper Simmons", "Logan Price", "Evelyn Myers", "Caleb Foster",
-        "Abigail Nichols", "Owen Hart", "Ella Kimura", "Samuel Rhodes",
-        "Aria Patel", "Henry Webb", "Scarlett Fox", "Sebastian Cross",
-        "Victoria Shaw", "Jack Morrison", "Lily Chang", "Oliver Hunt",
-        "Aurora Blake", "William Chen", "Chloe Waters", "James Nakamura",
-        "Penelope Stone", "Benjamin Roy", "Riley Singh", "Lucas Greene",
-        "Zara Blackwell", "Dylan Fisher", "Nora O'Brien", "Carter Munoz",
-        "Hazel Park", "Julian Decker", "Violet Houston", "Adrian Russo",
-        "Stella Bishop", "Connor Walls", "Aurora Steele", "Xavier Owens",
-    ]
-    h = int(hashlib.md5(domain.encode()).hexdigest()[:8], 16)
-    return names[h % len(names)]
-
-
-def _derive_contact_position(domain: str) -> str:
-    """Derive a realistic contact position from a domain."""
-    import hashlib
-    positions = [
-        "Editor in Chief", "Content Director", "Senior Editor",
-        "Content Manager", "Managing Editor", "Head of Content",
-        "Digital Editor", "Content Strategist",
-        "VP of Marketing", "Head of Growth", "SEO Director",
-        "Senior Content Strategist", "Editorial Director",
-        "Director of Content Marketing", "Web Director",
-        "Head of Editorial", "Senior Writer", "Brand Editor",
-        "Audience Development Manager", "Content Lead",
-        "Digital Marketing Director", "Senior Brand Manager",
-        "Head of Audience Growth", "Managing Director",
-        "Contributing Editor", "Features Editor", "Executive Editor",
-        "Head of Digital Media", "Director of Partnerships",
-        "Senior Editor & Publisher",
-    ]
-    h = int(hashlib.md5(domain.encode()).hexdigest()[:8], 16)
-    return positions[h % len(positions)]
-
-
 @activity.defn(name="fallback_prospects_activity")
 async def fallback_prospects_activity(
     tenant_id: str, campaign_id: str,
@@ -795,13 +664,57 @@ class BacklinkCampaignWorkflow:
             )
             enriched_prospects = contacts_result["enriched_prospects"]
 
-            output.prospects_approved = len(enriched_prospects)
+            # --- Phase 3.5: Human Approval Gate ---
+            approval_result = await workflow.execute_activity(
+                create_approval_request_activity,
+                args=[
+                    str(input_data.tenant_id),
+                    workflow.info().run_id,
+                    "prospect_approval",
+                    "medium",
+                    f"Campaign {input_data.campaign_name}: {len(enriched_prospects)} prospects require approval.",
+                    {"prospects": enriched_prospects, "campaign_id": str(input_data.campaign_id)},
+                ],
+                task_queue=TaskQueue.BACKLINK_ENGINE,
+                start_to_close_timeout=timedelta(seconds=30),
+                retry_policy=RetryPreset.DATABASE,
+            )
 
-            # --- Phase 4: Outreach Generation ---
+            await workflow.execute_activity(
+                update_campaign_status_activity,
+                args=[str(input_data.tenant_id), str(input_data.campaign_id), "awaiting_approval"],
+                task_queue=TaskQueue.BACKLINK_ENGINE,
+                start_to_close_timeout=timedelta(seconds=30),
+                retry_policy=RetryPreset.DATABASE,
+            )
+
+            await workflow.wait_condition(
+                lambda: self._approval_decision is not None
+            )
+
+            if self._approval_decision != "approved":
+                await workflow.execute_activity(
+                    update_campaign_status_activity,
+                    args=[str(input_data.tenant_id), str(input_data.campaign_id), "cancelled"],
+                    task_queue=TaskQueue.BACKLINK_ENGINE,
+                    start_to_close_timeout=timedelta(seconds=30),
+                    retry_policy=RetryPreset.DATABASE,
+                )
+                output.success = False
+                output.status = "cancelled"
+                output.errors.append(
+                    f"Campaign halted: Human reviewer decision was '{self._approval_decision}'."
+                )
+                return output.model_dump_json()
+
+            approved_prospects = self._approval_data.get("prospects", enriched_prospects)
+            output.prospects_approved = len(approved_prospects)
+
+            # --- Phase 4: Outreach Generation (with approved prospects) ---
             emails_result = await workflow.execute_activity(
                 generate_outreach_emails_activity,
                 args=[str(input_data.tenant_id), str(input_data.campaign_id),
-                      enriched_prospects, input_data.campaign_type],
+                      approved_prospects, input_data.campaign_type],
                 task_queue=TaskQueue.AI_ORCHESTRATION,
                 start_to_close_timeout=timedelta(minutes=30),
                 retry_policy=RetryPreset.LLM_INFERENCE,
