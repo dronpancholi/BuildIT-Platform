@@ -7,6 +7,7 @@ Circuit-breaker wrapped. Graceful empty API key fallback.
 
 from __future__ import annotations
 
+import asyncio
 from dataclasses import dataclass, field
 from typing import Any
 
@@ -46,6 +47,7 @@ class FirecrawlScrapeResult:
 
 
 _circuit = CircuitBreaker("firecrawl", failure_threshold=3, recovery_timeout=30)
+_semaphore = asyncio.Semaphore(5)
 
 
 class FirecrawlClient:
@@ -105,15 +107,16 @@ class FirecrawlClient:
         client = await self._get_client()
 
         try:
-            response = await _circuit.call(
-                client.post,
-                "/scrape",
-                json={
-                    "url": url,
-                    "formats": formats,
-                    "onlyMainContent": True,
-                },
-            )
+            async with _semaphore:
+                response = await _circuit.call(
+                    client.post,
+                    "/scrape",
+                    json={
+                        "url": url,
+                        "formats": formats,
+                        "onlyMainContent": True,
+                    },
+                )
 
             if response.status_code == 429:
                 raise FirecrawlRateLimitError(f"Firecrawl rate limited: {url}")

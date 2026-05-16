@@ -11,6 +11,7 @@ No mock data fallback — all calls execute against live API or raise.
 
 from __future__ import annotations
 
+import asyncio
 from typing import Any
 
 import httpx
@@ -39,6 +40,7 @@ class HunterAuthError(HunterError):
 
 
 _circuit = CircuitBreaker("hunter_io", failure_threshold=10, recovery_timeout=30)
+_semaphore = asyncio.Semaphore(5)
 
 
 class HunterClient:
@@ -69,10 +71,11 @@ class HunterClient:
     async def domain_search(self, domain: str, limit: int = 10) -> list[dict[str, Any]]:
         """Find email addresses associated with a domain."""
         client = await self._get_client()
-        response = await _circuit.call(
-            client.get, "/v2/domain-search",
-            params={"domain": domain, "api_key": self.api_key, "limit": limit},
-        )
+        async with _semaphore:
+            response = await _circuit.call(
+                client.get, "/v2/domain-search",
+                params={"domain": domain, "api_key": self.api_key, "limit": limit},
+            )
 
         if response.status_code == 429:
             raise HunterRateLimitError(f"Hunter rate limit exceeded for domain: {domain}")
@@ -98,15 +101,16 @@ class HunterClient:
     async def find_email(self, domain: str, first_name: str, last_name: str) -> dict[str, Any]:
         """Find a specific person's email at a domain."""
         client = await self._get_client()
-        response = await _circuit.call(
-            client.get, "/v2/email-finder",
-            params={
-                "domain": domain,
-                "first_name": first_name,
-                "last_name": last_name,
-                "api_key": self.api_key,
-            },
-        )
+        async with _semaphore:
+            response = await _circuit.call(
+                client.get, "/v2/email-finder",
+                params={
+                    "domain": domain,
+                    "first_name": first_name,
+                    "last_name": last_name,
+                    "api_key": self.api_key,
+                },
+            )
 
         if response.status_code == 429:
             raise HunterRateLimitError(f"Hunter rate limit exceeded for {domain}")
@@ -124,10 +128,11 @@ class HunterClient:
     async def verify_email(self, email: str) -> dict[str, Any]:
         """Verify email deliverability."""
         client = await self._get_client()
-        response = await _circuit.call(
-            client.get, "/v2/email-verifier",
-            params={"email": email, "api_key": self.api_key},
-        )
+        async with _semaphore:
+            response = await _circuit.call(
+                client.get, "/v2/email-verifier",
+                params={"email": email, "api_key": self.api_key},
+            )
 
         if response.status_code == 429:
             raise HunterRateLimitError(f"Hunter rate limit exceeded for {email}")

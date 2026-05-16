@@ -11,6 +11,7 @@ No mock data fallback — all calls execute against live API or raise.
 
 from __future__ import annotations
 
+import asyncio
 from typing import Any, TypedDict
 
 import httpx
@@ -90,6 +91,7 @@ class AhrefsAuthError(AhrefsError):
 
 
 _circuit = CircuitBreaker("ahrefs", failure_threshold=5, recovery_timeout=30)
+_semaphore = asyncio.Semaphore(10)
 
 
 class AhrefsClient:
@@ -121,10 +123,11 @@ class AhrefsClient:
     async def get_domain_rating(self, domain: str) -> DomainRatingResult:
         """Get Domain Rating (DR) for a domain."""
         client = await self._get_client()
-        response = await _circuit.call(
-            client.get, "/v3/site-explorer/domain-rating",
-            params={"target": domain, "output": "json"},
-        )
+        async with _semaphore:
+            response = await _circuit.call(
+                client.get, "/v3/site-explorer/domain-rating",
+                params={"target": domain, "output": "json"},
+            )
         if response.status_code == 429:
             raise AhrefsRateLimitError(f"Ahrefs rate limit exceeded for domain rating: {domain}")
         if response.status_code == 401 or response.status_code == 403:
@@ -142,10 +145,11 @@ class AhrefsClient:
     ) -> list[BacklinkEntry]:
         """Get backlinks pointing to a domain."""
         client = await self._get_client()
-        response = await _circuit.call(
-            client.get, "/v3/site-explorer/backlinks",
-            params={"target": domain, "mode": mode, "limit": limit, "output": "json"},
-        )
+        async with _semaphore:
+            response = await _circuit.call(
+                client.get, "/v3/site-explorer/backlinks",
+                params={"target": domain, "mode": mode, "limit": limit, "output": "json"},
+            )
         if response.status_code == 429:
             raise AhrefsRateLimitError(f"Ahrefs rate limit exceeded for backlinks: {domain}")
         if response.status_code == 401 or response.status_code == 403:
@@ -159,10 +163,11 @@ class AhrefsClient:
     ) -> list[ReferringDomainEntry]:
         """Get referring domains for competitor analysis."""
         client = await self._get_client()
-        response = await _circuit.call(
-            client.get, "/v3/site-explorer/referring-domains",
-            params={"target": domain, "limit": limit, "output": "json"},
-        )
+        async with _semaphore:
+            response = await _circuit.call(
+                client.get, "/v3/site-explorer/referring-domains",
+                params={"target": domain, "limit": limit, "output": "json"},
+            )
         if response.status_code == 429:
             raise AhrefsRateLimitError(f"Ahrefs rate limit exceeded for referring domains: {domain}")
         if response.status_code == 401 or response.status_code == 403:
@@ -174,10 +179,11 @@ class AhrefsClient:
     async def get_domain_metrics(self, domain: str) -> DomainMetricsResult:
         """Get comprehensive domain metrics from Ahrefs API."""
         client = await self._get_client()
-        response = await _circuit.call(
-            client.get, "/v3/site-explorer/overview",
-            params={"target": domain, "output": "json"},
-        )
+        async with _semaphore:
+            response = await _circuit.call(
+                client.get, "/v3/site-explorer/overview",
+                params={"target": domain, "output": "json"},
+            )
 
         if response.status_code == 429:
             raise AhrefsRateLimitError(f"Ahrefs rate limit exceeded for domain: {domain}")
@@ -201,10 +207,11 @@ class AhrefsClient:
         Used to detect Google Helpful Content Update (HCU) penalties and declining trajectories.
         """
         client = await self._get_client()
-        response = await _circuit.call(
-            client.get, "/v3/site-explorer/metrics-history",
-            params={"target": domain, "history_range": f"{months}m", "output": "json"},
-        )
+        async with _semaphore:
+            response = await _circuit.call(
+                client.get, "/v3/site-explorer/metrics-history",
+                params={"target": domain, "history_range": f"{months}m", "output": "json"},
+            )
 
         if response.status_code == 429:
             raise AhrefsRateLimitError(f"Ahrefs rate limit exceeded for domain history: {domain}")
@@ -221,10 +228,11 @@ class AhrefsClient:
         Used to calculate outbound-to-inbound link ratio (detecting link farms).
         """
         client = await self._get_client()
-        response = await _circuit.call(
-            client.get, "/v3/site-explorer/outgoing-linked-domains-summary",
-            params={"target": domain, "output": "json"},
-        )
+        async with _semaphore:
+            response = await _circuit.call(
+                client.get, "/v3/site-explorer/outgoing-linked-domains-summary",
+                params={"target": domain, "output": "json"},
+            )
 
         if response.status_code == 429:
             raise AhrefsRateLimitError(f"Ahrefs rate limit exceeded for outgoing links: {domain}")
@@ -246,10 +254,11 @@ class AhrefsClient:
         Used to detect toxic anchor text profiles (e.g. gambling/pharmaceutical injection).
         """
         client = await self._get_client()
-        response = await _circuit.call(
-            client.get, "/v3/site-explorer/anchors",
-            params={"target": domain, "limit": limit, "output": "json"},
-        )
+        async with _semaphore:
+            response = await _circuit.call(
+                client.get, "/v3/site-explorer/anchors",
+                params={"target": domain, "limit": limit, "output": "json"},
+            )
 
         if response.status_code == 429:
             raise AhrefsRateLimitError(f"Ahrefs rate limit exceeded for anchors: {domain}")

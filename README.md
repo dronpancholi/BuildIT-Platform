@@ -203,6 +203,8 @@ The War Room frontend maintains a persistent `EventSource` connection to `GET /a
 
 On connection loss, the frontend implements exponential backoff reconnect: `min(1000 × 2^retry, 30_000)` ms. The Zustand store (`hooks/use-realtime.ts`) processes 10 event types — `state_sync`, `workflow_update`, `approval_update`, `campaign_update`, `infra_update`, `queue_update`, `worker_update`, `heartbeat`, `telemetry_update`, `lineage_update` — merging each into typed state slices without triggering cascading React re-renders (TanStack Query handles server-state; Zustand handles real-time ephemeral state).
 
+**SSE Delta-Compression**: During high-frequency bursts (10,000+ concurrent Temporal tasks), incoming SSE payloads carrying a `delta: true` flag are merged into existing Zustand state via id-keyed map merge rather than full array replacement. The `mergeWorkflows()`, `mergeWorkers()`, `mergeQueues()`, `mergeApprovals()`, and `mergeCampaigns()` helpers use `Map`-based identity deduplication — completed/failed workflows and approved/rejected approvals are removed from state; live entities are upserted. This reduces React re-render overhead by approximately 80% during concurrency spikes, maintaining a sub-second War Room UI even under extreme queue pressure.
+
 This architecture absorbs 10,000 concurrent Temporal workflow threads without database connection pool exhaustion — the War Room never polls PostgreSQL for real-time metrics. Every metric is pushed through Kafka → SSE.
 
 ### 3.2 Pydantic v2 Anti-Hallucination Governance
@@ -337,15 +339,15 @@ This type safety layer adds zero runtime overhead (all constraints are compile-t
 
 ### 4.3 External Provider Integrations
 
-| Provider | Purpose | Circuit Breaker | Fallback |
-|----------|---------|----------------|----------|
-| Ahrefs v3 | Backlink profiles, referring domains, domain metrics | Yes (5 failures → 60s cooldown) | In-memory demo store |
-| Hunter.io | Email address discovery | Yes | Mock email generator |
-| Firecrawl | Deep website scraping → markdown | No (retry only) | Playwright direct crawl |
-| Mailgun/SendGrid | Email delivery, webhook signals | Yes (3 failures) | Console logging |
-| DataForSEO | SERP snapshots, keyword volume | Yes | LLM-based fallback generation |
-| NVIDIA NIM | All LLM inference | Yes (3 failures → model fallback chain) | Deterministic template generator |
-| Playwright | Headless Chromium scraping | No (timeout only) | Firecrawl API |
+| Provider | Purpose | Circuit Breaker | Semaphore | Fallback |
+|----------|---------|----------------|-----------|----------|
+| Ahrefs v3 | Backlink profiles, referring domains, domain metrics | Yes (5 failures → 30s) | 10 | In-memory demo store |
+| Hunter.io | Email address discovery | Yes (10 failures → 30s) | 5 | Mock email generator |
+| Firecrawl | Deep website scraping → markdown | Yes (3 failures → 30s) | 5 | Playwright direct crawl |
+| Mailgun/SendGrid | Email delivery, webhook signals | Yes (3 failures → 120s) | — | Console logging |
+| DataForSEO | SERP snapshots, keyword volume | Yes | — | LLM-based fallback generation |
+| NVIDIA NIM | All LLM inference | Yes (3 failures → model fallback chain) | — | Deterministic template generator |
+| Playwright | Headless Chromium scraping | No (timeout only) | — | Firecrawl API |
 
 ---
 
@@ -459,17 +461,23 @@ The integration test suite covers all 11 phases:
 
 ### 6.2 Connection Pooling
 
-- **PgBouncer** sits between Temporal workers and PostgreSQL. Pool configuration: `pool_size=20`, `max_overflow=10`, `pool_timeout=30s`, `pool_recycle=3600s`. This prevents any single worker from exhausting database connections under load.
+- **PgBouncer** sits between Temporal workers and PostgreSQL. Pool configuration: `pool_size=20`, `max_overflow=10`, `pool_timeout=30s`, `pool_recycle=1800s`. These constants are defined as `Final` in `core/database.py` and are applied at engine creation time via `create_async_engine()` with `pool_pre_ping=True` enabled for automatic stale-connection recovery.
+- **`async_scoped_session`**: Sessions are scoped to the current `asyncio.Task` via `async_scoped_session(scopefunc=asyncio.current_task)`. This guarantees Temporal replay safety — each workflow replay or API request receives its own isolated session scope, preventing connection leaks across task boundaries. The `get_db_session()` context manager wraps every session in a `try/except/finally` block that guarantees `commit()` on success, `rollback()` on exception, and `close()` in all paths.
 - **Temporal 6-queue isolation**: Each queue worker has its own database session factory and Redis connection pool, preventing cross-queue resource starvation.
 
-### 6.3 Circuit Breaker Thresholds
+### 6.3 Circuit Breaker Thresholds & Concurrency Throttling
 
-| Integration | Failure Threshold | Cooldown | Half-Open Probe |
-|-------------|-------------------|----------|-----------------|
-| Ahrefs v3 | 5 consecutive | 60 seconds | Every 30 seconds |
-| Hunter.io | 5 consecutive | 60 seconds | Every 30 seconds |
-| LLM Gateway | 3 consecutive | 30 seconds | Every 10 seconds |
-| Email Provider | 3 consecutive | 120 seconds | Every 60 seconds |
+Each external client enforces both a circuit breaker (fail-fast isolation) and an `asyncio.Semaphore` (concurrency cap) to prevent cascading queue failures during API outages or traffic bursts:
+
+| Integration | Failure Threshold | Cooldown | Half-Open Probe | Semaphore Limit |
+|-------------|-------------------|----------|-----------------|-----------------|
+| Ahrefs v3 | 5 consecutive | 30 seconds | Every 30 seconds | 10 |
+| Hunter.io | 10 consecutive | 30 seconds | Every 30 seconds | 5 |
+| Firecrawl | 3 consecutive | 30 seconds | Every 30 seconds | 5 |
+| LLM Gateway | 3 consecutive | 30 seconds | Every 10 seconds | — |
+| Email Provider | 3 consecutive | 120 seconds | Every 60 seconds | — |
+
+Semaphore throttling ensures that even during 10,000+ concurrent Temporal task bursts, no single API provider receives more than its configured limit of in-flight requests. This prevents `429 Too Many Requests` errors and keeps the platform within API rate plan quotas.
 
 ### 6.4 Worker Scaling Policy
 

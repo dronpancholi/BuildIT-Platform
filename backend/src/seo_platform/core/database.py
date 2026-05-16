@@ -12,14 +12,17 @@ Design principles:
 
 from __future__ import annotations
 
+import asyncio
 from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
+from typing import Final
 from uuid import UUID
 
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import (
     AsyncEngine,
     AsyncSession,
+    async_scoped_session,
     async_sessionmaker,
     create_async_engine,
 )
@@ -31,12 +34,20 @@ from seo_platform.core.logging import get_logger
 
 logger = get_logger(__name__)
 
+# Pool configuration — PgBouncer-aware hard limits
+POOL_SIZE: Final[int] = 20
+MAX_OVERFLOW: Final[int] = 10
+POOL_TIMEOUT: Final[float] = 30.0
+POOL_RECYCLE: Final[int] = 1800
+
 __all__ = [
     "Base",
     "get_current_user",
+    "get_db_session",
     "get_engine",
     "get_session",
     "get_session_factory",
+    "get_scoped_session",
     "get_tenant_session",
 ]
 
@@ -60,6 +71,7 @@ class Base(DeclarativeBase):
 # ---------------------------------------------------------------------------
 _engine: AsyncEngine | None = None
 _session_factory: async_sessionmaker[AsyncSession] | None = None
+_scoped_session: async_scoped_session[AsyncSession] | None = None
 
 
 def get_engine() -> AsyncEngine:
@@ -69,14 +81,12 @@ def get_engine() -> AsyncEngine:
         settings = get_settings()
         _engine = create_async_engine(
             settings.database.async_url,
-            pool_size=settings.database.pool_size,
-            max_overflow=settings.database.max_overflow,
-            pool_timeout=settings.database.pool_timeout,
-            pool_recycle=settings.database.pool_recycle,
+            pool_size=POOL_SIZE,
+            max_overflow=MAX_OVERFLOW,
+            pool_timeout=POOL_TIMEOUT,
+            pool_recycle=POOL_RECYCLE,
             echo=settings.database.echo,
-            # Performance: use server-side cursors for large result sets
             pool_pre_ping=True,
-            # JSON serialization: use orjson for performance
             json_serializer=_orjson_serializer,
             json_deserializer=_orjson_deserializer,
         )
@@ -84,7 +94,8 @@ def get_engine() -> AsyncEngine:
             "database_engine_created",
             host=settings.database.host,
             database=settings.database.db,
-            pool_size=settings.database.pool_size,
+            pool_size=POOL_SIZE,
+            max_overflow=MAX_OVERFLOW,
         )
     return _engine
 
@@ -102,9 +113,49 @@ def get_session_factory() -> async_sessionmaker[AsyncSession]:
     return _session_factory
 
 
+def get_scoped_session() -> async_scoped_session[AsyncSession]:
+    """Get or create async scoped session tied to current asyncio task.
+
+    Each asyncio task (Temporal workflow run, API request) gets its own
+    session scope, preventing cross-task connection leaks during replay.
+    """
+    global _scoped_session
+    if _scoped_session is None:
+        _scoped_session = async_scoped_session(
+            get_session_factory(),
+            scopefunc=asyncio.current_task,
+        )
+    return _scoped_session
+
+
 # ---------------------------------------------------------------------------
 # Session Context Managers
 # ---------------------------------------------------------------------------
+@asynccontextmanager
+async def get_db_session() -> AsyncGenerator[AsyncSession, None]:
+    """
+    Bulletproof async database session with automated commit/rollback/close.
+
+    Scoped to the current asyncio task (``async_scoped_session``), providing
+    Temporal-replay-safe session isolation. Use this as the PRIMARY method
+    for obtaining database sessions in application code.
+
+    Usage:
+        async with get_db_session() as session:
+            result = await session.execute(query)
+    """
+    scoped = get_scoped_session()
+    session = scoped()
+    try:
+        yield session
+        await session.commit()
+    except Exception:
+        await session.rollback()
+        raise
+    finally:
+        await session.close()
+
+
 @asynccontextmanager
 async def get_session() -> AsyncGenerator[AsyncSession, None]:
     """
@@ -181,7 +232,8 @@ async def init_database() -> None:
 
 async def close_database() -> None:
     """Dispose of the database engine and connection pool."""
-    global _engine, _session_factory
+    global _engine, _session_factory, _scoped_session
+    _scoped_session = None
     if _engine is not None:
         await _engine.dispose()
         _engine = None
