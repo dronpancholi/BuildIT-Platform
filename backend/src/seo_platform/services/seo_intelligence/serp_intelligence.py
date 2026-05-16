@@ -246,26 +246,24 @@ class SERPIntelligenceEngine:
             if top_results:
                 try:
                     from seo_platform.llm.gateway import RenderedPrompt, TaskType, llm_gateway
+                    from seo_platform.llm.templates.registry import get_template
 
                     results_str = "\n".join(
                         f"{r['rank']}. {r['title']} ({r['url']})\n   Snippet: {r['description']}"
                         for r in top_results
                     )
 
+                    tmpl = get_template("serp_intent_analysis")
+                    sys_p, usr_p = tmpl.render(
+                        keyword=keyword,
+                        serp_features=geo or "US",
+                        top_urls=results_str,
+                    )
                     prompt = RenderedPrompt(
-                        template_id="serp_intent_eeat_analysis",
-                        system_prompt=(
-                            "You are an elite SEO SERP intent and EEAT analyst. Analyze the top 10 ranking results "
-                            "to determine the dominant search intent and competitor EEAT signals. Return ONLY a JSON object "
-                            "matching the schema with: dominant_intent (ugc_forum, video, tool, ecommerce, editorial), "
-                            "intent_confidence (0.0 to 1.0), entity_associations (array of strings), "
-                            "competitor_eeat_signals (array of objects with domain, author_authority, institutional_trust), "
-                            "and recommended_content_pivot (specific strategic instruction)."
-                        ),
-                        user_prompt=(
-                            f"Keyword: '{keyword}'\nGeo: {geo}\n\nTop 10 SERP Results:\n{results_str}\n\n"
-                            "Analyze the dominant intent, associated entities, competitor EEAT strength, and recommend a strategic content pivot."
-                        ),
+                        template_id="serp_intent_analysis",
+                        system_prompt=sys_p,
+                        user_prompt=usr_p,
+                        token_budget=tmpl.default_token_budget,
                     )
 
                     llm_result = await llm_gateway.complete(

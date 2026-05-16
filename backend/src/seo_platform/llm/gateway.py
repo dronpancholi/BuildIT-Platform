@@ -16,6 +16,7 @@ from __future__ import annotations
 
 import enum
 import hashlib
+import re
 import time
 from decimal import Decimal
 from typing import Any
@@ -32,12 +33,52 @@ from seo_platform.core.errors import (
     LLMRateLimitError,
     LLMTimeoutError,
     OutputSchemaError,
+    SemanticGroundingError,
 )
 from seo_platform.core.kill_switch import kill_switch_service
 from seo_platform.core.logging import get_logger
 from seo_platform.core.reliability import CircuitBreaker, rate_limiter
+from seo_platform.llm.templates.registry import get_template
 
 logger = get_logger(__name__)
+
+# ---------------------------------------------------------------------------
+# Token Budget Helpers
+# ---------------------------------------------------------------------------
+_CHARS_PER_TOKEN: float = 4.0
+
+
+def _estimate_tokens(text: str) -> int:
+    """Rough token estimate: 4 characters ≈ 1 token."""
+    return max(1, len(text) // int(_CHARS_PER_TOKEN))
+
+
+def _truncate_words(text: str, max_chars: int) -> str:
+    """Word-boundary-aware truncation.
+
+    Preserves complete words and avoids splitting markdown link syntax
+    ``[text](url)``.  If the text fits within max_chars it is returned
+    unchanged.  Otherwise a ``...`` suffix is appended.
+    """
+    if len(text) <= max_chars:
+        return text
+
+    # Find the last word boundary within max_chars, being careful not
+    # to split markdown link references.
+    truncated = text[: max(max_chars - 3, 1)]
+    # Walk backwards to a safe break point.
+    for sep in ("\n\n", "\n", ". ", ", "):
+        idx = truncated.rfind(sep)
+        if idx > max_chars // 2:
+            truncated = truncated[: idx + 1]
+            break
+    else:
+        # Fall back to last space
+        idx = truncated.rfind(" ")
+        if idx > 0:
+            truncated = truncated[:idx]
+
+    return truncated.rstrip() + "..."
 
 
 # ---------------------------------------------------------------------------
@@ -106,6 +147,39 @@ class RenderedPrompt(BaseModel):
     system_prompt: str = ""
     user_prompt: str = ""
     variables: dict[str, Any] = Field(default_factory=dict)
+    token_budget: int = Field(default=2048, ge=256, le=8192)
+
+    def apply_budget(self) -> RenderedPrompt:
+        """Enforce token budget via word-boundary-aware truncation.
+
+        If the estimated total tokens (system + user) exceed the budget,
+        the user prompt is truncated first.  Returns a new RenderedPrompt
+        with the truncated content.
+        """
+        estimated = _estimate_tokens(self.system_prompt) + _estimate_tokens(self.user_prompt)
+        if estimated <= self.token_budget:
+            return self
+
+        system_tokens = _estimate_tokens(self.system_prompt)
+        budget_left = max(self.token_budget - system_tokens, 64)
+        # 4 chars per token → max_chars
+        user_max_chars = int(budget_left * _CHARS_PER_TOKEN)
+        truncated = _truncate_words(self.user_prompt, user_max_chars)
+
+        logger.info(
+            "prompt_budget_applied",
+            template_id=self.template_id,
+            estimated_tokens=estimated,
+            budget=self.token_budget,
+            truncated_chars=len(self.user_prompt) - len(truncated),
+        )
+        return RenderedPrompt(
+            template_id=self.template_id,
+            system_prompt=self.system_prompt,
+            user_prompt=truncated,
+            variables=self.variables,
+            token_budget=self.token_budget,
+        )
 
 
 class LLMResult(BaseModel):
@@ -252,6 +326,9 @@ class LLMGateway:
         except Exception:
             pass
 
+        # 3a. Apply token budget — word-boundary-aware truncation
+        sanitized_prompt = sanitized_prompt.apply_budget()
+
         role = TASK_MODEL_ROUTING[task_type]
         model_id = self._get_model_id(role)
         cache_key = self._compute_cache_key(model_id, sanitized_prompt)
@@ -318,18 +395,30 @@ class LLMGateway:
         except Exception:
             pass
 
-        # Validation
+        # Validation + Automated Repair Loop
         try:
             content_text = self._normalize_json_keys(content_text)
             validated = output_schema.model_validate_json(content_text)
         except Exception as validation_error:
-            logger.warning("nim_schema_repair", task=task_type.value)
+            logger.warning(
+                "nim_schema_repair",
+                task=task_type.value,
+                error=str(validation_error)[:200],
+            )
             try:
                 validated = await self._repair_and_retry(
-                    model_id, prompt, output_schema, content_text, str(validation_error)
+                    model_id, prompt, output_schema,
+                    content_text, str(validation_error),
                 )
-            except Exception:
-                raise OutputSchemaError("LLM output failed strict schema validation.")
+            except Exception as repair_error:
+                logger.error(
+                    "nim_schema_repair_failed",
+                    task=task_type.value,
+                    error=str(repair_error)[:200],
+                )
+                raise OutputSchemaError(
+                    f"LLM output failed strict schema validation after repair: {repair_error}"
+                )
 
         # Confidence Scoring
         confidence = compute_confidence(validated, output_schema)

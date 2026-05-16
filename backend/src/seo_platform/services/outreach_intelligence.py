@@ -805,25 +805,20 @@ class OutreachIntelligenceService:
 
         try:
             from seo_platform.llm.gateway import RenderedPrompt, TaskType, llm_gateway
+            from seo_platform.llm.templates.registry import get_template
 
+            tmpl = get_template("humanized_bespoke_pitch")
+            sys_p, usr_p = tmpl.render(
+                author_name=author_name,
+                social_signal=social_signal,
+                client_name=client_name,
+                value_add_asset=value_add_asset,
+            )
             prompt = RenderedPrompt(
                 template_id="humanized_bespoke_pitch",
-                system_prompt=(
-                    "You are an elite enterprise digital PR and backlink acquisition strategist. Craft a highly bespoke, "
-                    "humanized outreach pitch to an editor/author. You MUST adhere to these strict editorial rules:\n"
-                    "1. Opening Rapport: Reference their specific off-page social graph signal (LinkedIn/Twitter/podcast) with genuine warmth.\n"
-                    "2. ZERO AI Footprints: Do NOT say 'I noticed your excellent article on X' or summarize their about page.\n"
-                    "3. Bespoke Value Exchange: Pitch a specific, high-value editorial asset (custom graphic, proprietary data quote) from the client.\n"
-                    "4. Professional Call to Action: Close with a low-friction, conversational next step.\n"
-                    "Return ONLY a JSON object matching the schema with subject_line, body_content, value_add_type, and personalization_angle."
-                ),
-                user_prompt=(
-                    f"Author/Editor: {author_name}\n"
-                    f"Author Social Graph Signal: '{social_signal}'\n\n"
-                    f"Client Name: {client_name}\n"
-                    f"Client Value-Add Asset: '{value_add_asset}'\n\n"
-                    "Craft the elite bespoke pitch now."
-                ),
+                system_prompt=sys_p,
+                user_prompt=usr_p,
+                token_budget=tmpl.default_token_budget,
             )
 
             llm_result = await llm_gateway.complete(

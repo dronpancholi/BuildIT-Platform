@@ -162,6 +162,7 @@ class DataJournalismService:
                 from pydantic import BaseModel as _BMSchema
 
                 from seo_platform.llm.gateway import RenderedPrompt, TaskType, llm_gateway
+                from seo_platform.llm.templates.registry import get_template
 
                 class _AngleExtractionSchema(_BMSchema):
                     headline: str
@@ -170,25 +171,17 @@ class DataJournalismService:
                     target_journalist_beat: str
 
                 dataset_summary = json.dumps(dataset[:20], indent=2, default=str)
+                tmpl = get_template("data_journalism_angle_extraction")
+                sys_p, usr_p = tmpl.render(
+                    target_beat=target_beat or "technology",
+                    dataset_record_count=str(len(dataset)),
+                    dataset_summary=dataset_summary,
+                )
                 prompt = RenderedPrompt(
                     template_id="data_journalism_angle_extraction",
-                    system_prompt=(
-                        "You are an elite data journalist at a top-tier business publication. "
-                        "Analyze the provided dataset and extract the single most newsworthy, "
-                        "counter-intuitive editorial angle. Return ONLY a JSON object matching "
-                        "the schema with: headline, counter_intuitive_hook (a specific, "
-                        "data-driven insight that defies conventional wisdom), "
-                        "supporting_data_points (array of {metric_name, metric_value, "
-                        "percentage_change, statistical_significance}), "
-                        "and target_journalist_beat."
-                    ),
-                    user_prompt=(
-                        f"Analyze this client dataset for a compelling editorial angle:\n\n"
-                        f"Target beat: {target_beat or 'technology'}\n\n"
-                        f"Dataset ({len(dataset)} records, showing first 20):\n{dataset_summary}\n\n"
-                        f"Identify the most surprising, counter-intuitive insight that would "
-                        f"earn coverage in a Tier-1 publication."
-                    ),
+                    system_prompt=sys_p,
+                    user_prompt=usr_p,
+                    token_budget=tmpl.default_token_budget,
                 )
 
                 result = await llm_gateway.complete(

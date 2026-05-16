@@ -305,6 +305,33 @@ All 199+ Python source files use deferred annotation evaluation. This prevents f
 
 This type safety layer adds zero runtime overhead (all constraints are compile-time or Pydantic v2's optimized C-validated Rust core) while eliminating an entire class of silent data corruption bugs.
 
+### 3.8 Centralized Prompt Template Registry & LLM Gateway Hyper-Optimization
+
+Every LLM invocation resolves its system/user prompts through a centralized registry at `seo_platform/llm/templates/registry.py` rather than embedding raw strings in business logic. This ensures absolute prompt determinism across all AI-authored narratives.
+
+**Directory Structure:**
+```
+llm/templates/
+├── __init__.py
+└── registry.py          # PromptTemplate definitions + REGISTRY dict
+```
+
+**PromptTemplate Schema:** Each template stores `template_id`, `system_prompt`, `user_prompt`, and `default_token_budget`. Variables are substituted via `str.format(**variables)` at render time, with missing keys raising `KeyError` to prevent silent prompt corruption. Template IDs are registered in the `REGISTRY` dict and accessed via `get_template(template_id)`.
+
+**Registered Templates:**
+- `humanized_bespoke_pitch` — Elite social-graph outreach pitch generation
+- `data_journalism_angle_extraction` — Counter-intuitive editorial angle extraction from client datasets
+- `client_persona_summary` — Brand voice summary refinement
+- `serp_intent_analysis` — SERP intent classification and E-E-A-T analysis
+- `executive_reporting` — Campaign performance executive summaries
+- `outreach_email_generation` — 3-stage outreach email sequence generator
+
+**Automated Token Budgeting:** The `RenderedPrompt.apply_budget()` method (in `llm/gateway.py`) estimates token counts at 4 characters per token. If the combined system + user prompt exceeds `token_budget`, the user prompt is truncated via `_truncate_words()` — a word-boundary-aware helper that preserves complete words and avoids splitting markdown link syntax (`[text](url)`). A `...` suffix signals truncation to downstream readers.
+
+**Structured Outputs Enforcement:** `llm_gateway.complete()` passes `response_format={"type": "json_object"}` to the NVIDIA NIM API, guaranteeing JSON responses. Output is parsed against the caller-provided Pydantic `output_schema`. On `ValidationError`, an automated repair loop dispatches a secondary repair prompt containing the raw LLM output, the exact validation error, and the required JSON schema. Up to one repair attempt is made before raising `OutputSchemaError`.
+
+This three-layer defense (centralized templates → token budgeting → structured output repair) eliminates hallucination risk across all 38+ LLM invocation points in the platform.
+
 ---
 
 ## 4. Technology Stack & Boundary Contracts
