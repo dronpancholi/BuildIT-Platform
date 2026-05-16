@@ -153,7 +153,7 @@ async def score_prospects_activity(
     tenant_id: str, campaign_id: str, prospects: list[dict],
     min_da: float, max_spam: float, target_niche: str = "",
 ) -> dict[str, Any]:
-    """Score prospects using multi-signal composite scoring via live Ahrefs data."""
+    """Score prospects using multi-signal composite scoring via live Ahrefs data & anti-farm vetting grid."""
     logger.info("scoring_prospects", campaign_id=campaign_id, count=len(prospects))
 
     from seo_platform.clients.ahrefs import ahrefs_client, AhrefsRateLimitError
@@ -183,19 +183,31 @@ async def score_prospects_activity(
                 prospect_with_metrics, target_domain, target_niche
             )
 
+            # Phase 5: Live Ahrefs Anti-Farm Vetting Grid
+            farm_analysis = await backlink_intelligence.detect_link_farm_and_spam(prospect["domain"], prospect.get("url", ""))
+
+            final_spam_score = max(analysis.get("spam_score", 0), farm_analysis["spam_score"])
+            final_is_spam = analysis.get("is_spam", False) or farm_analysis["is_spam"]
+            final_spam_flags = list(set(analysis.get("spam_flags", []) + farm_analysis["spam_flags"]))
+
+            composite_score = analysis.get("composite_score", 0)
+            if final_spam_score > 0.3:
+                composite_score *= (1.0 - final_spam_score)
+
             score = {
                 **prospect,
                 "domain_authority": analysis.get("authority_score", 0) * 100,
-                "spam_score": analysis.get("spam_score", 0) * 100,
+                "spam_score": final_spam_score * 100,
                 "relevance_score": analysis.get("relevance_score", 0),
-                "composite_score": analysis.get("composite_score", 0),
-                "is_spam": analysis.get("is_spam", False),
+                "composite_score": composite_score,
+                "is_spam": final_is_spam,
                 "authority_classification": analysis.get("authority_classification", "low"),
-                "spam_flags": analysis.get("spam_flags", []),
+                "spam_flags": final_spam_flags,
                 "relevance_flags": analysis.get("relevance_flags", []),
+                "vetting_source": farm_analysis.get("vetting_source", "ahrefs_live_api"),
             }
 
-            if analysis.get("is_viable", False) and score["composite_score"] >= 0.35:
+            if analysis.get("is_viable", False) and not final_is_spam and score["composite_score"] >= 0.35:
                 scored.append(score)
             else:
                 filtered_out += 1
@@ -258,9 +270,9 @@ async def discover_contacts_activity(
 @activity.defn(name="generate_outreach_emails_activity")
 async def generate_outreach_emails_activity(
     tenant_id: str, campaign_id: str, prospects: list[dict],
-    campaign_type: str,
+    campaign_type: str, campaign_name: str = "",
 ) -> dict[str, Any]:
-    """Generate initial + 2 follow-up outreach emails per prospect using LLM."""
+    """Generate initial bespoke pitch (Phase 6/7) + 2 follow-up outreach emails per prospect using LLM."""
     import hashlib
     import json
 
@@ -334,6 +346,15 @@ async def generate_outreach_emails_activity(
 
     from seo_platform.services.content_analyzer import website_analyzer
     from seo_platform.services.relationship_store import relationship_store
+    from seo_platform.services.seo_intelligence.serp_intelligence import SERPIntelligenceEngine
+    from seo_platform.services.outreach_intelligence import outreach_intelligence
+
+    serp_engine = SERPIntelligenceEngine()
+    serp_analysis = await serp_engine.analyze_serp_intent_and_eeat(
+        keyword=campaign_name or campaign_type,
+        tenant_id=UUID(tenant_id),
+    )
+    content_pivot = serp_analysis.recommended_content_pivot
 
     email_sequences = []
 
@@ -451,14 +472,32 @@ Requirements:
                         prompt = _build_prompt(
                             stage if not attempt else "rewritten",
                             extra_instructions,
-                            grounding_hint=hint,
+                            hint,
                         )
             return None
 
-        initial_prompt = _build_prompt(
-            "first",
-            "TASK: Write a personalized FIRST outreach email that opens with a genuine compliment referencing their actual site content, explains value, and ends with a low-friction CTA."
+        # Phase 6 & 7: Elite Social Graph Bespoke Pitching
+        bespoke_pitch = await outreach_intelligence.generate_humanized_bespoke_pitch(
+            tenant_id=tenant_uuid,
+            prospect_data={
+                "domain": domain,
+                "contact_name": contact_name,
+                "social_graph_signal": f"Recent articles on {domain}: {'; '.join(a['title'] for a in recent_articles[:3]) if recent_articles else site_title or site_desc}",
+            },
+            client_context={
+                "client_name": campaign_name or "Our Enterprise Platform",
+                "value_add_asset": f"Proprietary benchmark data, custom infographics, and {content_pivot.lower()}",
+            },
         )
+
+        initial_email = {
+            "subject": bespoke_pitch.get("subject_line", ""),
+            "body_html": bespoke_pitch.get("body_content", "").replace("\n", "<br>"),
+            "personalized_opening": bespoke_pitch.get("personalization_angle", ""),
+            "generation_source": bespoke_pitch.get("generation_source", "social_graph_bespoke_ai"),
+            "value_add_type": bespoke_pitch.get("value_add_type", ""),
+        }
+
         followup_1_prompt = _build_prompt(
             "follow-up",
             "TASK: Write a warm follow-up email. Reference your previous outreach naturally. Add a new piece of value. Keep it brief."
@@ -468,7 +507,6 @@ Requirements:
             "TASK: Write a gentle re-engagement email. It's been some time. Fresh approach with a new angle. Low pressure."
         )
 
-        initial_email = await _generate_with_grounding(initial_prompt)
         followup_1 = await _generate_with_grounding(followup_1_prompt) if initial_email else None
         followup_2 = await _generate_with_grounding(followup_2_prompt) if followup_1 else None
 
@@ -840,7 +878,7 @@ class BacklinkCampaignWorkflow:
             emails_result = await workflow.execute_activity(
                 generate_outreach_emails_activity,
                 args=[str(input_data.tenant_id), str(input_data.campaign_id),
-                      approved_prospects, input_data.campaign_type],
+                      approved_prospects, input_data.campaign_type, input_data.campaign_name],
                 task_queue=TaskQueue.AI_ORCHESTRATION,
                 start_to_close_timeout=timedelta(minutes=30),
                 retry_policy=RetryPreset.LLM_INFERENCE,
