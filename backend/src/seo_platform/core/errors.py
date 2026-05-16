@@ -333,6 +333,45 @@ class BulkheadExhaustedError(PlatformError):
 
 
 # ---------------------------------------------------------------------------
+# AI Governance / Semantic Grounding
+# ---------------------------------------------------------------------------
+class SemanticGroundingError(PlatformError):
+    """LLM output failed semantic grounding validation — fabricated or unverifiable claims detected."""
+
+    error_code = "SEMANTIC_GROUNDING_FAILED"
+    http_status = 422
+    retryable = True  # LLM regeneration may fix
+
+    def __init__(
+        self,
+        field: str,
+        expected: str,
+        actual: str,
+        **kwargs: Any,
+    ) -> None:
+        super().__init__(
+            f"Semantic grounding violation in '{field}': expected '{expected}', got '{actual}'",
+            details={"field": field, "expected": expected, "actual": actual},
+            **kwargs,
+        )
+
+
+class ConfigurationError(PlatformError):
+    """Invalid or missing platform configuration."""
+
+    error_code = "CONFIGURATION_ERROR"
+    http_status = 500
+    retryable = False
+
+    def __init__(self, config_key: str, message: str, **kwargs: Any) -> None:
+        super().__init__(
+            f"Configuration error '{config_key}': {message}",
+            details={"config_key": config_key},
+            **kwargs,
+        )
+
+
+# ---------------------------------------------------------------------------
 # Non-retryable error type names for Temporal
 # ---------------------------------------------------------------------------
 NON_RETRYABLE_ERROR_TYPES: list[str] = [
@@ -347,4 +386,5 @@ NON_RETRYABLE_ERROR_TYPES: list[str] = [
     "RuleBlockedError",
     "ApprovalRejectedError",
     "WorkflowBlockedError",
+    "ConfigurationError",
 ]

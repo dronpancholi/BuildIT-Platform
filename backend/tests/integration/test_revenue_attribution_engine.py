@@ -166,9 +166,9 @@ class TestSchemaValidation:
             total_pipeline_created=2000.0,
             total_closed_won=18000.0,
             organic_traffic_value_added=3000.0,
-            roi_percentage=360.0,
+            roi_percentage=320.0,
         )
-        assert summary.roi_percentage == 360.0
+        assert summary.roi_percentage == 320.0
 
     async def test_campaign_roi_mismatch_raises(self, tenant_id: UUID, campaign_id: UUID):
         with pytest.raises(ValueError, match="ROI percentage"):

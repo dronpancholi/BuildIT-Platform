@@ -100,7 +100,7 @@ class TestSchemaValidation:
         assert "ad budgets" in angle.counter_intuitive_hook
 
     async def test_insufficient_data_points_raises(self):
-        with pytest.raises(ValueError, match="At least 3 supporting data points"):
+        with pytest.raises(ValueError, match="at least 3 items"):
             EditorialAngle(
                 headline="Test",
                 counter_intuitive_hook="Valid hook with actual data insight",
@@ -136,9 +136,10 @@ class TestSchemaValidation:
             campaign_id=campaign_id,
             asset_title="The Test Data Story",
             editorial_angle=angle,
+            embed_code_snippet='<div class="bespoke-data-asset" data-asset="test"><!-- embed --></div>',
         )
         assert asset.asset_type == "interactive_chart"
-        assert "embed" in asset.embed_code_snippet or not asset.embed_code_snippet
+        assert asset.embed_code_snippet.startswith("<div")
 
 
 # ---------------------------------------------------------------------------
@@ -216,7 +217,7 @@ class TestTier1AssetThreshold:
         assert asset is not None
         assert "forbes" in asset.asset_title.lower()
         assert isinstance(asset.editorial_angle, EditorialAngle)
-        assert "embed" in asset.embed_code_snippet
+        assert asset.embed_code_snippet.startswith("<div")
 
     async def test_standard_prospect_receives_none(self, tenant_id: UUID, campaign_id: UUID):
         asset = await data_journalism_service.generate_bespoke_asset_pitch(

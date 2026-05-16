@@ -286,7 +286,7 @@ class TestProhibitedWordDetection:
                         if pw.lower() in full:
                             raise ValueError(f"Brand voice violation: Prohibited word '{pw}' detected.")
 
-        schema = _TestSchema()
+        schema = _TestSchema(body_html="This uses delve and synergy incorrectly")
         with pytest.raises(ValueError, match="Brand voice violation"):
             schema.check_semantic_grounding(
                 scraped_context="",

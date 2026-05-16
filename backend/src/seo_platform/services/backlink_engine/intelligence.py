@@ -272,7 +272,7 @@ class BacklinkIntelligence:
         from sqlalchemy import select
 
         from seo_platform.core.database import get_tenant_session
-        from seo_platform.models.backlink import BacklinkCampaign, BacklinkProspect
+        from seo_platform.models.backlink import BacklinkProspect
 
         try:
             from seo_platform.clients.ahrefs import ahrefs_client
@@ -395,7 +395,7 @@ class BacklinkIntelligence:
         Authority propagation: which domains pass/receive the most authority.
         Returns relationship clusters of related prospects.
         """
-        from collections import Counter, defaultdict
+        from collections import defaultdict
 
         try:
             from seo_platform.clients.ahrefs import ahrefs_client
@@ -409,7 +409,6 @@ class BacklinkIntelligence:
 
         for domain in prospect_domains:
             domain_lower = domain.lower().replace("www.", "")
-            source = self.detect_spam(domain_lower)
             auth = self.calculate_authority(
                 domain_rating=40, ref_domains=0, backlinks=0, organic_traffic=0,
             )
@@ -734,7 +733,6 @@ Respond with JSON containing:
 
         pos_count = sum(1 for s in positive_signals if s in body_lower)
         neg_count = sum(1 for s in negative_signals if s in body_lower)
-        obj_count = sum(1 for s in objection_signals if s in body_lower)
 
         if pos_count > neg_count and pos_count > 0:
             sentiment = "positive"
@@ -777,7 +775,6 @@ Respond with JSON containing:
             ahrefs_client = None
 
         referring_domains: list[dict[str, Any]] = []
-        outbound_domains: list[dict[str, Any]] = []
         authority_contributions: list[dict[str, Any]] = []
 
         domain_metrics = {"domain_rating": 0, "ref_domains": 0, "backlinks": 0, "organic_traffic": 0}

@@ -9,7 +9,6 @@ hallucination metric validation.
 from __future__ import annotations
 
 import json
-import random
 from typing import Any
 from uuid import UUID
 
@@ -55,10 +54,6 @@ class EditorialAngle(BaseModel):
                     f"Counter-intuitive hook contains generic fluff: '{phrase}'. "
                     "Must be a specific, data-driven insight."
                 )
-        if len(self.supporting_data_points) < 3:
-            raise ValueError(
-                f"At least 3 supporting data points required. Got {len(self.supporting_data_points)}."
-            )
         return self
 
 

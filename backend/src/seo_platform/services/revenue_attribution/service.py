@@ -9,12 +9,10 @@ creation, and closed-won revenue attribution.
 from __future__ import annotations
 
 import json
-import math
-from datetime import datetime, timezone
 from typing import Any
 from uuid import UUID
 
-from pydantic import BaseModel, Field, field_validator, model_validator
+from pydantic import BaseModel, Field, model_validator
 
 from seo_platform.core.logging import get_logger
 
@@ -61,13 +59,14 @@ class CampaignROISummary(BaseModel):
 
     @model_validator(mode="after")
     def _validate_roi_calculation(self) -> CampaignROISummary:
-        expected_roi = ((self.total_closed_won + self.organic_traffic_value_added) - self.total_spend) / max(self.total_spend, 0.01) * 100
+        raw_roi = ((self.total_closed_won + self.organic_traffic_value_added) - self.total_spend) / max(self.total_spend, 0.01) * 100
+        expected_roi = max(raw_roi, 0.0)
         if abs(self.roi_percentage - expected_roi) > 0.1:
             raise ValueError(
                 f"ROI percentage {self.roi_percentage:.1f}% does not match "
                 f"calculated value {expected_roi:.1f}%. "
-                f"Formula: ((closed_won={self.total_closed_won} + traffic_value={self.organic_traffic_value_added}) "
-                f"- spend={self.total_spend}) / spend * 100."
+                f"Formula: max(((closed_won={self.total_closed_won} + traffic_value={self.organic_traffic_value_added}) "
+                f"- spend={self.total_spend}) / spend * 100, 0)."
             )
         return self
 
@@ -245,14 +244,20 @@ class RevenueAttributionService:
 
     @staticmethod
     def _ctr_for_position(position: int, benchmark: dict[str, Any]) -> float:
-        """Estimate CTR for a given position using benchmark decay."""
+        """Estimate CTR for a given position using benchmark decay.
+
+        Positions 1-10 use standard benchmark CTRs with linear interpolation.
+        Positions >10 use a power-law decay (``0.03 x (10 / position)^1.5``)
+        clamped to a minimum of 0.001, providing meaningful differentiation
+        even at deep positions.
+        """
         if position <= 1:
             return benchmark.get("ctr_position_1", 0.28)
         if position <= 5:
             return benchmark.get("ctr_position_5", 0.08) + (0.20 * (5 - position) / 4)
         if position <= 10:
             return benchmark.get("ctr_position_10", 0.03) + (0.05 * (10 - position) / 5)
-        return max(0.005, 0.03 * math.exp(-0.15 * (position - 10)))
+        return max(0.001, 0.03 * (10.0 / position) ** 1.5)
 
     # ------------------------------------------------------------------
     # Campaign ROI Summary

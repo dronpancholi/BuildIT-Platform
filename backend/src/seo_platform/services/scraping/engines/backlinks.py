@@ -1,7 +1,12 @@
 """
 SEO Platform — Backlink & Citation Scraper
 ===========================================
-Resilient backlink and citation discovery with multiple selector fallbacks.
+Entity-driven link intersect prospecting and citation discovery.
+
+Legacy Google ``link:`` operator scraping has been removed in favour of
+the Ahrefs-backed ``discover_link_intersect_prospects`` engine (Phase 8)
+which cross-references multiple competitor referring-domain profiles to
+discover un-farmed editorial gaps.
 """
 
 from typing import Any
@@ -16,16 +21,11 @@ logger = get_logger(__name__)
 
 class BacklinkScraperEngine(BaseScraper):
     """
-    Hardened backlink discovery with resilient selectors and fallback logic.
-    """
+    Entity-driven backlink discovery and citation scraping.
 
-    BACKLINK_SELECTORS = [
-        "cite",
-        "div.yuRUbf a",
-        "div.g a",
-        "div.v4uxe a",
-        "a.analytics-link",
-    ]
+    All prospect discovery now flows through the Ahrefs-based link intersect
+    pipeline, eliminating fragile ``link:`` operator scraping.
+    """
 
     CITATION_SELECTORS = [
         "div.yuRUbf a",
@@ -36,56 +36,6 @@ class BacklinkScraperEngine(BaseScraper):
 
     def __init__(self):
         super().__init__(service_name="backlink_scraper")
-
-    async def discover_backlinks(self, domain: str) -> list[dict[str, Any]]:
-        """
-        LEGACY DEPRECATED: Uses search operators to discover public backlink records.
-        Returns list of backlink data with confidence scores.
-        """
-        logger.warning("DEPRECATED_METHOD_CALLED: discover_backlinks relies on deprecated Google link: footprints. Use discover_link_intersect_prospects instead.")
-        query = f"link:{domain} -site:{domain} -site:www.{domain}"
-
-        async def parse_backlinks(page: Page) -> list[dict[str, Any]]:
-            backlinks = []
-
-            extraction = await self._extract_with_fallback(
-                page,
-                self.BACKLINK_SELECTORS,
-                lambda elements: elements,
-            )
-
-            if not extraction.data:
-                return backlinks
-
-            seen_domains = set()
-            for el in extraction.data:
-                try:
-                    text = await el.inner_text()
-                    href = await el.get_attribute("href")
-
-                    if text and "http" in text:
-                        domain_match = text.replace("http://", "").replace("https://", "").split("/")[0]
-                    elif href:
-                        domain_match = href.replace("http://", "").replace("https://", "").split("/")[0]
-                    else:
-                        continue
-
-                    if domain_match and domain_match not in seen_domains:
-                        seen_domains.add(domain_match)
-                        backlinks.append({
-                            "domain": domain_match,
-                            "url": text if "http" in text else f"https://{domain_match}",
-                            "source_url": href or "",
-                            "confidence": extraction.confidence,
-                        })
-                except Exception as e:
-                    logger.debug("backlink_parse_error", error=str(e))
-                    continue
-
-            logger.info("backlinks_discovered", domain=domain, count=len(backlinks))
-            return backlinks
-
-        return await self.search_google(query, parse_backlinks)
 
     async def discover_citations(self, business_name: str, phone: str) -> list[dict[str, Any]]:
         """
@@ -124,11 +74,6 @@ class BacklinkScraperEngine(BaseScraper):
             return citations
 
         return await self.search_google(query, parse_citations)
-
-    async def discover_competitor_backlinks(self, competitor_domain: str) -> list[dict[str, Any]]:
-        """Discover backlinks pointing to competitor domains."""
-        query = f"link:{competitor_domain}"
-        return await self.discover_backlinks(competitor_domain)
 
     async def discover_link_intersect_prospects(
         self, competitor_domains: list[str], client_domain: str = "", topical_niche: str = "",
