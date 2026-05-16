@@ -128,6 +128,16 @@ class TemporalSettings(BaseSettings):
         return f"{self.host}:{self.port}"
 
 
+class FirecrawlSettings(BaseSettings):
+    """Firecrawl API configuration for deep website scraping."""
+
+    model_config = SettingsConfigDict(env_prefix="FIRECRAWL_")
+
+    api_key: str = ""
+    api_url: str = "https://api.firecrawl.dev/v1"
+    request_timeout: float = 60.0
+
+
 class QdrantSettings(BaseSettings):
     """Qdrant vector database configuration."""
 
@@ -295,6 +305,7 @@ class Settings(BaseSettings):
     hunter: HunterSettings = Field(default_factory=HunterSettings)
     mailgun: MailgunSettings = Field(default_factory=MailgunSettings)
     resend: ResendSettings = Field(default_factory=ResendSettings)
+    firecrawl: FirecrawlSettings = Field(default_factory=FirecrawlSettings)
 
     # --- Email / SMTP (MailHog for dev) ---
     smtp_host: str = "localhost"

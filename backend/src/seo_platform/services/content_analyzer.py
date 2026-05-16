@@ -1,14 +1,16 @@
 """
 SEO Platform — Website Content Analyzer
 ==========================================
-Scrapes and analyzes website content for outreach context.
-Used by the outreach engine to generate contextual, personalized emails.
+Deep website content scraper using Firecrawl AI.
+Extracts site metadata, topical focus, recent articles, and author info.
+Upserts scraped content into Qdrant vector store for topical relevance matching.
 """
 
 from __future__ import annotations
 
 import re
 from typing import Any
+from uuid import UUID
 
 from seo_platform.core.logging import get_logger
 
@@ -17,81 +19,98 @@ logger = get_logger(__name__)
 
 class WebsiteContentAnalyzer:
 
-    async def analyze(self, domain: str) -> dict[str, Any]:
+    async def analyze(
+        self,
+        domain: str,
+        tenant_id: UUID | None = None,
+    ) -> dict[str, Any]:
         """
-        Scrape a website and extract content intelligence for outreach.
-        Returns structured data about the site's content, tone, and focus.
+        Deep scrape a website using Firecrawl and extract content intelligence.
+
+        Args:
+            domain: Domain to analyze (e.g. example.com)
+            tenant_id: Optional tenant UUID for Qdrant vector storage
+
+        Returns:
+            dict with site_title, site_description, topical_focus,
+            recent_articles, markdown_body, success flag, and metadata.
         """
+        from seo_platform.clients.firecrawl import firecrawl_client
+
         result = {
             "domain": domain,
             "site_title": "",
             "site_description": "",
             "recent_articles": [],
             "topical_focus": [],
-            "content_tone": "professional",
-            "publishing_frequency": "unknown",
             "author_names": [],
+            "markdown_body": "",
+            "content_tone": "professional",
             "success": False,
         }
 
-        try:
-            import httpx
-            async with httpx.AsyncClient(timeout=10.0, follow_redirects=True) as client:
-                resp = await client.get(f"https://{domain}", headers={
-                    "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36"
-                })
-                if resp.status_code != 200:
-                    return result
+        scrape = await firecrawl_client.scrape_url(f"https://{domain}")
 
-                html = resp.text
-                result["success"] = True
+        if not scrape.success:
+            logger.debug("content_analyzer_firecrawl_failed", domain=domain, error=scrape.error)
+            return result
 
-                # Extract title
-                title_match = re.search(r"<title>(.*?)</title>", html, re.DOTALL)
-                if title_match:
-                    result["site_title"] = title_match.group(1).strip()
+        result["success"] = True
+        result["markdown_body"] = scrape.markdown
 
-                # Extract meta description
-                desc_match = re.search(
-                    r'<meta[^>]*name=["\']description["\'][^>]*content=["\']([^"\']*)["\']',
-                    html,
+        # Extract metadata from Firecrawl result
+        meta = scrape.metadata
+        result["site_title"] = meta.get("title", "") or meta.get("og:title", "")
+        result["site_description"] = (
+            meta.get("description", "")
+            or meta.get("og:description", "")
+            or meta.get("meta:description", "")
+        )
+
+        # Parse markdown for topical focus (H1/H2 headers)
+        if scrape.markdown:
+            headers = re.findall(r"^#{1,2}\s+(.+)$", scrape.markdown, re.MULTILINE)
+            result["topical_focus"] = [h.strip() for h in headers if h.strip()][:8]
+
+            # Extract markdown links as potential articles
+            links = re.findall(r"\[([^\]]+)\]\(([^)]+)\)", scrape.markdown)
+            result["recent_articles"] = [
+                {"title": title.strip(), "url": url}
+                for title, url in links[:12]
+                if title.strip() and not url.startswith("#")
+            ]
+
+            # Extract author patterns from markdown
+            authors = re.findall(
+                r"(?:by|author|written\s+by)[:\s]+([A-Z][a-z]+(?:\s+[A-Z][a-z]+)?)",
+                scrape.markdown[:5000],
+            )
+            result["author_names"] = list(set(authors))[:3]
+
+            # Tone detection from markdown
+            text_lower = scrape.markdown.lower()
+            if any(w in text_lower for w in ["tutorial", "guide", "how to", "learn"]):
+                result["content_tone"] = "educational"
+            elif any(w in text_lower for w in ["buy", "shop", "pricing", "sale"]):
+                result["content_tone"] = "commercial"
+            elif any(w in text_lower for w in ["news", "breaking", "latest", "update"]):
+                result["content_tone"] = "journalistic"
+
+        # Upsert into Qdrant for topical relevance matching
+        if tenant_id and scrape.markdown:
+            try:
+                from seo_platform.services.vector_store import qdrant_vector_store
+                await qdrant_vector_store.upsert_prospect_content(
+                    tenant_id=tenant_id,
+                    domain=domain,
+                    markdown_content=scrape.markdown,
+                    metadata={
+                        "site_title": result["site_title"],
+                        "success": True,
+                    },
                 )
-                if desc_match:
-                    result["site_description"] = desc_match.group(1).strip()
-
-                # Extract H1s as topical indicators
-                h1s = re.findall(r"<h1[^>]*>(.*?)</h1>", html, re.DOTALL)
-                result["topical_focus"] = [re.sub(r"<[^>]+>", "", h).strip() for h in h1s if h.strip()][:5]
-
-                # Extract article links (patterns like /blog/, /article/, /post/)
-                article_links = re.findall(
-                    r'<a[^>]*href=["\'](/(?:blog|article|post|news|insights|resources)/[^"\'<>]+)["\'][^>]*>([^<]+)</a>',
-                    html,
-                )
-                result["recent_articles"] = [
-                    {"title": title.strip(), "url": url}
-                    for url, title in article_links[:8]
-                    if title.strip()
-                ]
-
-                # Extract author-like patterns (byline indicators)
-                authors = re.findall(
-                    r'(?:by|author|written\s+by)[:\s]+([A-Z][a-z]+(?:\s+[A-Z][a-z]+)?)',
-                    html[:5000],
-                )
-                result["author_names"] = list(set(authors))[:3]
-
-                # Simple tone detection
-                text_lower = html.lower()
-                if any(w in text_lower for w in ["tutorial", "guide", "how to", "learn"]):
-                    result["content_tone"] = "educational"
-                elif any(w in text_lower for w in ["buy", "shop", "pricing", "sale"]):
-                    result["content_tone"] = "commercial"
-                elif any(w in text_lower for w in ["news", "breaking", "latest", "update"]):
-                    result["content_tone"] = "journalistic"
-
-        except Exception as e:
-            logger.debug("content_analyzer_failed", domain=domain, error=str(e))
+            except Exception as e:
+                logger.debug("qdrant_upsert_skipped", domain=domain, error=str(e))
 
         return result
 

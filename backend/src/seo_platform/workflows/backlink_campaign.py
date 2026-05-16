@@ -281,6 +281,7 @@ async def generate_outreach_emails_activity(
     from uuid import UUID
 
     from pydantic import BaseModel
+    import re as _re
 
     from seo_platform.llm.gateway import RenderedPrompt, TaskType, llm_gateway
 
@@ -288,6 +289,48 @@ async def generate_outreach_emails_activity(
         subject: str
         body_html: str
         personalized_opening: str
+
+        _fluff_phrases = [
+            "hope this email finds you well",
+            "stumbled upon your fantastic blog",
+            "huge fan of your work",
+            "browsing your website",
+            "as a fellow enthusiast",
+            "i came across your",
+            "i stumbled upon",
+            "i've been browsing",
+            "i've been following your work",
+        ]
+
+        def check_semantic_grounding(self, scraped_context: str) -> None:
+            """Post-hoc semantic grounding validation. Raises ValueError if grounding fails."""
+            opening_lower = self.personalized_opening.lower()
+
+            for phrase in self._fluff_phrases:
+                if phrase in opening_lower:
+                    raise ValueError(
+                        f"Semantic grounding failure: Opening contains generic fluff '{phrase}'. "
+                        "Must reference specific content from the scraped website."
+                    )
+
+            if scraped_context:
+                context_lower = scraped_context.lower()
+                words = [
+                    w for w in _re.findall(r'\b[a-z]{5,}\b', opening_lower)
+                    if w not in {"about", "their", "there", "which", "would",
+                                 "could", "should", "these", "those", "being",
+                                 "while", "where", "after", "before", "other",
+                                 "first", "second", "still", "until", "since"}
+                ]
+                if words:
+                    match_count = sum(1 for w in words if w in context_lower)
+                    ratio = match_count / len(words)
+                    if ratio < 0.2:
+                        raise ValueError(
+                            f"Semantic grounding failure: Only {match_count}/{len(words)} significant "
+                            f"words from opening appear in scraped content (ratio={ratio:.2f}). "
+                            "Rewrite using specific details from the website."
+                        )
 
     from seo_platform.services.content_analyzer import website_analyzer
     from seo_platform.services.relationship_store import relationship_store
@@ -309,36 +352,58 @@ async def generate_outreach_emails_activity(
             logger.info("skipping_unverified_prospect", domain=domain)
             continue
 
-        site_context = await website_analyzer.analyze(domain)
+        tenant_uuid = UUID(tenant_id)
+        site_context = await website_analyzer.analyze(domain, tenant_id=tenant_uuid)
         site_title = site_context.get("site_title", "")
         site_desc = site_context.get("site_description", "")
         recent_articles = site_context.get("recent_articles", [])
         topical_focus = site_context.get("topical_focus", [])
+        markdown_body = site_context.get("markdown_body", "")
 
-        site_context_str = f"Site title: {site_title}\n" if site_title else ""
+        # Calculate topical relevance via Qdrant
+        topical_relevance = 0.5
+        try:
+            from seo_platform.services.vector_store import qdrant_vector_store
+            topical_relevance = await qdrant_vector_store.calculate_topical_relevance(
+                tenant_id=tenant_uuid,
+                prospect_domain=domain,
+                keyword_cluster_id=str(prospect.get("campaign_id", campaign_id)),
+            )
+        except Exception:
+            pass
+
+        site_context_str = ""
+        if site_title:
+            site_context_str += f"Site title: {site_title}\n"
         if site_desc:
             site_context_str += f"Site description: {site_desc}\n"
         if topical_focus:
-            site_context_str += f"Topical focus: {', '.join(topical_focus[:3])}\n"
+            site_context_str += f"Topical focus: {', '.join(topical_focus[:4])}\n"
         if recent_articles:
-            articles_str = "; ".join(f"\"{a['title']}\"" for a in recent_articles[:4])
+            articles_str = "; ".join(f"\"{a['title']}\"" for a in recent_articles[:5])
             site_context_str += f"Recent articles: {articles_str}\n"
+        site_context_str += f"Topical relevance to campaign: {topical_relevance:.2f}\n"
+        if markdown_body:
+            preview = markdown_body[:600].strip()
+            site_context_str += f"Content preview: {preview[:300]}...\n" if len(preview) > 300 else f"Content preview: {preview}\n"
         if not site_context_str:
             site_context_str = "Site content could not be analyzed.\n"
 
-        tenant_uuid = UUID(tenant_id)
-        rel = relationship_store.get_or_create(domain, tenant_uuid)
-
-        def _build_prompt(stage: str, extra_instructions: str) -> RenderedPrompt:
-            system = f"""You are an elite outreach specialist for a premium SEO agency. Generate a {stage} outreach email.
-Return ONLY a JSON object with 'subject', 'body_html', and 'personalized_opening' fields.
-CRITICAL: Reference the recipient's actual site content. Make it feel like a human wrote it."""
+        def _build_prompt(stage: str, extra_instructions: str, grounding_hint: str = "") -> RenderedPrompt:
+            system_parts = [
+                f"You are an elite outreach specialist for a premium SEO agency. Generate a {stage} outreach email.",
+                "Return ONLY a JSON object with 'subject', 'body_html', and 'personalized_opening' fields.",
+                "CRITICAL: Reference the recipient's actual site content. Make it feel like a human who has actually visited their website wrote it.",
+            ]
+            if grounding_hint:
+                system_parts.append(f"CORRECTION FROM PREVIOUS ATTEMPT: {grounding_hint}")
 
             user = f"""CONTEXT:
 - Recipient name: {contact_name}
 - Target domain: {domain}
 - Domain authority: {prospect.get('domain_authority', 40)}/100
 - Relevance score: {prospect.get('relevance_score', 0.5)}/1.0
+- Topical relevance: {topical_relevance:.2f}
 - Campaign type: {campaign_type}
 - Value offer: {templates.get(campaign_type, 'Content collaboration opportunity')}
 
@@ -350,12 +415,45 @@ WEBSITE CONTENT:
 Requirements:
 - Subject under 60 characters
 - Professional HTML body
-- Human-sounding, not templated"""
+- Human-sounding, not templated
+- Every claim in the opening must be grounded in the WEBSITE CONTENT above"""
             return RenderedPrompt(
                 template_id="outreach_email_generation",
-                system_prompt=system,
+                system_prompt="\n".join(system_parts),
                 user_prompt=user,
             )
+
+        async def _generate_with_grounding(
+            prompt: RenderedPrompt, max_retries: int = 2,
+        ) -> dict | None:
+            for attempt in range(max_retries):
+                try:
+                    result = await llm_gateway.complete(
+                        task_type=TaskType.SEO_ANALYSIS,
+                        prompt=prompt,
+                        output_schema=OutreachEmailSchema,
+                        tenant_id=UUID(tenant_id),
+                    )
+                    validated = result.content
+                    validated.check_semantic_grounding(site_context_str)
+                    return {
+                        "subject": validated.subject,
+                        "body_html": validated.body_html,
+                        "personalized_opening": validated.personalized_opening,
+                    }
+                except Exception as e:
+                    logger.warning(
+                        "outreach_grounding_failed",
+                        domain=domain, attempt=attempt, error=str(e),
+                    )
+                    if attempt < max_retries - 1:
+                        hint = str(e).replace("Semantic grounding failure: ", "")
+                        prompt = _build_prompt(
+                            stage if not attempt else "rewritten",
+                            extra_instructions,
+                            grounding_hint=hint,
+                        )
+            return None
 
         initial_prompt = _build_prompt(
             "first",
@@ -370,56 +468,9 @@ Requirements:
             "TASK: Write a gentle re-engagement email. It's been some time. Fresh approach with a new angle. Low pressure."
         )
 
-        initial_email = None
-        followup_1 = None
-        followup_2 = None
-
-        try:
-            result = await llm_gateway.complete(
-                task_type=TaskType.SEO_ANALYSIS,
-                prompt=initial_prompt,
-                output_schema=OutreachEmailSchema,
-                tenant_id=UUID(tenant_id),
-            )
-            initial_email = {
-                "subject": result.content.subject,
-                "body_html": result.content.body_html,
-                "personalized_opening": result.content.personalized_opening,
-            }
-        except Exception as e:
-            logger.warning("llm_initial_email_failed", domain=domain, error=str(e))
-
-        if initial_email:
-            try:
-                result = await llm_gateway.complete(
-                    task_type=TaskType.SEO_ANALYSIS,
-                    prompt=followup_1_prompt,
-                    output_schema=OutreachEmailSchema,
-                    tenant_id=UUID(tenant_id),
-                )
-                followup_1 = {
-                    "subject": result.content.subject,
-                    "body_html": result.content.body_html,
-                    "personalized_opening": result.content.personalized_opening,
-                }
-            except Exception as e:
-                logger.warning("llm_followup_1_failed", domain=domain, error=str(e))
-
-        if followup_1:
-            try:
-                result = await llm_gateway.complete(
-                    task_type=TaskType.SEO_ANALYSIS,
-                    prompt=followup_2_prompt,
-                    output_schema=OutreachEmailSchema,
-                    tenant_id=UUID(tenant_id),
-                )
-                followup_2 = {
-                    "subject": result.content.subject,
-                    "body_html": result.content.body_html,
-                    "personalized_opening": result.content.personalized_opening,
-                }
-            except Exception as e:
-                logger.warning("llm_followup_2_failed", domain=domain, error=str(e))
+        initial_email = await _generate_with_grounding(initial_prompt)
+        followup_1 = await _generate_with_grounding(followup_1_prompt) if initial_email else None
+        followup_2 = await _generate_with_grounding(followup_2_prompt) if followup_1 else None
 
         if initial_email:
             email_sequences.append({
