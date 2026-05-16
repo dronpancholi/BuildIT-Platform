@@ -323,6 +323,7 @@ async def generate_outreach_emails_activity(
         personalized_opening: str
 
     from seo_platform.services.content_analyzer import website_analyzer
+    from seo_platform.services.relationship_store import relationship_store
 
     emails = []
 
@@ -355,9 +356,18 @@ async def generate_outreach_emails_activity(
         if not site_context_str:
             site_context_str = "Site content could not be analyzed.\n"
 
-        prompt = RenderedPrompt(
-            template_id="outreach_email_generation",
-            system_prompt="""You are an elite outreach specialist for a premium SEO agency. Generate personalized, professional outreach emails.
+        # Relationship intelligence
+        tenant_uuid = UUID(tenant_id)
+        rel = relationship_store.get_or_create(domain, tenant_uuid)
+        relationship_history = relationship_store.get_outreach_history(domain, tenant_uuid)
+
+        if relationship_history:
+            system_prompt = f"""You are an elite outreach specialist for a premium SEO agency. You are following up with a prior contact.
+Return ONLY a JSON object with 'subject', 'body_html', and 'personalized_opening' fields.
+CRITICAL: This is NOT a first email. Reference your prior outreach naturally. Be warmer and more direct since you have a prior relationship.
+Keep the tone professional but conversational — like continuing a thread."""
+        else:
+            system_prompt = """You are an elite outreach specialist for a premium SEO agency. Generate personalized, professional outreach emails.
 Return ONLY a JSON object with 'subject', 'body_html', and 'personalized_opening' fields.
 The email must be:
 - Highly personalized to the recipient's website and content
@@ -367,8 +377,9 @@ The email must be:
 - Not generic or spammy
 - Relevant to the specific domain
 
-CRITICAL: This email must reference the actual content of the recipient's site. Make it feel like a human who has actually visited their website wrote it.""",
-            user_prompt=f"""CONTEXT:
+CRITICAL: This email must reference the actual content of the recipient's site. Make it feel like a human who has actually visited their website wrote it."""
+
+        user_prompt = f"""CONTEXT:
 - Recipient name: {contact_name}
 - Target domain: {domain}
 - Domain authority: {prospect.get('domain_authority', 40)}/100
@@ -378,18 +389,60 @@ CRITICAL: This email must reference the actual content of the recipient's site. 
 
 WEBSITE CONTENT:
 {site_context_str}
+RELATIONSHIP HISTORY:
+{relationship_history if relationship_history else "First contact with this prospect."}"""
+
+        if not relationship_history:
+            user_prompt += """
+
 TASK:
-Write a personalized outreach email that:
+Write a personalized FIRST outreach email that:
 1. Opens with a genuine compliment that references their actual site content
 2. Explains why you're reaching out (value-oriented)
 3. Offers something specific that aligns with their content
-4. Ends with a clear, low-friction call to action
+4. Ends with a clear, low-friction call to action"""
+        else:
+            days_since = rel.days_since_last_contact
+            if days_since < 7:
+                user_prompt += """
+
+TASK:
+Write a warm, short follow-up email. You already contacted them recently.
+- Reference your previous email naturally
+- Add a new piece of value (a relevant article, data point, or idea)
+- Keep it brief and respectful of their time
+- Don't re-send the same pitch"""
+            elif days_since < 21:
+                user_prompt += """
+
+TASK:
+Write a thoughtful re-engagement email. It's been a couple of weeks since your last contact.
+- Open with a new angle or value-add relevant to their site
+- Reference your prior outreach briefly
+- Offer something new and specific
+- Low pressure, high value"""
+            else:
+                user_prompt += """
+
+TASK:
+Write a gentle re-engagement email. It's been a while since your last contact.
+- Fresh approach with a new value proposition
+- Briefly acknowledge the time gap
+- Focus entirely on what you can offer them now
+- No pressure, no hard sell"""
+
+        user_prompt += """
 
 Requirements:
 - Subject under 60 characters
 - Professional HTML body
 - Human-sounding, not templated
-- Reference their actual site content naturally""",
+- Reference their actual site content naturally"""
+
+        prompt = RenderedPrompt(
+            template_id="outreach_email_generation",
+            system_prompt=system_prompt,
+            user_prompt=user_prompt,
         )
 
         try:
@@ -408,6 +461,7 @@ Requirements:
                 "personalized_opening": result.content.personalized_opening,
                 "confidence_score": result.confidence_score,
             })
+            rel.record_outreach(result.content.subject, result.content.body_html)
         except Exception as e:
             logger.warning("llm_outreach_generation_failed", domain=domain, error=str(e))
 
@@ -575,6 +629,18 @@ def _derive_contact_name(domain: str) -> str:
         "Lisa Anderson", "Tom Richards", "Anna Patel", "Chris Miller",
         "Rachel Lee", "Daniel Taylor", "Hannah Wright", "Ryan Cooper",
         "Olivia Adams", "Ben Foster", "Grace Mitchell", "Jack Turner",
+        "Priya Sharma", "Ethan Brooks", "Zoe Campbell", "Nathan Reed",
+        "Isabella Torres", "Liam Murphy", "Mia Sullivan", "Noah Bennett",
+        "Charlotte Fisher", "Lucas Hayes", "Amelia Porter", "Mason Cole",
+        "Harper Simmons", "Logan Price", "Evelyn Myers", "Caleb Foster",
+        "Abigail Nichols", "Owen Hart", "Ella Kimura", "Samuel Rhodes",
+        "Aria Patel", "Henry Webb", "Scarlett Fox", "Sebastian Cross",
+        "Victoria Shaw", "Jack Morrison", "Lily Chang", "Oliver Hunt",
+        "Aurora Blake", "William Chen", "Chloe Waters", "James Nakamura",
+        "Penelope Stone", "Benjamin Roy", "Riley Singh", "Lucas Greene",
+        "Zara Blackwell", "Dylan Fisher", "Nora O'Brien", "Carter Munoz",
+        "Hazel Park", "Julian Decker", "Violet Houston", "Adrian Russo",
+        "Stella Bishop", "Connor Walls", "Aurora Steele", "Xavier Owens",
     ]
     h = int(hashlib.md5(domain.encode()).hexdigest()[:8], 16)
     return names[h % len(names)]
@@ -587,6 +653,16 @@ def _derive_contact_position(domain: str) -> str:
         "Editor in Chief", "Content Director", "Senior Editor",
         "Content Manager", "Managing Editor", "Head of Content",
         "Digital Editor", "Content Strategist",
+        "VP of Marketing", "Head of Growth", "SEO Director",
+        "Senior Content Strategist", "Editorial Director",
+        "Director of Content Marketing", "Web Director",
+        "Head of Editorial", "Senior Writer", "Brand Editor",
+        "Audience Development Manager", "Content Lead",
+        "Digital Marketing Director", "Senior Brand Manager",
+        "Head of Audience Growth", "Managing Director",
+        "Contributing Editor", "Features Editor", "Executive Editor",
+        "Head of Digital Media", "Director of Partnerships",
+        "Senior Editor & Publisher",
     ]
     h = int(hashlib.md5(domain.encode()).hexdigest()[:8], 16)
     return positions[h % len(positions)]

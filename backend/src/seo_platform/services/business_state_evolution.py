@@ -730,8 +730,10 @@ class BusinessStateEvolutionEngine:
         if not keywords:
             return
 
-        suffixes = ["blog", "guide", "resources", "academy", "hub", "insights", "weekly", "review", "magazine", "today"]
-        domain_types = ["com", "io", "co", "org", "net"]
+        suffixes = ["blog", "guide", "resources", "academy", "hub", "insights", "weekly", "review", "magazine", "today",
+                     "journal", "digest", "pulse", "explorer", "spotlight", "labs", "studio", "works", "report", "central",
+                     "network", "experts", "opinion", "buzz", "wire", "beat", "lane", "scope", "craft", "foundry"]
+        domain_types = ["com", "io", "co", "org", "net", "app", "blog", "news", "media", "info", "marketing", "today", "pro"]
 
         count = 0
         for kw in keywords[:20]:
