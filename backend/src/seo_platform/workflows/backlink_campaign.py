@@ -313,9 +313,12 @@ async def generate_outreach_emails_activity(
             "i've been following your work",
         ]
 
-        def check_semantic_grounding(self, scraped_context: str) -> None:
+        def check_semantic_grounding(
+            self, scraped_context: str, prohibited_words: list[str] | None = None,
+        ) -> None:
             """Post-hoc semantic grounding validation. Raises ValueError if grounding fails."""
             opening_lower = self.personalized_opening.lower()
+            full_lower = f"{self.subject.lower()} {self.body_html.lower()} {opening_lower}"
 
             for phrase in self._fluff_phrases:
                 if phrase in opening_lower:
@@ -323,6 +326,14 @@ async def generate_outreach_emails_activity(
                         f"Semantic grounding failure: Opening contains generic fluff '{phrase}'. "
                         "Must reference specific content from the scraped website."
                     )
+
+            if prohibited_words:
+                for pw in prohibited_words:
+                    if pw.lower() in full_lower:
+                        raise ValueError(
+                            f"Brand voice violation: Prohibited word '{pw}' detected. "
+                            "Rewrite without this buzzword."
+                        )
 
             if scraped_context:
                 context_lower = scraped_context.lower()
@@ -347,6 +358,13 @@ async def generate_outreach_emails_activity(
     from seo_platform.services.relationship_store import relationship_store
     from seo_platform.services.seo_intelligence.serp_intelligence import SERPIntelligenceEngine
     from seo_platform.services.outreach_intelligence import outreach_intelligence
+    from seo_platform.services.client_persona.service import client_persona_service
+
+    persona_context = await client_persona_service.get_active_persona_context(
+        tenant_id=UUID(tenant_id),
+        client_id=UUID(campaign_id),
+        target_niche=campaign_type,
+    )
 
     serp_engine = SERPIntelligenceEngine()
     serp_analysis = await serp_engine.analyze_serp_intent_and_eeat(
@@ -411,12 +429,27 @@ async def generate_outreach_emails_activity(
 
         def _build_prompt(stage: str, extra_instructions: str, grounding_hint: str = "") -> RenderedPrompt:
             system_parts = [
-                f"You are an elite outreach specialist for a premium SEO agency. Generate a {stage} outreach email.",
+                f"You are an elite outreach specialist writing on behalf of the client. Generate a {stage} outreach email.",
+                f"BRAND VOICE SUMMARY: {persona_context.get('brand_voice_summary', 'Professional, warm, and highly authoritative.')}",
+                f"PROHIBITED BUZZWORDS: {', '.join(persona_context.get('prohibited_words', ['delve', 'beacon', 'testament', 'synergy']))}. Do NOT use these words under any circumstances.",
+                f"FORMALITY LEVEL: {persona_context.get('editorial_constraints', {}).get('formality_level', 'professional_conversational')}.",
                 "Return ONLY a JSON object with 'subject', 'body_html', and 'personalized_opening' fields.",
-                "CRITICAL: Reference the recipient's actual site content. Make it feel like a human who has actually visited their website wrote it.",
+                "CRITICAL: Reference the recipient's actual site content without sounding like an AI summary.",
             ]
             if grounding_hint:
                 system_parts.append(f"CORRECTION FROM PREVIOUS ATTEMPT: {grounding_hint}")
+
+            samples = persona_context.get("relevant_archive_samples", [])
+            if samples:
+                samples_str = "\n\n---\n\n".join(samples)
+                system_parts.append(
+                    f"HISTORICAL HIGH-CONVERTING EMAIL SAMPLES (Match this exact tone and pacing):\n{samples_str}"
+                )
+
+            mandatory_tone = persona_context.get("editorial_constraints", {}).get("mandatory_tone_markers", [])
+            tone_instruction = ""
+            if mandatory_tone:
+                tone_instruction = f"\n- Mandatory tone characteristics: {', '.join(mandatory_tone)}"
 
             user = f"""CONTEXT:
 - Recipient name: {contact_name}
@@ -436,7 +469,7 @@ Requirements:
 - Subject under 60 characters
 - Professional HTML body
 - Human-sounding, not templated
-- Every claim in the opening must be grounded in the WEBSITE CONTENT above"""
+- Every claim in the opening must be grounded in the WEBSITE CONTENT above{tone_instruction}"""
             return RenderedPrompt(
                 template_id="outreach_email_generation",
                 system_prompt="\n".join(system_parts),
@@ -455,7 +488,9 @@ Requirements:
                         tenant_id=UUID(tenant_id),
                     )
                     validated = result.content
-                    validated.check_semantic_grounding(site_context_str)
+                    validated.check_semantic_grounding(
+                        site_context_str, prohibited_words=persona_context.get("prohibited_words"),
+                    )
                     return {
                         "subject": validated.subject,
                         "body_html": validated.body_html,
