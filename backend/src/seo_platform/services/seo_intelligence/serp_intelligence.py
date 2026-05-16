@@ -146,11 +146,28 @@ class SERPDominanceReport(BaseModel):
     keyword_details: list[KeywordDominanceEntry] = Field(default_factory=list)
 
 
+class SERPIntentAndEEATAnalysis(BaseModel):
+    keyword: str
+    dominant_intent: str = "editorial"  # ugc_forum, video, tool, ecommerce, editorial
+    intent_confidence: float = 0.0
+    entity_associations: list[str] = Field(default_factory=list)
+    competitor_eeat_signals: list[dict[str, Any]] = Field(default_factory=list)
+    recommended_content_pivot: str = "Maintain standard editorial content"
+
+
 # ---------------------------------------------------------------------------
 # LLM Output Schemas (for structured extraction)
 # ---------------------------------------------------------------------------
 class _PAAIntentSchema(BaseModel):
     questions: list[dict[str, Any]] = Field(default_factory=list)
+
+
+class _SERPIntentEEATSchema(BaseModel):
+    dominant_intent: str
+    intent_confidence: float
+    entity_associations: list[str]
+    competitor_eeat_signals: list[dict[str, Any]]
+    recommended_content_pivot: str
 
 
 # ---------------------------------------------------------------------------
@@ -188,6 +205,113 @@ class SERPIntelligenceEngine:
     2. LLM augmentation where beneficial (advisory only)
     3. Deterministic fallback if primary fails
     """
+
+    # ------------------------------------------------------------------
+    # SERP Intent & EEAT Cognition Layer (Phase 6)
+    # ------------------------------------------------------------------
+    async def analyze_serp_intent_and_eeat(
+        self, keyword: str, tenant_id: UUID, geo: str = "US",
+    ) -> SERPIntentAndEEATAnalysis:
+        """
+        Advanced SERP Intent & EEAT Cognition Engine (Phase 6).
+        Combines DataForSEO live SERP snapshots with an advanced LLM reasoning loop to:
+        1. Classify SERP intent shifts (ugc_forum, video, tool, ecommerce, editorial)
+        2. Identify entity associations and semantic clusters
+        3. Evaluate competitor EEAT signals (author credentials, institutional trust)
+        4. Recommend dynamic content pivots (e.g. pivoting to Reddit/Quora if UGC dominates)
+        """
+        logger.info("analyze_serp_intent_and_eeat", keyword=keyword, geo=geo, tenant_id=str(tenant_id))
+
+        result = SERPIntentAndEEATAnalysis(keyword=keyword)
+
+        try:
+            from seo_platform.clients.dataforseo import dataforseo_client
+
+            snapshot = await dataforseo_client.get_serp_snapshot(keyword)
+
+            top_results: list[dict[str, Any]] = []
+            for task in snapshot.get("tasks", []):
+                for item in task.get("result", []):
+                    for res_item in item.get("items", []):
+                        rank = res_item.get("rank_absolute") or res_item.get("rank", 0)
+                        if rank and 1 <= rank <= 10:
+                            top_results.append({
+                                "rank": rank,
+                                "url": res_item.get("url", "") or res_item.get("link", "") or "",
+                                "title": res_item.get("title", "") or "",
+                                "description": res_item.get("description", "") or res_item.get("snippet", "") or "",
+                                "breadcrumb": res_item.get("breadcrumb", "") or "",
+                            })
+
+            if top_results:
+                try:
+                    from seo_platform.llm.gateway import RenderedPrompt, TaskType, llm_gateway
+
+                    results_str = "\n".join(
+                        f"{r['rank']}. {r['title']} ({r['url']})\n   Snippet: {r['description']}"
+                        for r in top_results
+                    )
+
+                    prompt = RenderedPrompt(
+                        template_id="serp_intent_eeat_analysis",
+                        system_prompt=(
+                            "You are an elite SEO SERP intent and EEAT analyst. Analyze the top 10 ranking results "
+                            "to determine the dominant search intent and competitor EEAT signals. Return ONLY a JSON object "
+                            "matching the schema with: dominant_intent (ugc_forum, video, tool, ecommerce, editorial), "
+                            "intent_confidence (0.0 to 1.0), entity_associations (array of strings), "
+                            "competitor_eeat_signals (array of objects with domain, author_authority, institutional_trust), "
+                            "and recommended_content_pivot (specific strategic instruction)."
+                        ),
+                        user_prompt=(
+                            f"Keyword: '{keyword}'\nGeo: {geo}\n\nTop 10 SERP Results:\n{results_str}\n\n"
+                            "Analyze the dominant intent, associated entities, competitor EEAT strength, and recommend a strategic content pivot."
+                        ),
+                    )
+
+                    llm_result = await llm_gateway.complete(
+                        task_type=TaskType.SEO_ANALYSIS,
+                        prompt=prompt,
+                        output_schema=_SERPIntentEEATSchema,
+                        tenant_id=tenant_id,
+                    )
+
+                    content = llm_result.content
+                    result.dominant_intent = content.dominant_intent
+                    result.intent_confidence = round(content.intent_confidence, 4)
+                    result.entity_associations = content.entity_associations
+                    result.competitor_eeat_signals = content.competitor_eeat_signals
+                    result.recommended_content_pivot = content.recommended_content_pivot
+
+                except Exception as e:
+                    logger.warning("serp_intent_llm_reasoning_failed", error=str(e))
+                    # Deterministic fallback based on URL footprint matching
+                    ugc_count = sum(1 for r in top_results if any(d in r["url"].lower() for d in ["reddit.com", "quora.com", "stackexchange", "stackoverflow"]))
+                    video_count = sum(1 for r in top_results if any(d in r["url"].lower() for d in ["youtube.com", "vimeo.com"]))
+                    tool_count = sum(1 for r in top_results if any(w in r["title"].lower() for w in ["calculator", "tool", "generator", "software"]))
+                    ecom_count = sum(1 for r in top_results if any(d in r["url"].lower() for d in ["amazon.com", "ebay.com", "walmart.com", "etsy.com"]))
+
+                    counts = {
+                        "ugc_forum": ugc_count,
+                        "video": video_count,
+                        "tool": tool_count,
+                        "ecommerce": ecom_count,
+                        "editorial": len(top_results) - (ugc_count + video_count + tool_count + ecom_count),
+                    }
+                    dominant = max(counts.items(), key=lambda x: x[1])[0]
+
+                    result.dominant_intent = dominant
+                    result.intent_confidence = round(counts[dominant] / float(len(top_results)), 2) if top_results else 0.5
+                    if dominant == "ugc_forum":
+                        result.recommended_content_pivot = "Pivot from standard blog posts to Reddit community engagement and Quora expert answers."
+                    elif dominant == "video":
+                        result.recommended_content_pivot = "Pivot to YouTube video creation and embedded video carousels."
+                    elif dominant == "tool":
+                        result.recommended_content_pivot = "Develop an interactive calculator or free engineering tool."
+
+        except Exception as e:
+            logger.warning("serp_intent_and_eeat_analysis_failed", keyword=keyword, error=str(e))
+
+        return result
 
     # ------------------------------------------------------------------
     # SERP Feature Detection

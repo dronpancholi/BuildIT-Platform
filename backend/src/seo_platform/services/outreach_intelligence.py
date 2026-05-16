@@ -773,5 +773,95 @@ class OutreachIntelligenceService:
             },
         }
 
+    # ------------------------------------------------------------------
+    # Entity & Social Graph Ingestion & Bespoke Pitching (Phase 7)
+    # ------------------------------------------------------------------
+    async def generate_humanized_bespoke_pitch(
+        self, tenant_id: UUID, prospect_data: dict, client_context: dict,
+    ) -> dict[str, Any]:
+        """
+        Advanced Entity & Social Graph Bespoke Pitch Engine (Phase 7).
+        Replaces generic AI markdown summarization with genuine relationship building by:
+        1. Ingesting author social graph signals (LinkedIn posts, Twitter threads, podcasts)
+        2. Ingesting client value-add assets (proprietary data points, custom graphics)
+        3. Crafting an elite, humanized pitch that establishes genuine off-page rapport
+        4. Completely avoiding synthetic 'I noticed your excellent article' AI footprints
+        """
+        logger.info("generate_humanized_bespoke_pitch", domain=prospect_data.get("domain", ""), tenant_id=str(tenant_id))
+
+        from pydantic import BaseModel
+
+        class _BespokePitchSchema(BaseModel):
+            subject_line: str
+            body_content: str
+            value_add_type: str
+            personalization_angle: str
+
+        author_name = prospect_data.get("contact_name", "Editor")
+        social_signal = prospect_data.get("social_graph_signal", "Recent discussion on industry trends and content strategy.")
+        
+        client_name = client_context.get("client_name", "Our Platform")
+        value_add_asset = client_context.get("value_add_asset", "Proprietary benchmark data and custom infographics.")
+
+        try:
+            from seo_platform.llm.gateway import RenderedPrompt, TaskType, llm_gateway
+
+            prompt = RenderedPrompt(
+                template_id="humanized_bespoke_pitch",
+                system_prompt=(
+                    "You are an elite enterprise digital PR and backlink acquisition strategist. Craft a highly bespoke, "
+                    "humanized outreach pitch to an editor/author. You MUST adhere to these strict editorial rules:\n"
+                    "1. Opening Rapport: Reference their specific off-page social graph signal (LinkedIn/Twitter/podcast) with genuine warmth.\n"
+                    "2. ZERO AI Footprints: Do NOT say 'I noticed your excellent article on X' or summarize their about page.\n"
+                    "3. Bespoke Value Exchange: Pitch a specific, high-value editorial asset (custom graphic, proprietary data quote) from the client.\n"
+                    "4. Professional Call to Action: Close with a low-friction, conversational next step.\n"
+                    "Return ONLY a JSON object matching the schema with subject_line, body_content, value_add_type, and personalization_angle."
+                ),
+                user_prompt=(
+                    f"Author/Editor: {author_name}\n"
+                    f"Author Social Graph Signal: '{social_signal}'\n\n"
+                    f"Client Name: {client_name}\n"
+                    f"Client Value-Add Asset: '{value_add_asset}'\n\n"
+                    "Craft the elite bespoke pitch now."
+                ),
+            )
+
+            llm_result = await llm_gateway.complete(
+                task_type=TaskType.SEO_ANALYSIS,
+                prompt=prompt,
+                output_schema=_BespokePitchSchema,
+                tenant_id=tenant_id,
+            )
+
+            content = llm_result.content
+            return {
+                "subject_line": content.subject_line,
+                "body_content": content.body_content,
+                "value_add_type": content.value_add_type,
+                "personalization_angle": content.personalization_angle,
+                "generation_source": "social_graph_bespoke_ai",
+            }
+
+        except Exception as e:
+            logger.warning("bespoke_pitch_generation_failed", error=str(e))
+            # Elite deterministic fallback avoiding generic AI footprints
+            first_name = author_name.split()[0] if author_name else "there"
+            fallback_subj = f"Quick question regarding your recent thoughts on {client_context.get('industry', 'industry trends')}"
+            fallback_body = (
+                f"Hi {first_name},\n\n"
+                f"I really enjoyed your recent commentary regarding {social_signal.lower()[:50]}. It's rare to see someone address the nuances so directly.\n\n"
+                f"We recently compiled some exclusive benchmark data at {client_name} specifically exploring {value_add_asset.lower()[:50]}. "
+                f"I thought the custom charts might be a perfect drop-in addition for your upcoming pieces to give your readers an extra visual edge.\n\n"
+                f"Would you be open to me sending over a quick preview link to see if it aligns?\n\n"
+                f"Best regards,\n{client_name} Team"
+            )
+            return {
+                "subject_line": fallback_subj,
+                "body_content": fallback_body,
+                "value_add_type": "proprietary_data_charts",
+                "personalization_angle": "social_commentary_alignment",
+                "generation_source": "elite_deterministic_fallback",
+            }
+
 
 outreach_intelligence = OutreachIntelligenceService()

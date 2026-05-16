@@ -81,6 +81,80 @@ class BacklinkIntelligence:
             "spam_flags": spam_flags,
         }
 
+    async def detect_link_farm_and_spam(self, domain: str, url: str = "") -> dict[str, Any]:
+        """
+        Advanced link farm and spam detection engine (Phase 5).
+        Combines heuristic checks with live Ahrefs API analysis for:
+        1. Outbound-to-inbound link ratio (detecting link farms)
+        2. 24-month organic traffic history (detecting HCU penalties)
+        3. Anchor text profile toxicity (detecting PBN/injection abuse)
+        """
+        base_spam = self.detect_spam(domain, url)
+        spam_score = base_spam["spam_score"]
+        spam_flags = list(base_spam["spam_flags"])
+
+        domain_clean = domain.lower().replace("www.", "")
+
+        try:
+            from seo_platform.clients.ahrefs import ahrefs_client
+
+            # 1. Outbound Link Ratio Check
+            try:
+                metrics = await ahrefs_client.get_domain_metrics(domain_clean)
+                ref_domains = metrics.get("ref_domains", 0)
+                outgoing = await ahrefs_client.get_outgoing_links_summary(domain_clean)
+                outgoing_domains = outgoing.get("outgoing_linked_domains", 0)
+
+                if ref_domains > 0 and outgoing_domains > 0:
+                    outbound_ratio = outgoing_domains / float(ref_domains)
+                    if outbound_ratio > 3.0:
+                        spam_flags.append(f"link_farm:outbound_ratio_{outbound_ratio:.1f}x")
+                        spam_score += 0.4
+            except Exception as e:
+                logger.debug("ahrefs_outbound_ratio_check_failed", domain=domain_clean, error=str(e))
+
+            # 2. 24-Month Organic Traffic History Check (HCU Penalty Detection)
+            try:
+                history = await ahrefs_client.get_traffic_history(domain_clean, months=24)
+                if history and len(history) >= 6:
+                    traffic_values = [h.get("organic_traffic", 0) for h in history if isinstance(h, dict)]
+                    if traffic_values:
+                        peak_traffic = max(traffic_values)
+                        recent_traffic = traffic_values[-1]
+                        if peak_traffic > 1000 and recent_traffic < peak_traffic * 0.5:
+                            drop_pct = (1.0 - (recent_traffic / float(peak_traffic))) * 100
+                            spam_flags.append(f"hcu_penalty:traffic_dropped_{drop_pct:.0f}%")
+                            spam_score += 0.35
+            except Exception as e:
+                logger.debug("ahrefs_traffic_history_check_failed", domain=domain_clean, error=str(e))
+
+            # 3. Anchor Text Profile Toxicity Check
+            try:
+                anchors = await ahrefs_client.get_anchor_text_profile(domain_clean, limit=100)
+                if anchors:
+                    toxic_count = 0
+                    total_anchors = len(anchors)
+                    for item in anchors:
+                        text = item.get("anchor", "").lower()
+                        if any(ind in text for ind in self.SPAM_INDICATORS):
+                            toxic_count += 1
+                    if total_anchors > 0 and (toxic_count / float(total_anchors)) > 0.1:
+                        spam_flags.append(f"toxic_anchors:{toxic_count}/{total_anchors}")
+                        spam_score += 0.4
+            except Exception as e:
+                logger.debug("ahrefs_anchor_check_failed", domain=domain_clean, error=str(e))
+
+        except Exception as e:
+            logger.warning("ahrefs_link_farm_detection_failed", domain=domain_clean, error=str(e))
+
+        spam_score = min(1.0, spam_score)
+        return {
+            "is_spam": spam_score >= 0.35,
+            "spam_score": round(spam_score, 4),
+            "spam_flags": list(set(spam_flags)),
+            "vetting_source": "ahrefs_live_api",
+        }
+
     def calculate_authority(self, domain_rating: float, ref_domains: int,
                           backlinks: int, organic_traffic: int) -> dict[str, Any]:
         """

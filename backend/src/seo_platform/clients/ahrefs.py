@@ -132,6 +132,71 @@ class AhrefsClient:
             "organic_traffic": data.get("organic_traffic", 0),
         }
 
+    async def get_traffic_history(self, domain: str, months: int = 24) -> list[dict[str, Any]]:
+        """
+        Get monthly organic traffic and referring domains history over the last N months.
+        Used to detect Google Helpful Content Update (HCU) penalties and declining trajectories.
+        """
+        client = await self._get_client()
+        response = await _circuit.call(
+            client.get, "/v3/site-explorer/metrics-history",
+            params={"target": domain, "history_range": f"{months}m", "output": "json"},
+        )
+
+        if response.status_code == 429:
+            raise AhrefsRateLimitError(f"Ahrefs rate limit exceeded for domain history: {domain}")
+        if response.status_code == 401 or response.status_code == 403:
+            raise AhrefsAuthError(f"Ahrefs authentication failed for domain history: {domain}")
+        response.raise_for_status()
+
+        data = response.json()
+        return data.get("metrics_history", [])
+
+    async def get_outgoing_links_summary(self, domain: str) -> dict[str, Any]:
+        """
+        Get total outgoing linked domains vs referring domains.
+        Used to calculate outbound-to-inbound link ratio (detecting link farms).
+        """
+        client = await self._get_client()
+        response = await _circuit.call(
+            client.get, "/v3/site-explorer/outgoing-linked-domains-summary",
+            params={"target": domain, "output": "json"},
+        )
+
+        if response.status_code == 429:
+            raise AhrefsRateLimitError(f"Ahrefs rate limit exceeded for outgoing links: {domain}")
+        if response.status_code == 401 or response.status_code == 403:
+            raise AhrefsAuthError(f"Ahrefs authentication failed for outgoing links: {domain}")
+        response.raise_for_status()
+
+        data = response.json()
+        return {
+            "domain": domain,
+            "outgoing_linked_domains": data.get("outgoing_linked_domains", 0),
+            "outgoing_external_links": data.get("outgoing_external_links", 0),
+            "outgoing_dofollow_links": data.get("outgoing_dofollow_links", 0),
+        }
+
+    async def get_anchor_text_profile(self, domain: str, limit: int = 100) -> list[dict[str, Any]]:
+        """
+        Get top anchor texts pointing to the domain.
+        Used to detect toxic anchor text profiles (e.g. gambling/pharmaceutical injection).
+        """
+        client = await self._get_client()
+        response = await _circuit.call(
+            client.get, "/v3/site-explorer/anchors",
+            params={"target": domain, "limit": limit, "output": "json"},
+        )
+
+        if response.status_code == 429:
+            raise AhrefsRateLimitError(f"Ahrefs rate limit exceeded for anchors: {domain}")
+        if response.status_code == 401 or response.status_code == 403:
+            raise AhrefsAuthError(f"Ahrefs authentication failed for anchors: {domain}")
+        response.raise_for_status()
+
+        data = response.json()
+        return data.get("anchors", [])
+
     async def close(self) -> None:
         if self._client:
             await self._client.aclose()
