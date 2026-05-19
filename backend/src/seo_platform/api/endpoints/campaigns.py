@@ -214,18 +214,23 @@ async def generate_campaign_emails(
     campaign_id: UUID,
     request: GenerateEmailRequest,
 ) -> APIResponse[list[GenerateEmailResponse]]:
-    """Generate deterministic fallback emails for all prospects in a campaign.
-    Uses the elite deterministic template (no LLM/API keys needed).
-    Each generated email is saved as an OutreachThread in the database."""
+    """Generate personalized outreach emails for all prospects in a campaign.
+    Uses NVIDIA NIM LLM when API key is configured, falls back to
+    elite deterministic template. Each email is saved as an OutreachThread."""
+    import json as json_mod
     from sqlalchemy import select
     from sqlalchemy.orm import joinedload
 
+    from seo_platform.config import get_settings
     from seo_platform.core.database import get_tenant_session
     from seo_platform.models.backlink import (
         BacklinkCampaign, BacklinkProspect, ProspectStatus,
         OutreachThread, ThreadStatus,
     )
     from seo_platform.services.compliance_scorer import compliance_scorer
+
+    settings = get_settings()
+    use_nim = settings.nvidia.api_key and "mock" not in settings.nvidia.api_key.lower()
 
     async with get_tenant_session(request.tenant_id) as session:
         campaign = await session.get(BacklinkCampaign, campaign_id)
@@ -254,8 +259,8 @@ async def generate_campaign_emails(
             name = prospect.contact_name or "there"
             first_name = name.split()[0] if name != "there" else "there"
 
-            fallback_subj = f"Quick question regarding your recent thoughts on {niche}"
-            fallback_body = (
+            subj = f"Quick question regarding your recent thoughts on {niche}"
+            body = (
                 f"<p>Hi {first_name},</p>"
                 f"<p>I really enjoyed your recent piece on {domain.split('.')[0]} "
                 f"regarding {niche}. It's rare to see someone address the nuances so directly.</p>"
@@ -265,10 +270,55 @@ async def generate_campaign_emails(
                 f"<p>Would you be open to me sending over a quick preview link?</p>"
                 f"<p>Best regards,<br/>{campaign.name} Team</p>"
             )
+            ai_personalization = {"generation_source": "elite_deterministic_fallback"}
+
+            if use_nim:
+                try:
+                    import httpx
+                    model = settings.nvidia.seo_model
+                    prompt = (
+                        f"You are a senior outreach strategist. Write a short, personalized email "
+                        f"to convince {name} at {domain} to agree to a backlink placement for "
+                        f"{campaign.name} in the niche '{niche}'. "
+                        f"The email must be concise, research-driven, and reference the prospect's work. "
+                        f"Respond in JSON with keys 'subject', 'body_html' (HTML with <p> tags), and 'icebreaker'."
+                    )
+                    async with httpx.AsyncClient(
+                        base_url=settings.nvidia.api_url,
+                        headers={
+                            "Authorization": f"Bearer {settings.nvidia.api_key}",
+                            "Content-Type": "application/json",
+                        },
+                        timeout=httpx.Timeout(30),
+                    ) as client:
+                        resp = await client.post("/chat/completions", json={
+                            "model": model,
+                            "messages": [
+                                {"role": "system", "content": "You are an elite outreach strategist. Return valid JSON only."},
+                                {"role": "user", "content": prompt},
+                            ],
+                            "temperature": 0.7,
+                            "max_tokens": 512,
+                            "response_format": {"type": "json_object"},
+                        })
+                        resp.raise_for_status()
+                        data = resp.json()
+                        content = data["choices"][0]["message"]["content"]
+                        parsed = json_mod.loads(content)
+                        subj = parsed.get("subject", subj)
+                        body = parsed.get("body_html", body)
+                        ai_personalization = {
+                            "icebreaker": parsed.get("icebreaker", ""),
+                            "generation_source": "nvidia_nim",
+                            "model": model,
+                        }
+                except Exception as e:
+                    from seo_platform.core.logging import get_logger
+                    get_logger(__name__).warning("nim_email_generation_failed", error=str(e))
 
             compliance = await compliance_scorer.score_email_pitch(
                 tenant_id=request.tenant_id,
-                email_body=fallback_body,
+                email_body=body,
                 entity_id=prospect.id,
                 entity_type="email_pitch",
             )
@@ -280,22 +330,22 @@ async def generate_campaign_emails(
                 status=ThreadStatus.DRAFT,
                 from_email="demo@buildit.local",
                 to_email=prospect.contact_email or f"contact@{domain}",
-                subject=fallback_subj,
-                body_html=fallback_body,
+                subject=subj,
+                body_html=body,
                 follow_up_count=0,
                 max_follow_ups=3,
-                provider="demo",
-                confidence_score=0.85,
-                ai_personalization={},
+                provider="nvidia_nim" if use_nim else "demo",
+                confidence_score=compliance.get("score", 0.85) or 0.85,
+                ai_personalization=ai_personalization,
             )
             session.add(thread)
 
             results.append(GenerateEmailResponse(
                 prospect_domain=domain,
                 prospect_name=prospect.contact_name,
-                subject=fallback_subj,
-                body_html=fallback_body,
-                generation_source="elite_deterministic_fallback",
+                subject=subj,
+                body_html=body,
+                generation_source=ai_personalization.get("generation_source", "elite_deterministic_fallback"),
                 compliance_score=compliance.get("score", 0.0),
                 compliance_passed=compliance.get("passed", True),
             ))
