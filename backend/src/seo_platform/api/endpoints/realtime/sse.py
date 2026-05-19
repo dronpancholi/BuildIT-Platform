@@ -70,8 +70,8 @@ class SSEManager:
     Manages SSE connections for real-time updates.
     """
 
-    MAX_CONNECTIONS_PER_TENANT = 10
-    MAX_TOTAL_CONNECTIONS = 100
+    MAX_CONNECTIONS_PER_TENANT = 50
+    MAX_TOTAL_CONNECTIONS = 500
 
     def __init__(self):
         self._connections: dict[str, set[asyncio.Queue]] = {}

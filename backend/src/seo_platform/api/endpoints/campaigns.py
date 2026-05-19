@@ -284,14 +284,13 @@ async def generate_campaign_emails(
                         f"Respond in JSON with keys 'subject', 'body_html' (HTML with <p> tags), and 'icebreaker'."
                     )
                     async with httpx.AsyncClient(
-                        base_url=settings.nvidia.api_url,
                         headers={
                             "Authorization": f"Bearer {settings.nvidia.api_key}",
                             "Content-Type": "application/json",
                         },
                         timeout=httpx.Timeout(30),
                     ) as client:
-                        resp = await client.post("/chat/completions", json={
+                        resp = await client.post(f"{settings.nvidia.api_url}/chat/completions", json={
                             "model": model,
                             "messages": [
                                 {"role": "system", "content": "You are an elite outreach strategist. Return valid JSON only."},

@@ -242,16 +242,14 @@ class LLMGateway:
         self._cache: dict[str, LLMResult] = {}
 
     async def _get_client(self) -> httpx.AsyncClient:
-        if self._client is None:
-            settings = get_settings()
-            self._client = httpx.AsyncClient(
-                base_url=settings.nvidia.api_url,
-                headers={
-                    "Authorization": f"Bearer {settings.nvidia.api_key}",
-                    "Content-Type": "application/json",
-                },
-                timeout=httpx.Timeout(settings.nvidia.request_timeout),
-            )
+        settings = get_settings()
+        return httpx.AsyncClient(
+            headers={
+                "Authorization": f"Bearer {settings.nvidia.api_key}",
+                "Content-Type": "application/json",
+            },
+            timeout=httpx.Timeout(float(settings.nvidia.request_timeout)),
+        )
         return self._client
 
     def _get_model_id(self, role: ModelRole) -> str:
@@ -502,7 +500,7 @@ class LLMGateway:
         }
 
         try:
-            response = await client.post("/chat/completions", json=payload)
+            response = await client.post(f"{settings.nvidia.api_url}/chat/completions", json=payload)
             if response.status_code == 429:
                 raise LLMRateLimitError("NVIDIA NIM rate limit exceeded")
             response.raise_for_status()

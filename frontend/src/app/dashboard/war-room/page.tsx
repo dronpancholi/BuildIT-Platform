@@ -68,9 +68,17 @@ interface PredictiveDashboard {
 }
 
 interface OperationalPressureEntry {
-  component: string;
+  name: string;
   pressure_score: number;
-  level: string;
+  current_load: number;
+  capacity: number;
+}
+
+interface OperationalPressureReport {
+  components: OperationalPressureEntry[];
+  most_constrained_resource: string;
+  overall_pressure_score: number;
+  relief_actions: { component: string; action: string; expected_impact: string; priority: string }[];
 }
 
 interface WorkerImbalanceEntry {
@@ -150,11 +158,13 @@ export default function WarRoomPage() {
     refetchInterval: 10000,
   });
 
-  const { data: pressureData } = useQuery<OperationalPressureEntry[]>({
+  const { data: pressureData } = useQuery<OperationalPressureReport>({
     queryKey: ["operational-pressure"],
     queryFn: () => fetchApi("/infra-self-analysis/pressure"),
     refetchInterval: 10000,
   });
+
+  const operationalPressureEntries = pressureData?.components ?? [];
 
   const { data: imbalanceData } = useQuery<WorkerImbalanceEntry[]>({
     queryKey: ["worker-imbalance"],
@@ -688,14 +698,14 @@ export default function WarRoomPage() {
               </div>
               {!pressureData ? (
                 <div className="text-sm text-slate-500 font-mono py-8 text-center">Loading pressure data...</div>
-              ) : pressureData.length === 0 ? (
+              ) : operationalPressureEntries.length === 0 ? (
                 <div className="text-sm text-slate-500 font-mono py-8 text-center">No pressure data</div>
               ) : (
                 <div className="space-y-3">
-                  {pressureData.map((p, i) => (
-                    <div key={p.component || i}>
+                  {operationalPressureEntries.map((p, i) => (
+                    <div key={p.name || i}>
                       <div className="flex items-center justify-between mb-1">
-                        <span className="text-xs font-mono text-slate-300 uppercase">{p.component}</span>
+                        <span className="text-xs font-mono text-slate-300 uppercase">{p.name}</span>
                         <span className={`text-[10px] font-mono ${p.pressure_score > 70 ? "text-red-400" : p.pressure_score > 40 ? "text-amber-400" : "text-slate-500"}`}>
                           {Math.round(p.pressure_score)}%
                         </span>
@@ -708,7 +718,7 @@ export default function WarRoomPage() {
                           transition={{ duration: 0.5 }}
                         />
                       </div>
-                      <div className="text-[10px] font-mono text-slate-600 mt-0.5 capitalize">{p.level}</div>
+                      <div className="text-[10px] font-mono text-slate-600 mt-0.5">load: {Math.round(p.current_load)} / {Math.round(p.capacity)}</div>
                     </div>
                   ))}
                 </div>
