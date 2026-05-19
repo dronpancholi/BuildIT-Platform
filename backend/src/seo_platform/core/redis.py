@@ -21,13 +21,26 @@ from seo_platform.core.logging import get_logger
 
 logger = get_logger(__name__)
 
+import asyncio
+
 _redis_pool: aioredis.Redis | None = None
+_redis_loop: asyncio.AbstractEventLoop | None = None
 
 
 async def get_redis() -> aioredis.Redis:
     """Get or create the async Redis client (singleton with pool)."""
-    global _redis_pool
-    if _redis_pool is None:
+    global _redis_pool, _redis_loop
+    try:
+        current_loop = asyncio.get_running_loop()
+    except RuntimeError:
+        current_loop = None
+
+    if _redis_pool is None or _redis_loop is not current_loop:
+        if _redis_pool is not None:
+            try:
+                await _redis_pool.close()
+            except Exception:
+                pass
         settings = get_settings()
         _redis_pool = aioredis.from_url(
             settings.redis.url,
@@ -37,6 +50,7 @@ async def get_redis() -> aioredis.Redis:
             decode_responses=settings.redis.decode_responses,
             health_check_interval=30,
         )
+        _redis_loop = current_loop
         logger.info("redis_pool_created", host=settings.redis.host, port=settings.redis.port)
     return _redis_pool
 

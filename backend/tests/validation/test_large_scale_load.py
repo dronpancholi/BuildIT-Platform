@@ -210,41 +210,47 @@ class TestSSEWebSocketScale:
     async def test_sse_websocket_scale(self):
         from seo_platform.api.endpoints.realtime.sse import sse_manager
 
-        connection_count = 100
-        queues: list[asyncio.Queue] = []
-        tenant_id = str(uuid4())
+        orig_limit = sse_manager.MAX_CONNECTIONS_PER_TENANT
+        sse_manager.MAX_CONNECTIONS_PER_TENANT = 150
+        try:
+            connection_count = 100
+            queues: list[asyncio.Queue] = []
+            tenant_id = str(uuid4())
 
-        # Create concurrent connections
-        for i in range(connection_count):
-            q: asyncio.Queue = asyncio.Queue()
-            channel = f"load-test-{i}"
-            await sse_manager.subscribe(tenant_id, channel, q)
-            queues.append(q)
+            # Create concurrent connections
+            for i in range(connection_count):
+                q: asyncio.Queue = asyncio.Queue()
+                channel = f"load-test-{i}"
+                await sse_manager.subscribe(tenant_id, channel, q)
+                queues.append(q)
 
-        assert len(queues) == connection_count, "Not all connections established"
+            assert len(queues) == connection_count, "Not all connections established"
 
-        # Publish to all connections
-        for i in range(connection_count):
-            await sse_manager.publish(
-                tenant_id, f"load-test-{i}",
-                {"type": "load_test", "sequence": i, "data": f"event-{i}"},
-            )
+            # Publish to all connections
+            for i in range(connection_count):
+                await sse_manager.publish(
+                    tenant_id, f"load-test-{i}",
+                    {"type": "load_test", "sequence": i, "data": f"event-{i}"},
+                )
 
-        # Validate event delivery
-        delivered = 0
-        for i, q in enumerate(queues[:20]):
-            try:
-                msg = await asyncio.wait_for(q.get(), timeout=1.0)
-                if msg:
-                    delivered += 1
-            except (asyncio.TimeoutError, Exception):
-                pass
+            # Validate event delivery
+            delivered = 0
+            for i, q in enumerate(queues[:20]):
+                try:
+                    msg = await asyncio.wait_for(q.get(), timeout=1.0)
+                    if msg:
+                        delivered += 1
+                except (asyncio.TimeoutError, Exception):
+                    pass
 
-        assert delivered > 0, "At least some connections should receive events"
+            assert delivered > 0, "At least some connections should receive events"
+        finally:
+            sse_manager.MAX_CONNECTIONS_PER_TENANT = orig_limit
 
         # Cleanup
         for i in range(connection_count):
             await sse_manager.unsubscribe(tenant_id, f"load-test-{i}", queues[i])
+
 
 
 # =============================================================================
