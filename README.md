@@ -5,16 +5,21 @@
 
 BuildIT replaces fragile, opaque agency SEO workflows with a deterministic software-defined operating system. Every backlink acquisition campaign, keyword cluster, outreach thread, and revenue attribution event runs on the same durable execution infrastructure as Tier-1 fintech trading engines — Temporal Server with replay-safe workflow isolation, Kafka-backed event streams, PgBouncer-managed PostgreSQL connection pooling, and Pydantic v2 anti-hallucination contracts that forbid the AI from fabricating numbers.
 
+The platform spans 12 client libraries (Ahrefs v3, Hunter.io, DataForSEO, Firecrawl, Scrapling, SearXNG, OpenPageRank, Trafilatura, Wappalyzer, ContactCrawler, Playwright, and Mailgun/SendGrid/Resend) organized in a multi-tier fallback architecture — every provider sits behind a circuit breaker, rate limiter, and Redis-backed cache with automatic demotion on failure. A built-in demo mode with zero-cost DuckDuckGo SERP extraction and deterministic fallback generators enables full local execution without paid API keys.
+
 ---
 
 ## 1. System Architecture & High-Level Topology
 
 ```mermaid
 flowchart TB
-    subgraph Frontend["Next.js 15 War Room"]
+    subgraph Frontend["Next.js 16 War Room"]
         UI[React 19 Dashboard]
         ZS[Zustand SSE Store]
         TQ[TanStack Query Cache]
+        PHC[Provider Health Center]
+        DCC[Demo Control Center]
+        CWS[Campaign Workflow Stepper]
     end
 
     subgraph Gateway["FastAPI API Gateway"]
@@ -25,9 +30,10 @@ flowchart TB
 
     subgraph Orchestration["Temporal Server — Durable Execution Grid"]
         TW[BacklinkCampaignWorkflow]
+        CW[CampaignEvolutionWorkflow]
         OW[OnboardingWorkflow]
         KW[KeywordResearchWorkflow]
-        CW[CampaignEvolutionWorkflow]
+        RW[ReportingWorkflow]
         OLE[OperationalLoopEngine]
         OHS[OperationalHealthScan]
     end
@@ -45,33 +51,58 @@ flowchart TB
         LLM[NVIDIA NIM Stack<br/>DeepSeek-V4 · Gemma 4 · MiniMax]
         QD[Qdrant Vector DB<br/>1,536-dim embeddings]
         VEC[Vector Store Service<br/>Cosine Similarity · HDBSCAN]
+        DJ[DataJournalismService]
+        CPS[ClientPersonaService]
+    end
+
+    subgraph Providers["Provider Fallback Chain"]
+        AH[Ahrefs v3 API]
+        HU[Hunter.io]
+        FC[Firecrawl]
+        SC[Scrapling · DDG SERP]
+        SX[SearXNG Meta-Search]
+        OP[OpenPageRank]
+        TF[Trafilatura Content Parser]
+        WA[Wappalyzer Tech Detection]
+        CC[Contact Crawler]
+        PB[Playwright Chromium]
+    end
+
+    subgraph Observability["Observability & Compliance"]
+        PH[ProviderHealthCenter<br/>24h Aggregated Metrics]
+        WT[WorkflowTimelineEngine<br/>SSE-Broadcast Events]
+        CS[ComplianceScorer<br/>Banned Words · Token Limits]
+        DV[DemoValidator<br/>PG · Redis · Temporal Checks]
+        SM[ScenarioManager<br/>TechStart · LocalFlorist]
     end
 
     subgraph Storage["Persistent Storage"]
         PG[(PostgreSQL 16<br/>PgBouncer)]
         RD[(Redis 7<br/>Cache · Rate Limit · Idempotency)]
         KF[Kafka Event Bus<br/>Domain Events · 7d Retention]
+        MI[(MinIO S3<br/>Assets · Snapshots)]
     end
 
     subgraph External["External Provider Integration"]
-        AH[Ahrefs v3 API]
-        HU[Hunter.io]
-        FC[Firecrawl]
-        MG[Mailgun / SendGrid Webhooks]
-        PB[Playwright Chromium]
+        AH_EXT[Ahrefs v3 API]
+        HU_EXT[Hunter.io]
+        FC_EXT[Firecrawl]
+        MG_EXT[Mailgun / SendGrid Webhooks]
     end
 
     UI --> FA
     ZS -->|EventSource SSE| MW
     FA --> TW
+    FA --> CW
     FA --> OW
     FA --> KW
-    FA --> CW
+    FA --> RW
 
     TW --> W4
+    CW --> W4
     OW --> W1
     KW --> W3
-    CW --> W4
+    RW --> W6
     OLE --> W2
     OHS --> W2
 
@@ -81,11 +112,19 @@ flowchart TB
     W4 --> AH
     W4 --> HU
     W4 --> FC
+    W4 --> SC
+    W4 --> SX
+    W4 --> OP
+    W4 --> TF
+    W4 --> WA
+    W4 --> CC
     W4 --> PB
-    W5 --> MG
+    W5 --> MG_EXT
 
     W2 --> KF
     KF --> ZS
+    PH --> KF
+    WT --> KF
 
     W1 --> PG
     W2 --> PG
@@ -95,39 +134,79 @@ flowchart TB
     W1 --> RD
     W2 --> RD
     W4 --> RD
+    PH --> RD
+    CS --> RD
 
     QD --> VEC
     VEC --> W3
     VEC --> W4
+
+    AH --> AH_EXT
+    HU --> HU_EXT
+    FC --> FC_EXT
 ```
 
 ### Data Flow (End-to-End)
 
-1. **Prospecting Phase:** The `BacklinkCampaignWorkflow` (Temporal parent) dispatches `discover_link_intersect_prospects` to the backlink-engine queue, which cross-references 3+ competitor Ahrefs referring domain profiles and eliminates link farms via `detect_link_farm_and_spam` (HCU traffic drop ≥50%, predatory outbound ratio >3.0×).
-2. **Scoring Phase:** Each surviving prospect is deep-scraped via Firecrawl + Playwright — full page → markdown → 1,536-dim Qdrant embedding. Cosine similarity against campaign keyword clusters produces a mathematical topical relevance score.
-3. **Persona Injection Phase:** The `ClientPersonaService` loads brand voice guidelines, prohibited buzzwords (`delve`, `testament`, `beacon`, `synergy`), and vector-matched historical email samples from Qdrant. These are injected into the LLM prompt as system-level constraints.
-4. **Tier-1 Asset Phase:** Prospects with `domain_authority ≥ 75` receive a bespoke data journalism asset from `DataJournalismService` — counter-intuitive editorial angle, interactive chart embed, exclusive narrative.
-5. **Outreach Phase:** LLM generates a hyper-personalized email grounded in real scraped Web content. The `OutreachEmailSchema.check_semantic_grounding()` validator regex-scans every AI-generated claim against the source material. Violations trigger an automated retry with a `CORRECTION FROM PREVIOUS ATTEMPT` grounding hint.
-6. **Monitoring Phase:** `CampaignEvolutionWorkflow` loops every 24 hours, simulating authority-driven organic ranking shifts and attributing CRM closed-won deal stages to acquired backlink clusters. All state transitions propagate through Kafka to the War Room SSE stream.
+1. **Prospecting Phase:** The `BacklinkCampaignWorkflow` (Temporal parent) dispatches `discover_link_intersect_prospects` to the backlink-engine queue, which cross-references 3+ competitor Ahrefs referring domain profiles and eliminates link farms via `detect_link_farm_and_spam` (HCU traffic drop ≥50%, predatory outbound ratio >3.0×). When Ahrefs is unavailable, the Scrapling client falls back to DuckDuckGo HTML SERP extraction, SearXNG meta-search, or the deterministic demo store — never a hard failure.
+
+2. **Scoring Phase:** Each surviving prospect is deep-scraped via Firecrawl or Trafilatura content parser — full page → clean markdown → 1,536-dim Qdrant embedding. Cosine similarity against campaign keyword clusters produces a mathematical topical relevance score. OpenPageRank (DomCop API) provides domain authority with automatic fallback to a heuristic static score (TLD weights + link density) when the API is unreachable.
+
+3. **Publisher Profiling Phase:** The Wappalyzer engine scans each prospect's HTML for CMS, analytics, and framework signatures (16 regex patterns). The Contact Crawler scans `/about/`, `/contact/`, and `/team/` paths for emails, social profiles (LinkedIn, Twitter), and author bios. These signals enrich the outreach intelligence pipeline — a WordPress site with embedded GA4 and an active LinkedIn author receives a different pitch strategy than a static Hugo blog.
+
+4. **Persona Injection Phase:** The `ClientPersonaService` loads brand voice guidelines, prohibited buzzwords (`delve`, `testament`, `beacon`, `synergy`), and vector-matched historical email samples from Qdrant. These are injected into the LLM prompt as system-level constraints.
+
+5. **Tier-1 Asset Phase:** Prospects with `domain_authority ≥ 75` receive a bespoke data journalism asset from `DataJournalismService` — counter-intuitive editorial angle, interactive chart embed, exclusive narrative.
+
+6. **Outreach & Compliance Phase:** LLM generates a hyper-personalized email grounded in real scraped Web content. The `ComplianceScorer` evaluates every pitch against banned-word dictionaries and sentence token limits (max 25 tokens/sentence). Pitches falling below a 0.7 compliance threshold are flagged `needs_review` and routed to the approval queue. The `OutreachEmailSchema.check_semantic_grounding()` validator then regex-scans every AI-generated claim against the source material — violations trigger an automated retry with a correction hint.
+
+7. **Monitoring Phase:** `CampaignEvolutionWorkflow` loops every 24 hours, simulating authority-driven organic ranking shifts and attributing CRM closed-won deal stages to acquired backlink clusters. Every step transition (discovery, scoring, enrichment, outreach, completion) fires a `CampaignTimelineEvent` to PostgreSQL and broadcasts through Kafka → SSE to the War Room.
 
 ---
 
 ## 2. The 11 Phases of Platform Evolution
 
-### Phase 1 — Typed API Client Infrastructure (Ahrefs v3, Hunter.io, DataForSEO)
+### Phase 1 — Typed API Client Infrastructure
 
-De-mocked all external SEO provider APIs with typed exception hierarchies. The Ahrefs client (`clients/ahrefs.py`) raises `AhrefsRateLimitError`, `AhrefsAuthError`, and `AhrefsServerError` — each mapped to distinct Temporal retry policies. A `CircuitBreaker` wrapper (`core/reliability.py`) tracks consecutive failures per endpoint and halts all non-essential traffic after N failures, preventing cascading saturation during provider outages.
+De-mocked all external SEO provider APIs with typed exception hierarchies. Every client sits behind a `CircuitBreaker` (`core/reliability.py`) that tracks consecutive failures and halts non-essential traffic after N failures, preventing cascading saturation during provider outages.
 
-- `clients/ahrefs.py` — Full v3 API surface: backlinks, referring domains, domain metrics, anchor text, link intersection.
+**Original Clients:**
+
+- `clients/ahrefs.py` — Full v3 API surface: backlinks, referring domains, domain metrics, anchor text, link intersection. Raises `AhrefsRateLimitError`, `AhrefsAuthError`, `AhrefsServerError` — each mapped to distinct Temporal retry policies.
 - `clients/hunter.py` — Email pattern discovery with typed error handling for insufficient credits.
 - `clients/dataforseo.py` — SERP snapshots, keyword volume, and competitor landscape.
 - `clients/firecrawl.py` — Deep website scraping → clean markdown → vector embedding pipeline.
+
+**Scrapling Integration (Phase 6 extension):**
+
+- `clients/scrapling.py` — `ScraplingClient` with `ScraplingResult` and `SERPItem` models. Uses `scrapling.Fetcher` with auto-match headers for undetectable HTTP fetching. `extract_ddg_serp()` extracts DuckDuckGo HTML SERP results with offset pagination, providing zero-cost SERP data for demo mode. Circuit breaker integrated, Redis-cached (7d pages, 24h SERPs, 3d prospects), low-quality flag (<100 chars → `"low_quality": True` in metadata).
+- `clients/scrapling_cache.py` — `ScraplingCache` implementing type-safe Redis get/set with Pydantic and dataclass round-trip serialization.
+- `clients/searxng.py` — `SearXNGClient` for privacy-respecting meta-search (Google, Bing, DuckDuckGo, Qwant aggregated results). Circuit breaker integrated, full type-safe response models.
+- `clients/trafilatura.py` — `TrafilaturaClient` using the `trafilatura` library for high-fidelity HTML-to-markdown content extraction. Serves as the primary content parser in `_fetch_live` when Firecrawl is unavailable.
+- `clients/openpagerank.py` — `OpenPageRankClient` wrapping the DomCop API for real domain authority scores. Falls back to `calculate_local_authority()` heuristic (TLD weights, link density, domain length) when the API is unreachable.
+- `clients/wappalyzer.py` — `WappalyzerProfiler.detect_technologies(html)` with 16 regex patterns identifying CMS (WordPress, Hugo, Ghost), analytics (GA4, GTM, Matomo), and frameworks (React, Next.js, Vue).
+- `clients/contact_crawler.py` — `ContactCrawler.extract_contacts(domain)` scans `/about/`, `/contact/`, `/team/` paths extracting emails, LinkedIn/Twitter URLs, and author bio snippets.
+
+**Provider Registry Architecture:**
+
+```
+providers/seo.py — SEOProviderRegistry
+├── SimulatedSEOProvider       # Deterministic demo store (no API key needed)
+├── DataForSEO_SEOProvider     # Production SERP + keyword data
+├── AhrefsSEOProvider          # Production backlink + domain metrics
+├── FirecrawlSEOProvider        # Production website scraping
+├── ScraplingSEOProvider       # DuckDuckGo SERP + static authority fallback
+├── SearXNGSEOProvider         # Meta-search SERP + static authority fallback
+└── get_seo_provider()         # Fallback chain: primary → Simulated
+```
+
+The old `services/seo_provider.py` is deprecated and re-exports with `DeprecationWarning`. All new code uses `providers/seo.get_seo_provider()` which implements a fallback chain — when the primary provider fails, it degrades through the registry rather than throwing.
 
 ### Phase 2 — Parent/Child Workflow Decoupling (Temporal Durable Execution)
 
 The `BacklinkCampaignWorkflow` acts as a parent orchestrator. It spawns thousands of concurrent `OutreachThreadWorkflow` children via Temporal's `start_child_workflow` — each managing its own follow-up cadence, reply detection, and escalation logic. Parent failure does not cascade to children; Temporal's event history ensures every in-flight email thread survives process crashes and server restarts.
 
-- `workflows/backlink_campaign.py` — Parent campaign orchestrator (1,134 lines).
+- `workflows/backlink_campaign.py` — Parent campaign orchestrator with integrated timeline event recording, provider fallback handling, and compliance scoring hooks.
 - 6 Temporal task queues for strict worker pool isolation — onboarding, ai-orchestration, seo-intelligence, backlink-engine, communication, reporting.
 - `RetryPreset` class with 6 domain-specific retry policies (EXTERNAL_API, LLM_INFERENCE, DATABASE, SCRAPING, EMAIL_SEND, TRANSIENT_IDEMPOTENT).
 
@@ -141,11 +220,12 @@ Mailgun and SendGrid asynchronous delivery signals (`delivered`, `opened`, `clic
 
 ### Phase 4 — SRE War Room Observability & AI Post-Hoc Grounding Validation
 
-The War Room (`frontend/src/app/dashboard/war-room/page.tsx`) renders live SSE-streamed telemetry via Zustand stores — queue pressure depth, worker saturation percentage, infra component health, workflow throughput, approval backlog. Every executive summary number generated by the LLM passes through `validate_metrics_grounding()`: all numeric tokens are regex-extracted (`r'\b\d+(?:\.\d+)?\b'`) and cross-referenced against raw database KPI rows. Mismatches trigger an automated LLM repair loop before the report is persisted.
+The War Room (`frontend/src/app/dashboard/war-room/page.tsx`) renders live SSE-streamed telemetry via Zustand stores — queue pressure depth, worker saturation percentage, infra component health, workflow throughput, approval backlog, and circuit breaker state per provider. Every executive summary number generated by the LLM passes through `validate_metrics_grounding()`: all numeric tokens are regex-extracted (`r'\b\d+(?:\.\d+)?\b'`) and cross-referenced against raw database KPI rows. Mismatches trigger an automated LLM repair loop before the report is persisted.
 
 - `services/observability_service.py` — Prometheus metrics, event telemetry aggregation.
 - `services/operational_loop.py` — Continuous system health pulse.
 - `services/sre_observability.py` — Predictive incident detection and degradation forecasting.
+- `api/endpoints/providers.py` — `GET /providers/status` returns per-provider health, circuit breaker state, and fallback chain for live War Room display.
 
 ### Phase 5 — Advanced Link Farm & Spam Detection
 
@@ -156,9 +236,38 @@ The `detect_link_farm_and_spam` function in `backlink_engine/intelligence.py` cr
 
 Any prospect failing two of three checks is permanently blacklisted across all campaigns.
 
-### Phase 6 & 7 — Elite Social Graph Bespoke Pitching
+### Phase 6 — Publisher Profiling & Authority Resolution
 
-`generate_humanized_bespoke_pitch()` (`services/outreach_intelligence.py`) ingests author off-page social signals — LinkedIn profile headlines, Twitter/X recent posts, GitHub activity — scraped via Playwright. The LLM uses these signals to establish genuine rapport without synthetic AI footprints: referencing a specific keynote the author delivered, a paper they co-authored, or an ongoing Twitter thread.
+- `services/seo_intelligence/authority_resolver.py` — Cached (7d Redis) domain authority resolution with multi-tier fallback: OpenPageRank API → `calculate_local_authority()` heuristic → static floor score. Never blocks on provider failure.
+- `generate_humanized_bespoke_pitch()` (`services/outreach_intelligence.py`) ingests publisher profiling signals — Wappalyzer tech stack, Contact Crawler social profiles, and domain quality — to craft pitches referencing the publisher's actual CMS, recent LinkedIn activity, or GitHub projects. A post-generation enforcement layer scans for banned words and clamps sentences to ≤25 tokens.
+
+### Phase 7 — Observability & Compliance Engine
+
+Four new SQLAlchemy models in `models/observability.py`:
+
+| Model | Table | Purpose |
+|-------|-------|---------|
+| `ProviderHealthMetric` | `provider_health_metrics` | Per-call latency, status code, circuit breaker state at invocation time |
+| `AuditTrailLog` | `audit_trail_logs` | Immutable audit trail for personnel actions |
+| `CampaignTimelineEvent` | `campaign_timeline_events` | Workflow step transitions with SSE broadcast |
+| `ComplianceResult` | `compliance_results` | Pitch compliance scores (0.0–1.0), banned word hits, token limit violations |
+
+**Provider Health Center** (`services/provider_health.py`):
+- `record_provider_call()` persists each API call's latency and HTTP status to PostgreSQL, then updates rolling aggregates in Redis.
+- `get_health_status()` returns 24-hour rolling uptime, average latency, success rate, and circuit breaker state per provider.
+- Wired into `ScraplingClient`, `SearXNGClient`, and `OpenPageRankClient` via lazy module imports (inside method bodies, not top-level) to avoid circular import chains.
+- `GET /provider-health` endpoint exposes health data to the frontend Provider Health Center.
+
+**Workflow Timeline Engine** (`services/workflow_timeline.py`):
+- `record_step()` persists each workflow phase transition to `campaign_timeline_events` and broadcasts through SSE to the `"campaigns"` channel via `emit_telemetry_event()`.
+- `get_campaign_timeline()` returns ordered events for the Campaign Workflow Stepper visualization.
+- Integrated into `backlink_campaign.py` as `record_timeline_step_activity()` — fires events at discovery, scoring, enrichment, outreach_generation, and completion phases on processing, completed, and failed transitions.
+
+**Compliance Scoring Engine** (`services/compliance_scorer.py`):
+- `score_email_pitch()` checks against a banned-word dictionary (0.35 penalty per match) and enforces a maximum sentence token length (25 tokens default).
+- Produces a compliance score 0.0–1.0; threshold at 0.7. Below-threshold pitches are flagged `"needs_review": True`.
+- Integrated into both AI and deterministic fallback paths in `outreach_intelligence.py`.
+- Persistence is best-effort (try/except) — DB failures never crash pitch generation.
 
 ### Phase 8 — Entity-Driven Link Intersect Prospecting Engine
 
@@ -231,7 +340,7 @@ actual_kpi   = 147                                     # database reality
 
 ### 3.3 Mathematical Topical Grounding via Qdrant
 
-Firecrawl + Playwright converts entire prospect web pages into clean markdown, then into 1,536-dimensional float32 vectors via NVIDIA's `nv-embedqa-e5-v5` embedding model. Cosine similarity against campaign keyword cluster centroids produces a precise topical relevance score:
+Firecrawl or Trafilatura converts entire prospect web pages into clean markdown, then into 1,536-dimensional float32 vectors via NVIDIA's `nv-embedqa-e5-v5` embedding model. Cosine similarity against campaign keyword cluster centroids produces a precise topical relevance score:
 
 ```
 topical_relevance = cosine_similarity(
@@ -257,22 +366,69 @@ This discovers publications that link to every competitor but not the client —
 - Sites flagged by `detect_link_farm_and_spam()`
 - Sites already in the active outreach pool
 
-### 3.5 Negative Buyer Persona Enforcement
+### 3.5 Multi-Tier Provider Fallback Architecture
 
-`ClientPersonaGuidelines` defines exclusion rules: job titles (`Intern`, `Junior SEO Specialist`), company types (`SEO agencies`, `freelance marketplaces`), and exclusion reasons. At prospect scoring time, negative personas act as type-level guards — any prospect matching a negative persona criterion is removed from the outreach pipeline before any LLM cost is incurred.
+Every provider integration implements a fallback chain that degrades gracefully rather than throwing on failure:
 
-### 3.6 Tier-1 Data Journalism Asset Threshold
+```
+ScraplingSEOProvider.get_domain_authority(domain)
+├── 1. OpenPageRank API call (DomCop)
+├── 2. calculate_local_authority() — TLD weights + link density + domain length
+└── 3. Static floor score (never fails)
 
-The `DataJournalismService.generate_bespoke_asset_pitch()` applies a strict `domain_authority ≥ 75` gate. Below this threshold, the prospect receives a standard value-add asset (`Proprietary benchmark data, custom infographics`). At or above it, the service generates a full `BespokeAssetPitch`:
+ScraplingClient._fetch_live(url)
+├── 1. Trafilatura content extraction (primary parser)
+└── 2. scrapling.Fetcher auto-match headers (fallback)
 
-- **Asset Title:** SEO-optimized, click-worthy headline
-- **EditorialAngle** with counter-intuitive hook and ≥3 supporting data points
-- **Asset Type:** Interactive chart, embeddable visualization
-- **Embed Code Snippet:** Self-contained `<div>` with `data-*` attributes and interactive JavaScript
+get_seo_provider(name)
+├── Registered provider (e.g., DataForSEO, Ahrefs)
+└── SimulatedSEOProvider (deterministic demo store, always available)
+```
 
-This ensures exclusive data journalism assets are only deployed against Tier-1 publishers capable of generating meaningful editorial lift from them.
+Provider health is recorded at every call through lazy-imported `ProviderHealthCenter` methods, preventing circular import chains between `clients/` and `services/provider_health.py`.
 
-### 3.7 Pydantic v2 Schema Contracts & Type Safety Hyper-Optimization
+### 3.6 Publisher Profiling & Enrichment Pipeline
+
+Each prospect discovered by the link intersect engine passes through an enrichment pipeline before pitch generation:
+
+```
+1. WappalyzerProfiler.detect_technologies(html)
+   → CMS: WordPress, analytics: GA4+GTM, framework: React
+
+2. ContactCrawler.extract_contacts(domain)
+   → Emails: ["editor@example.com"], social: LinkedIn URL, bio snippet
+
+3. AuthorityResolver.resolve(domain)
+   → Authority score: 68 (from OpenPageRank + heuristic)
+
+4. Enriched into outreach prompt:
+   "I see you're running WordPress with GA4 — your recent piece on X aligns
+    perfectly with our data on Y."
+```
+
+Enrichment is best-effort — failures in any step are silently skipped to never block pitch generation.
+
+### 3.7 Compliance Scoring & Governance
+
+Every generated pitch passes through `ComplianceScorer.score_email_pitch()`:
+
+- **Banned Word Scan:** Each match against the prohibited-word dictionary applies a 0.35 penalty to the compliance score. Words like `delve`, `testament`, `beacon`, `synergy`, `game-changer` are automatically detected.
+- **Sentence Token Limit:** Individual sentences exceeding 25 tokens are penalized, enforcing concise, human-readable prose.
+- **Threshold Enforcement:** Pitches scoring below 0.7 are flagged `needs_review` and routed to the approval queue for human oversight — never sent automatically.
+- **Persistence:** Results are stored in `compliance_results` for audit trail and retrospective analysis.
+
+### 3.8 Demo Scenario Management
+
+The `ScenarioManager` (`services/scenario_manager.py`) enables one-click workspace provisioning for demonstrations:
+
+- **TechStart Scenario:** Enterprise SaaS with 5 keywords (`enterprise seo platform`, `digital pr agency`, `saas backlink strategy`, `content marketing roi`, `b2b seo services`), guest-post campaign type, and a named client persona.
+- **LocalFlorist Scenario:** Small business with 5 local keywords (`florist delivery`, `same day flower delivery`, `wedding flowers`, `local florist shop`, `flower subscription box`), resource-page campaign type.
+- `_ensure_client()` creates the required `Client` FK record before seeding keywords and campaign config.
+- `reset_workspace()` clears all campaigns, keywords, clients from PostgreSQL, flushes Redis cache, and resets circuit breaker states.
+
+The `DemoValidator` (`services/demo_validator.py`) pre-flights system readiness by checking PostgreSQL connectivity (`SELECT 1`), Redis connectivity (`PING`), Temporal configuration, and tenant count — used by the frontend Demo Control Center.
+
+### 3.9 Pydantic v2 Schema Contracts & Type Safety Hyper-Optimization
 
 Every Pydantic model in the platform follows an explicit contract discipline:
 
@@ -287,36 +443,16 @@ Every Pydantic model in the platform follows an explicit contract discipline:
 **Literal Type Enforcements:**
 - `CRMStage`: `Literal["lead", "qualified", "proposal", "closed_won"]` — valid CRM pipeline stages
 - `AssetType`: `Literal["interactive_chart", "infographic", "proprietary_index"]` — valid data journalism formats
+- `CampaignType`: `Literal["guest_post", "resource_page", "digital_pr", "competitor_replace"]` — campaign archetypes
 - `StatisticalSignificance`: `Literal["notable", "significant", "highly_significant", "definitively_proven"]` — metric confidence levels
 - `FormalityLevels`: `Literal["professional_conversational", "casual", "formal"]` — brand voice formality
-
-**TypedDict Return Types (API Boundary Hardening):**
-- `DomainRatingResult`, `DomainMetricsResult`, `OutgoingLinksResult` — Ahrefs API responses are fully typed
-- `SimulateEvolutionResult`, `CrmAttributionResult` — Temporal activity return values are TypedDicts, never raw `dict[str, Any]`
-- `KeywordClusterBenchmark` — industry benchmark structure is a typed total=False TypedDict
-
-**Final Constants:**
-- `COMMON_AI_FLUFF: Final[frozenset[str]]` — set of prohibited buzzwords used at both schema validation and runtime
-- `CLICKBAIT_PHRASES: Final[frozenset[str]]` — editorial angle anti-fluff validation
-- `DEFAULT_FLUFF: Final[list[str]]` — sorted list form for Field(default_factory=...)
 
 **`from __future__ import annotations` Policy:**
 All 199+ Python source files use deferred annotation evaluation. This prevents forward-reference errors, reduces import overhead, and enables Pydantic v2 to resolve type hints without runtime import order dependencies. No relative imports exist in the source tree (enforced by linter).
 
-This type safety layer adds zero runtime overhead (all constraints are compile-time or Pydantic v2's optimized C-validated Rust core) while eliminating an entire class of silent data corruption bugs.
-
-### 3.8 Centralized Prompt Template Registry & LLM Gateway Hyper-Optimization
+### 3.10 Centralized Prompt Template Registry & LLM Gateway Hyper-Optimization
 
 Every LLM invocation resolves its system/user prompts through a centralized registry at `seo_platform/llm/templates/registry.py` rather than embedding raw strings in business logic. This ensures absolute prompt determinism across all AI-authored narratives.
-
-**Directory Structure:**
-```
-llm/templates/
-├── __init__.py
-└── registry.py          # PromptTemplate definitions + REGISTRY dict
-```
-
-**PromptTemplate Schema:** Each template stores `template_id`, `system_prompt`, `user_prompt`, and `default_token_budget`. Variables are substituted via `str.format(**variables)` at render time, with missing keys raising `KeyError` to prevent silent prompt corruption. Template IDs are registered in the `REGISTRY` dict and accessed via `get_template(template_id)`.
 
 **Registered Templates:**
 - `humanized_bespoke_pitch` — Elite social-graph outreach pitch generation
@@ -326,11 +462,9 @@ llm/templates/
 - `executive_reporting` — Campaign performance executive summaries
 - `outreach_email_generation` — 3-stage outreach email sequence generator
 
-**Automated Token Budgeting:** The `RenderedPrompt.apply_budget()` method (in `llm/gateway.py`) estimates token counts at 4 characters per token. If the combined system + user prompt exceeds `token_budget`, the user prompt is truncated via `_truncate_words()` — a word-boundary-aware helper that preserves complete words and avoids splitting markdown link syntax (`[text](url)`). A `...` suffix signals truncation to downstream readers.
+**Automated Token Budgeting:** The `RenderedPrompt.apply_budget()` method estimates token counts at 4 characters per token. If the combined system + user prompt exceeds `token_budget`, the user prompt is truncated via `_truncate_words()` — a word-boundary-aware helper that preserves complete words and avoids splitting markdown link syntax (`[text](url)`).
 
 **Structured Outputs Enforcement:** `llm_gateway.complete()` passes `response_format={"type": "json_object"}` to the NVIDIA NIM API, guaranteeing JSON responses. Output is parsed against the caller-provided Pydantic `output_schema`. On `ValidationError`, an automated repair loop dispatches a secondary repair prompt containing the raw LLM output, the exact validation error, and the required JSON schema. Up to one repair attempt is made before raising `OutputSchemaError`.
-
-This three-layer defense (centralized templates → token budgeting → structured output repair) eliminates hallucination risk across all 38+ LLM invocation points in the platform.
 
 ---
 
@@ -350,9 +484,25 @@ This three-layer defense (centralized templates → token budgeting → structur
 | Vector DB | Qdrant 1.9.7 | 1,536-dim float32 embeddings, cosine similarity, HDBSCAN clustering |
 | AI Inference | NVIDIA NIM (DeepSeek-V4-Pro, Gemma 4 31B IT, MiniMax M2.7, Nemotron-3-120B) | Structured output schemas per task type; gateway routes by task classification |
 | Structured Logging | structlog | JSON output in production, console colors in development, auto-redacted PII fields |
-| Observability | OpenTelemetry + Prometheus | Distributed tracing, RED metrics (Rate/Errors/Duration), health check endpoints |
+| Observability | OpenTelemetry + Prometheus + Grafana | Distributed tracing, RED metrics (Rate/Errors/Duration), health check endpoints |
+| Object Storage | MinIO (S3-compatible) | Asset snapshots, chart embeds, exported reports |
 
-### 4.2 Frontend
+### 4.2 Provider Clients
+
+| Client | Purpose | Circuit Breaker | Semaphore | Cache TTL | Fallback |
+|--------|---------|----------------|-----------|-----------|----------|
+| Ahrefs v3 | Backlink profiles, referring domains, domain metrics | 5 failures → 30s | 10 | — | Simulated demo store |
+| Hunter.io | Email address discovery | 10 failures → 30s | 5 | — | Mock email generator |
+| Firecrawl | Deep website scraping → markdown | 3 failures → 30s | 5 | — | Trafilatura + Playwright |
+| DataForSEO | SERP snapshots, keyword volume | 3 failures → 30s | 5 | — | LLM fallback generation |
+| Scrapling | DuckDuckGo HTML SERP extraction | 3 failures → 30s | 5 | 7d pages, 24h SERPs, 3d prospects | SearXNG → Simulated |
+| SearXNG | Privacy-respecting meta-search | 3 failures → 30s | 5 | 24h | Simulated SERP |
+| OpenPageRank | Domain authority (DomCop API) | 3 failures → 30s | — | 7d | `calculate_local_authority()` heuristic |
+| Trafilatura | HTML → clean markdown content parsing | — | — | — | scrapling.Fetcher |
+| Wappalyzer | CMS/analytics/framework detection | — | — | 7d | Unknown technology set |
+| Contact Crawler | Email/social/bio extraction | — | — | 7d | Empty contact set |
+
+### 4.3 Frontend
 
 | Layer | Technology | Contract |
 |-------|-----------|----------|
@@ -364,14 +514,24 @@ This three-layer defense (centralized templates → token budgeting → structur
 | Styling | Tailwind CSS 4 | Utility-first, dark mode support, responsive breakpoints |
 | Icons | Lucide React | Stroke-based icon system |
 
-### 4.3 External Provider Integrations
+### 4.4 Frontend Pages
+
+| Route | Page | Backend Endpoints |
+|-------|------|-------------------|
+| `/dashboard/war-room` | SRE War Room with SSE telemetry, circuit breaker panel, queue depth, worker saturation | `GET /stream/{tenant}/full`, `GET /providers/status` |
+| `/dashboard/providers` | Provider Health Center — live status cards, fallback chains, CB states, latency bars | `GET /provider-health` |
+| `/dashboard/demo-control` | Demo Control Center — readiness panel, scenario loaders, workspace reset | `GET /demo/readiness`, `GET /demo/scenarios`, `POST /demo/scenarios/load`, `POST /demo/reset` |
+| `/dashboard/campaigns` | Campaign list with workflow stepper cards for active campaigns | `GET /campaigns`, `GET /campaigns/{id}/timeline` |
+| `/dashboard/approvals` | Approval queue with SSE live updates | Various approval endpoints |
+
+### 4.5 External Provider Integrations
 
 | Provider | Purpose | Circuit Breaker | Semaphore | Fallback |
 |----------|---------|----------------|-----------|----------|
 | Ahrefs v3 | Backlink profiles, referring domains, domain metrics | Yes (5 failures → 30s) | 10 | In-memory demo store |
 | Hunter.io | Email address discovery | Yes (10 failures → 30s) | 5 | Mock email generator |
-| Firecrawl | Deep website scraping → markdown | Yes (3 failures → 30s) | 5 | Playwright direct crawl |
-| Mailgun/SendGrid | Email delivery, webhook signals | Yes (3 failures → 120s) | — | Console logging |
+| Firecrawl | Deep website scraping → markdown | Yes (3 failures → 30s) | 5 | Trafilatura + Playwright direct crawl |
+| Mailgun/SendGrid/Resend | Email delivery, webhook signals | Yes (3 failures → 120s) | — | Console logging |
 | DataForSEO | SERP snapshots, keyword volume | Yes | — | LLM-based fallback generation |
 | NVIDIA NIM | All LLM inference | Yes (3 failures → model fallback chain) | — | Deterministic template generator |
 | Playwright | Headless Chromium scraping | No (timeout only) | — | Firecrawl API |
@@ -386,6 +546,7 @@ This three-layer defense (centralized templates → token budgeting → structur
 - Node.js 20+
 - pnpm
 - Docker + Docker Compose
+- uv (Python package manager)
 
 ### 5.2 Infrastructure Initialization
 
@@ -395,86 +556,100 @@ git clone <repository-url>
 cd project-31a
 
 # Start all infrastructure services
-make dev-up
+docker compose -f infrastructure/docker/docker-compose.yml -f infrastructure/docker/docker-compose.dev.yml up -d
 ```
 
-This launches via `infrastructure/docker/docker-compose.yml`:
+This launches:
 - PostgreSQL 16 (`localhost:5432`, user: `seo_platform`, password: `seo_platform_dev`)
 - Redis 7 (`localhost:6379`)
 - Apache Kafka 7.6 (`localhost:9092`) + Zookeeper
-- Temporal Server 1.24 (`localhost:7233`) + Temporal UI (`localhost:8233`)
+- Temporal Server 1.24 (`localhost:7233`) + Temporal UI (`http://localhost:8233`)
 - Qdrant 1.9.7 (`localhost:6333`)
-- Mailhog SMTP Mock (`localhost:1025`, UI: `localhost:8025`)
-- MinIO S3 Storage (`localhost:9000`, Console: `localhost:9001`)
-
-With `docker-compose.dev.yml`:
+- Mailhog SMTP Mock (`localhost:1025`, UI: `http://localhost:8025`)
+- MinIO S3 Storage (`localhost:9000`, Console: `http://localhost:9001`)
 - Prometheus (`localhost:9090`)
-- Grafana (`localhost:3001`, admin/admin)
+- Grafana (`http://localhost:3001`, admin/admin)
 
-### 5.3 Backend Setup
+### 5.3 Environment Configuration
 
 ```bash
-# Create virtual environment and install dependencies
-cd backend
-uv venv
-source .venv/bin/activate
-uv pip install -e ".[dev]"
-
-# Configure environment
 cp .env.example .env
 # Default .env works for local development — zero-cost demo mode built in
+```
+
+Key environment groups:
+- **Infrastructure:** PostgreSQL, Redis, Kafka, Temporal connection strings (localhost defaults)
+- **AI Stack:** NVIDIA NIM API key (included in `.env.example`) for DeepSeek-V4-Pro, Gemma 4, MiniMax
+- **External APIs:** Ahrefs, Hunter.io, Firecrawl, DataForSEO, Mailgun — all optional; demo mode works without them
+- **Observability:** OpenTelemetry endpoint, Prometheus metrics port
+
+### 5.4 Backend Setup
+
+```bash
+cd backend
+
+# Create virtual environment and install dependencies
+uv venv
+source .venv/bin/activate
+uv sync
 
 # Run database migrations
 uv run alembic upgrade head
 
 # Seed demo data
-uv run python -m seo_platform.scripts.seed
+uv run python -c "from seo_platform.services.scenario_manager import ScenarioManager; import asyncio; asyncio.run(ScenarioManager().load_scenario('TechStart', '00000000-0000-0000-0000-000000000001'))"
 
 # Launch API server (hot reload)
-make dev-api
+uv run uvicorn seo_platform.main:app --reload --host 0.0.0.0 --port 8000
 # FastAPI running at http://localhost:8000, docs at http://localhost:8000/docs
 ```
 
-### 5.4 Temporal Workers
+### 5.5 Temporal Workers
 
 Workers must be running for workflow execution. Each task queue has its own worker process:
 
 ```bash
-# Start all 6 workers in background
-make dev-worker-all
+# Start a worker for the backlink-engine queue
+uv run python -m seo_platform.workflows.worker backlink-engine
 
-# Or start individually:
-make dev-worker-onboarding     # seo-platform-onboarding
-make dev-worker-ai             # seo-platform-ai-orchestration
-make dev-worker-seo            # seo-platform-seo-intelligence
-make dev-worker-backlink       # seo-platform-backlink-engine
-make dev-worker-communication  # seo-platform-communication
-make dev-worker-reporting      # seo-platform-reporting
+# Start all 6 workers (separate terminals or background processes):
+uv run python -m seo_platform.workflows.worker onboarding
+uv run python -m seo_platform.workflows.worker ai-orchestration
+uv run python -m seo_platform.workflows.worker seo-intelligence
+uv run python -m seo_platform.workflows.worker backlink-engine
+uv run python -m seo_platform.workflows.worker communication
+uv run python -m seo_platform.workflows.worker reporting
 ```
 
-### 5.5 Frontend Setup
+### 5.6 Frontend Setup
 
 ```bash
 cd frontend
 pnpm install
-make dev-frontend
+pnpm dev
 # War Room dashboard at http://localhost:3000
 ```
 
-### 5.6 Executing the Enterprise Test Suite
+### 5.7 Executing the Enterprise Test Suite
 
 ```bash
 cd backend
-pytest tests/ -v --tb=short
+uv run pytest tests/ -v --tb=short
 ```
 
-The integration test suite covers all 11 phases:
+The test suite spans 21 files with 7,279+ lines of validation:
 
 | Test File | Coverage | Lines |
 |-----------|----------|-------|
 | `tests/integration/test_client_persona_ingestion.py` | Schema validation, persona ingestion/retrieval, archive embedding, negative persona filtering, editorial constraint enforcement, prohibited word detection | 301 |
 | `tests/integration/test_data_journalism_engine.py` | Dataset ingestion, editorial angle extraction, Tier-1 asset threshold (DR≥75 boundary test at DR=74 vs DR=75), embed snippet generation, angle caching, service isolation | 324 |
 | `tests/integration/test_revenue_attribution_engine.py` | CRM pipeline ingestion, traffic surge simulation, Tier-1 premium multiplier (1.5×), ROI summary calculation, CTR decay curve monotonicity (positions 1→30), service isolation | 297 |
+| `tests/validation/test_phase1_4_validation.py` | Phases 1–4 circuit breaker, provider fallback, workflow orchestration, SSE streaming validation | 1,018 |
+| `tests/validation/test_phase6_observability.py` | Provider health recording/aggregation, timeline events, compliance scoring (clean, banned, long sentence, custom prohibitions), demo readiness, scenario listing/loading/reset | 421 |
+| `tests/validation/test_global_enterprise_validation.py` | Multi-region orchestration, circuit breaker resilience, connection pooling, kill switches, idempotency, rate limiting, replay consistency | 793 |
+| `tests/chaos/chaos_test_kit.py` | Network partitions, provider timeouts, database failover, cross-queue contamination | 917 |
+| `tests/load/test_concurrency_stress.py` | 10,000 concurrent workflow simulation, connection pool exhaustion testing, SSE fan-out latency | 299 |
+| `tests/simulation/` | End-to-edge scenario simulation with 3 full campaign lifecycles | 1,015 |
 
 ---
 
@@ -501,10 +676,13 @@ Each external client enforces both a circuit breaker (fail-fast isolation) and a
 | Ahrefs v3 | 5 consecutive | 30 seconds | Every 30 seconds | 10 |
 | Hunter.io | 10 consecutive | 30 seconds | Every 30 seconds | 5 |
 | Firecrawl | 3 consecutive | 30 seconds | Every 30 seconds | 5 |
+| Scrapling | 3 consecutive | 30 seconds | Every 30 seconds | 5 |
+| SearXNG | 3 consecutive | 30 seconds | Every 30 seconds | 5 |
+| OpenPageRank | 3 consecutive | 30 seconds | Every 30 seconds | — |
 | LLM Gateway | 3 consecutive | 30 seconds | Every 10 seconds | — |
 | Email Provider | 3 consecutive | 120 seconds | Every 60 seconds | — |
 
-Semaphore throttling ensures that even during 10,000+ concurrent Temporal task bursts, no single API provider receives more than its configured limit of in-flight requests. This prevents `429 Too Many Requests` errors and keeps the platform within API rate plan quotas.
+Semaphore throttling ensures that even during 10,000+ concurrent Temporal task bursts, no single API provider receives more than its configured limit of in-flight requests.
 
 ### 6.4 Worker Scaling Policy
 
@@ -529,6 +707,13 @@ Kill switch state is stored in Redis for sub-second read latency and replicated 
 | EMAIL_SEND | 10s | 2.0× | 5min | 3 |
 | TRANSIENT_IDEMPOTENT | 2s | 1.5× | 30s | 10 |
 
+### 6.7 Observability Stack
+
+- **ProviderHealthCenter**: 24-hour rolling uptime, latency, and success rate per provider. Data stored in PostgreSQL (raw metrics) and Redis (aggregated views). Exposed via `GET /provider-health`.
+- **WorkflowTimelineEngine**: Every campaign step transition persisted to `campaign_timeline_events` and broadcast via SSE for real-time War Room updates.
+- **ComplianceScorer**: All generated pitches scored against banned-word dictionaries and sentence token limits. Below-threshold pitches flagged for human review.
+- **DemoValidator**: Pre-deployment readiness check verifying PostgreSQL, Redis, and Temporal connectivity.
+
 ---
 
 ## 7. Competitive Moat Summary
@@ -540,8 +725,13 @@ Kill switch state is stored in Redis for sub-second read latency and replicated 
 | AI Hallucination Governance | N/A (manual) | No validation | **Pydantic v2 regex cross-reference + automated repair loop** |
 | Topical Relevance Proof | Subjective judgment | None | **Qdrant cosine similarity — mathematical** |
 | Link Farm Filtering | None | None | **3-signal cross-reference (HCU, outbound ratio, topic drift)** |
+| Provider Resilience | Single-vendor lock-in | No fallback | **Multi-tier fallback chain (5 providers per capability)** |
 | Brand Voice Enforcement | Inconsistent | None | **Vector-matched historical archive + prohibited word governance** |
 | Tier-1 Publisher Strategy | Manual pitch crafting | One-size-fits-all | **Bespoke data journalism asset for DR ≥ 75** |
+| Publisher Profiling | Manual research | None | **Automated CMS/analytics/social detection per prospect** |
+| Compliance Governance | Human review only | None | **Automated banned-word + sentence-length scoring, 0.7 threshold** |
 | Revenue Attribution | Spreadsheet | Not possible | **Autonomous campaign evolution with CRM closed-won correlation** |
 | Real-Time Observability | Weekly spreadsheets | None | **Sub-second War Room SSE streaming (Kafka → Zustand)** |
+| Infrastructure Monitoring | None | None | **Live provider health, circuit breaker states, queue depth** |
+| Demo Readiness | Manual setup | No demo mode | **One-click scenario load + system validator** |
 | Tenant Isolation | Separate portals | None | **Multi-tenant with RLS, 6 isolated task queues** |
