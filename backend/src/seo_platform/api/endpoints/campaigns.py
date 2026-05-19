@@ -195,6 +195,116 @@ async def list_campaign_threads(
         )
 
 
+class GenerateEmailRequest(BaseModel):
+    tenant_id: UUID
+
+
+class GenerateEmailResponse(BaseModel):
+    prospect_domain: str
+    prospect_name: str | None
+    subject: str
+    body_html: str
+    generation_source: str
+    compliance_score: float
+    compliance_passed: bool
+
+
+@router.post("/{campaign_id}/generate-emails", response_model=APIResponse[list[GenerateEmailResponse]])
+async def generate_campaign_emails(
+    campaign_id: UUID,
+    request: GenerateEmailRequest,
+) -> APIResponse[list[GenerateEmailResponse]]:
+    """Generate deterministic fallback emails for all prospects in a campaign.
+    Uses the elite deterministic template (no LLM/API keys needed).
+    Each generated email is saved as an OutreachThread in the database."""
+    from sqlalchemy import select
+    from sqlalchemy.orm import joinedload
+
+    from seo_platform.core.database import get_tenant_session
+    from seo_platform.models.backlink import (
+        BacklinkCampaign, BacklinkProspect, ProspectStatus,
+        OutreachThread, ThreadStatus,
+    )
+    from seo_platform.services.compliance_scorer import compliance_scorer
+
+    async with get_tenant_session(request.tenant_id) as session:
+        campaign = await session.get(BacklinkCampaign, campaign_id)
+        if not campaign:
+            raise HTTPException(status_code=404, detail="Campaign not found")
+
+        prospects = (
+            await session.execute(
+                select(BacklinkProspect)
+                .where(
+                    BacklinkProspect.campaign_id == campaign_id,
+                    BacklinkProspect.tenant_id == request.tenant_id,
+                )
+                .options(joinedload(BacklinkProspect.threads))
+            )
+        ).unique().scalars().all()
+
+        results: list[GenerateEmailResponse] = []
+        niche = "enterprise SaaS and DevOps" if "tech" in campaign.name.lower() else "local business"
+
+        for prospect in prospects:
+            if prospect.threads:
+                continue
+
+            domain = prospect.domain
+            name = prospect.contact_name or "there"
+            first_name = name.split()[0] if name != "there" else "there"
+
+            fallback_subj = f"Quick question regarding your recent thoughts on {niche}"
+            fallback_body = (
+                f"<p>Hi {first_name},</p>"
+                f"<p>I really enjoyed your recent piece on {domain.split('.')[0]} "
+                f"regarding {niche}. It's rare to see someone address the nuances so directly.</p>"
+                f"<p>We recently compiled exclusive benchmark data at {campaign.name} "
+                f"exploring this exact space. I thought the custom insights might be a "
+                f"perfect drop-in addition for your upcoming coverage.</p>"
+                f"<p>Would you be open to me sending over a quick preview link?</p>"
+                f"<p>Best regards,<br/>{campaign.name} Team</p>"
+            )
+
+            compliance = await compliance_scorer.score_email_pitch(
+                tenant_id=request.tenant_id,
+                email_body=fallback_body,
+                entity_id=prospect.id,
+                entity_type="email_pitch",
+            )
+
+            thread = OutreachThread(
+                tenant_id=request.tenant_id,
+                campaign_id=campaign_id,
+                prospect_id=prospect.id,
+                status=ThreadStatus.DRAFT,
+                from_email="demo@buildit.local",
+                to_email=prospect.contact_email or f"contact@{domain}",
+                subject=fallback_subj,
+                body_html=fallback_body,
+                follow_up_count=0,
+                max_follow_ups=3,
+                provider="demo",
+                confidence_score=0.85,
+                ai_personalization={},
+            )
+            session.add(thread)
+
+            results.append(GenerateEmailResponse(
+                prospect_domain=domain,
+                prospect_name=prospect.contact_name,
+                subject=fallback_subj,
+                body_html=fallback_body,
+                generation_source="elite_deterministic_fallback",
+                compliance_score=compliance.get("score", 0.0),
+                compliance_passed=compliance.get("passed", True),
+            ))
+
+        await session.flush()
+
+        return APIResponse(data=results)
+
+
 @router.post("/{campaign_id}/launch", response_model=APIResponse[CampaignLaunchResponse])
 async def launch_campaign(campaign_id: UUID, tenant_id: UUID = Query(...)) -> APIResponse[CampaignLaunchResponse]:
     """Launch a campaign by starting the Temporal workflow."""

@@ -409,8 +409,28 @@ class ScenarioManager:
                         ThreadStatus.LINK_ACQUIRED
                     )
 
-                    topic = "container cost optimization" if scenario_name == "TechStart" else "local flower delivery"
-                    pitch_body = f"<p>Hello {prospect.contact_name or 'there'},</p><p>I read your guide on {topic}. We published a deep-dive on this topic. It might help your readers. Would you link to it?</p><p>Thanks,<br/>Alex</p>"
+                    domain = prospect.domain
+                    name = prospect.contact_name or "there"
+                    first_name = name.split()[0] if name != "there" else "there"
+
+                    if scenario_name == "TechStart":
+                        topic = "enterprise SaaS and DevOps"
+                        client_name = "TechStart Inc."
+                    else:
+                        topic = "local business and flower delivery"
+                        client_name = "LocalFlorist"
+
+                    pitch_subj = f"Quick question regarding your recent thoughts on {topic}"
+                    pitch_body = (
+                        f"<p>Hi {first_name},</p>"
+                        f"<p>I really enjoyed your recent piece on {domain.split('.')[0]} "
+                        f"regarding {topic}. It's rare to see someone address the nuances so directly.</p>"
+                        f"<p>We recently compiled exclusive benchmark data at {client_name} "
+                        f"exploring this exact space. I thought the custom charts might be a "
+                        f"perfect addition for your upcoming coverage.</p>"
+                        f"<p>Would you be open to me sending over a quick preview link?</p>"
+                        f"<p>Best regards,<br/>{client_name} Team</p>"
+                    )
 
                     thread = OutreachThread(
                         tenant_id=tenant_id,
@@ -418,8 +438,8 @@ class ScenarioManager:
                         prospect_id=prospect.id,
                         status=thread_status,
                         from_email="alex@techstart.io" if scenario_name == "TechStart" else "alex@localflorist.io",
-                        to_email=prospect.contact_email or f"contact@{prospect.domain}",
-                        subject=f"Resource suggestion: {topic.title()}",
+                        to_email=prospect.contact_email or f"contact@{domain}",
+                        subject=pitch_subj,
                         body_html=pitch_body,
                         follow_up_count=0,
                         max_follow_ups=3,
@@ -427,7 +447,7 @@ class ScenarioManager:
                         sent_at=datetime.now(UTC) - timedelta(days=2),
                         replied_at=datetime.now(UTC) - timedelta(days=1) if thread_status in (ThreadStatus.REPLIED, ThreadStatus.LINK_ACQUIRED) else None,
                         confidence_score=0.88,
-                        ai_personalization={"icebreaker": "I loved your recent article on DevOps trends."}
+                        ai_personalization={"icebreaker": "I really enjoyed your recent piece on industry trends.", "generation_source": "elite_deterministic_fallback"}
                     )
                     session.add(thread)
 

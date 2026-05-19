@@ -1,13 +1,13 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Mail, ChevronDown, ChevronUp, ExternalLink,
   Clock, CheckCircle2, Reply, Send, Loader2,
-  AlertCircle, User, Building2,
+  AlertCircle, User, Building2, Sparkles,
 } from "lucide-react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { fetchApi } from "@/lib/api";
 
 export interface ThreadData {
@@ -123,11 +123,30 @@ interface EmailThreadViewerProps {
 }
 
 export function EmailThreadViewer({ campaignId }: EmailThreadViewerProps) {
+  const queryClient = useQueryClient();
+  const [generating, setGenerating] = useState(false);
+
   const { data: threads = [], isLoading, isError, error } = useQuery<ThreadData[]>({
     queryKey: ["campaign-threads", campaignId],
     queryFn: () => fetchApi(`/campaigns/${campaignId}/threads`),
     enabled: !!campaignId,
+    refetchInterval: 5000,
   });
+
+  const generateEmails = useCallback(async () => {
+    setGenerating(true);
+    try {
+      await fetchApi(`/campaigns/${campaignId}/generate-emails`, {
+        method: "POST",
+        body: JSON.stringify({ tenant_id: "00000000-0000-0000-0000-000000000001" }),
+      });
+      queryClient.invalidateQueries({ queryKey: ["campaign-threads", campaignId] });
+    } catch (err) {
+      console.error("Failed to generate emails", err);
+    } finally {
+      setGenerating(false);
+    }
+  }, [campaignId, queryClient]);
 
   if (isLoading) {
     return (
@@ -151,7 +170,19 @@ export function EmailThreadViewer({ campaignId }: EmailThreadViewerProps) {
     return (
       <div className="flex flex-col items-center py-8 text-slate-600">
         <Mail className="w-8 h-8 mb-2" />
-        <span className="text-xs">No emails generated yet</span>
+        <span className="text-xs mb-4">No emails generated yet</span>
+        <button
+          onClick={generateEmails}
+          disabled={generating}
+          className="px-4 py-2 bg-platform-600 hover:bg-platform-500 disabled:bg-slate-700 text-white rounded-md text-xs font-bold font-mono transition-colors flex items-center gap-2"
+        >
+          {generating ? (
+            <Loader2 className="w-4 h-4 animate-spin" />
+          ) : (
+            <Sparkles className="w-4 h-4" />
+          )}
+          {generating ? "GENERATING..." : "GENERATE BESPOKE EMAILS"}
+        </button>
       </div>
     );
   }
@@ -161,19 +192,33 @@ export function EmailThreadViewer({ campaignId }: EmailThreadViewerProps) {
 
   return (
     <div className="space-y-3">
-      <div className="flex items-center gap-4 px-1">
-        <span className="text-[10px] font-mono text-slate-500 flex items-center gap-1">
-          <Send className="w-3 h-3" />
-          {sentCount} sent
-        </span>
-        <span className="text-[10px] font-mono text-slate-500 flex items-center gap-1">
-          <Reply className="w-3 h-3" />
-          {replyCount} replies
-        </span>
-        <span className="text-[10px] font-mono text-slate-600 flex items-center gap-1">
-          <CheckCircle2 className="w-3 h-3" />
-          {threads.length} total threads
-        </span>
+      <div className="flex items-center justify-between px-1">
+        <div className="flex items-center gap-4">
+          <span className="text-[10px] font-mono text-slate-500 flex items-center gap-1">
+            <Send className="w-3 h-3" />
+            {sentCount} sent
+          </span>
+          <span className="text-[10px] font-mono text-slate-500 flex items-center gap-1">
+            <Reply className="w-3 h-3" />
+            {replyCount} replies
+          </span>
+          <span className="text-[10px] font-mono text-slate-600 flex items-center gap-1">
+            <CheckCircle2 className="w-3 h-3" />
+            {threads.length} total threads
+          </span>
+        </div>
+        <button
+          onClick={generateEmails}
+          disabled={generating}
+          className="px-3 py-1.5 bg-platform-600 hover:bg-platform-500 disabled:bg-slate-700 text-white rounded text-[10px] font-mono font-bold transition-colors flex items-center gap-1.5"
+        >
+          {generating ? (
+            <Loader2 className="w-3 h-3 animate-spin" />
+          ) : (
+            <Sparkles className="w-3 h-3" />
+          )}
+          {generating ? "GENERATING..." : "GENERATE"}
+        </button>
       </div>
       <div className="space-y-2 max-h-[400px] overflow-y-auto pr-1">
         {threads.map((thread) => (
