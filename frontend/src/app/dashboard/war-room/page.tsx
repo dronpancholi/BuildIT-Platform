@@ -175,7 +175,7 @@ export default function WarRoomPage() {
   });
 
   const pressureEntries = useMemo(() => {
-    const base = queuePressure?.entries || [];
+    const base: QueuePressureEntry[] = (queuePressure as { entries?: QueuePressureEntry[] } | null)?.entries ?? [];
     if (!sseQueues || Object.keys(sseQueues).length === 0) return base;
     return base.map((q) => ({
       ...q,
@@ -184,7 +184,8 @@ export default function WarRoomPage() {
   }, [queuePressure, sseQueues]);
 
   const workerEntries = useMemo(() => {
-    const base = workerSaturation?.entries || workerSaturation as unknown as WorkerSaturationEntry[];
+    const raw = workerSaturation as { entries?: WorkerSaturationEntry[] } | null | undefined;
+    const base: WorkerSaturationEntry[] = raw?.entries ?? [];
     if (!sseWorkers || sseWorkers.length === 0) return base;
     return base.map((w) => ({
       ...w,

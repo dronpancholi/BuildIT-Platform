@@ -30,7 +30,7 @@ class CircuitBreaker:
     """Circuit breaker for external service calls. CLOSED→OPEN→HALF_OPEN→CLOSED."""
 
     def __init__(self, service_name: str, failure_threshold: int = 5,
-                 recovery_timeout: int = 30, success_threshold: int = 2) -> None:
+                 recovery_timeout: float = 30.0, success_threshold: int = 2) -> None:
         self.service_name = service_name
         self.failure_threshold = failure_threshold
         self.recovery_timeout = recovery_timeout
@@ -103,7 +103,7 @@ class TokenBucketRateLimiter:
     async def consume(self, tenant_id: UUID, resource: str, tokens: int = 1,
                       max_tokens: int = 1000, refill_rate: float = 10.0) -> RateLimitResult:
         from seo_platform.core.redis import get_redis
-        redis = await get_redis()
+        redis: Any = await get_redis()
         result = await redis.eval(self.LUA_SCRIPT, 1, f"rate_limit:{tenant_id}:{resource}",
                                   str(tokens), str(max_tokens), str(refill_rate), str(time.time()))
         return RateLimitResult(allowed=bool(int(result[0])), retry_after_seconds=float(result[1]))

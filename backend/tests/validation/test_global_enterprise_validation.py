@@ -71,7 +71,8 @@ class TestMultiRegionOrchestration:
             key = f"replay:{workflow_id}:{region}:{step}"
             if await idempotency_store.exists(key):
                 stored = await idempotency_store.get(key)
-                return stored
+                if stored is not None:
+                    return stored
             result = json.dumps({"region": region, "step": step, "status": "completed"})
             await idempotency_store.store(key, result, ttl=300)
             return result
@@ -178,6 +179,7 @@ class TestGlobalReplaySafety:
 
         await idempotency_store.store(op_id, result_payload, ttl=300)
         stored = await idempotency_store.get(op_id)
+        assert stored is not None, "Idempotency result should be stored"
         parsed = json.loads(stored)
         assert parsed["executed"] is True, "Idempotent replay should return consistent result"
 
@@ -193,7 +195,7 @@ class TestGlobalReplaySafety:
     async def test_replay_command_history_consistency(self):
         from seo_platform.core.redis import get_redis
 
-        redis = await get_redis()
+        redis: Any = await get_redis()
         session_id = f"replay-history-{uuid4()}"
         history_key = f"history:global:{session_id}"
         commands = [f"cmd-{i}" for i in range(25)]

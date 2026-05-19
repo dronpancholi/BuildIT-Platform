@@ -72,7 +72,7 @@ class TenantRedis:
         """Namespace key with tenant prefix."""
         return f"{self._prefix}{key}"
 
-    async def _client(self) -> aioredis.Redis:
+    async def _client(self) -> Any:
         return await get_redis()
 
     async def get(self, key: str) -> str | None:
