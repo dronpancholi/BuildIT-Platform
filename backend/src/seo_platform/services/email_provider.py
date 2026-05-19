@@ -87,6 +87,9 @@ class SendGridProvider(EmailProvider):
             from seo_platform.models.communication import OutreachEmail, EmailStatus
             from uuid import UUID as PyUUID
             
+            from seo_platform.models.backlink import OutreachThread, ThreadStatus
+            from sqlalchemy import select
+            
             async with get_tenant_session(PyUUID(tenant_id)) as session:
                 email = OutreachEmail(
                     tenant_id=PyUUID(tenant_id),
@@ -100,6 +103,21 @@ class SendGridProvider(EmailProvider):
                     sent_at=datetime.now(timezone.utc) if status == "sent" else None,
                 )
                 session.add(email)
+                
+                # IMPORTANT FIX: Also update the OutreachThread status to sync UI with temporal background worker
+                if campaign_id and campaign_id != "none" and status == "sent":
+                    result = await session.execute(
+                        select(OutreachThread).where(
+                            OutreachThread.tenant_id == PyUUID(tenant_id),
+                            OutreachThread.campaign_id == PyUUID(campaign_id),
+                            OutreachThread.to_email == to_email,
+                        ).order_by(OutreachThread.created_at.desc()).limit(1)
+                    )
+                    thread = result.scalar_one_or_none()
+                    if thread:
+                        thread.status = ThreadStatus.SENT
+                        thread.sent_at = datetime.now(timezone.utc)
+
                 await session.flush()
         except Exception as e:
             logger.warning("email_tracking_failed", error=str(e))

@@ -284,6 +284,33 @@ class LocalSEOIntelligenceService:
         logger.info("analyzing_local_authority", business=business_name)
 
         citations = existing_citations or []
+        
+        # If no citations provided, do a live scrape to find them!
+        if not citations and business_name != "Unknown":
+            logger.info("no_citations_provided_running_live_scrape")
+            from seo_platform.providers.seo import get_seo_provider
+            provider = get_seo_provider()
+            for dir_name in ["yelp", "facebook_business", "apple_maps", "bbb", "tripadvisor"]:
+                try:
+                    # Query like: "My Business Name" site:yelp.com
+                    domain_map = {
+                        "yelp": "yelp.com",
+                        "facebook_business": "facebook.com",
+                        "apple_maps": "maps.apple.com",
+                        "bbb": "bbb.org",
+                        "tripadvisor": "tripadvisor.com"
+                    }
+                    domain = domain_map.get(dir_name)
+                    if domain:
+                        serp = await provider.get_serp_data(f'"{business_name}" site:{domain}')
+                        if serp.get("organic_results"):
+                            citations.append({
+                                "directory": dir_name,
+                                "nap_consistent": True, # Assume consistent if found for now
+                                "url": serp["organic_results"][0].get("url", "")
+                            })
+                except Exception as e:
+                    logger.warning("live_citation_scrape_failed", directory=dir_name, error=str(e))
 
         consistent_count = sum(
             1 for c in citations if c.get("nap_consistent", False)

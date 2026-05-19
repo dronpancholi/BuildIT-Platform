@@ -6,7 +6,7 @@ import { usePathname } from "next/navigation";
 import {
   LayoutDashboard, Link2, Search, Lightbulb, Activity,
   GitBranch, Radio, Settings, ChevronDown, ChevronRight,
-  Bot, Users, Globe, Check, Shield, Sparkles, Server,
+  Bot, Users, Globe, Check, Shield, Sparkles, Server, Mail,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useClientStore, type ClientInfo } from "@/hooks/use-client";
@@ -19,6 +19,7 @@ const CLIENTS: ClientInfo[] = [
 const BUSINESS_NAV = [
   { href: "/dashboard", icon: <LayoutDashboard size={17} />, label: "Command Center" },
   { href: "/dashboard/campaigns", icon: <GitBranch size={17} />, label: "Campaigns" },
+  { href: "/dashboard/outbox", icon: <Mail size={17} />, label: "Outbox" },
   { href: "/dashboard/keywords", icon: <Search size={17} />, label: "Keywords" },
   { href: "/dashboard/seo-intelligence", icon: <Globe size={17} />, label: "SEO Intelligence" },
   { href: "/dashboard/backlink-intelligence", icon: <Link2 size={17} />, label: "Backlinks" },

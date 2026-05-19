@@ -433,7 +433,7 @@ class SEOProviderRegistry:
 
     def __init__(self):
         self._providers: dict[str, SEODataProvider] = {}
-        self._active: str = "simulated"
+        self._active: str = "scrapling"
 
     def register(self, provider: SEODataProvider) -> None:
         self._providers[provider.name] = provider

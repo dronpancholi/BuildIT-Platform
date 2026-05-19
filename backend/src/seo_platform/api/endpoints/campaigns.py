@@ -149,6 +149,48 @@ class ThreadResponse(BaseModel):
     ai_personalization: dict
 
 
+@router.get("/threads/all", response_model=APIResponse[list[ThreadResponse]])
+async def list_all_threads(
+    tenant_id: UUID = Query(...),
+) -> APIResponse[list[ThreadResponse]]:
+    """List all outreach threads across all campaigns for a tenant (Outbox view)."""
+    from sqlalchemy import select
+    from sqlalchemy.orm import joinedload
+
+    from seo_platform.core.database import get_tenant_session
+    from seo_platform.models.backlink import BacklinkProspect, OutreachThread
+
+    async with get_tenant_session(tenant_id) as session:
+        result = await session.execute(
+            select(OutreachThread)
+            .join(BacklinkProspect, OutreachThread.prospect_id == BacklinkProspect.id)
+            .where(OutreachThread.tenant_id == tenant_id)
+            .options(joinedload(OutreachThread.prospect))
+            .order_by(OutreachThread.sent_at.desc().nulls_last(), OutreachThread.created_at.desc())
+        )
+        threads = result.unique().scalars().all()
+
+        return APIResponse(
+            data=[
+                ThreadResponse(
+                    id=t.id,
+                    prospect_domain=t.prospect.domain if t.prospect else "",
+                    prospect_name=t.prospect.contact_name if t.prospect else None,
+                    to_email=t.to_email,
+                    subject=t.subject or "",
+                    body_html=t.body_html or "",
+                    status=t.status.value if hasattr(t.status, "value") else str(t.status),
+                    follow_up_count=t.follow_up_count,
+                    sent_at=t.sent_at.isoformat() if t.sent_at else None,
+                    replied_at=t.replied_at.isoformat() if t.replied_at else None,
+                    confidence_score=t.confidence_score,
+                    ai_personalization=t.ai_personalization or {},
+                )
+                for t in threads
+            ],
+        )
+
+
 @router.get("/{campaign_id}/threads", response_model=APIResponse[list[ThreadResponse]])
 async def list_campaign_threads(
     campaign_id: UUID,

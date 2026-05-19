@@ -129,18 +129,26 @@ async def expand_keywords(
         return {"keywords": unique, "count": len(unique), "source": "dataforseo"}
 
     except Exception as e:
-        logger.warning("dataforseo_expand_failed", error=str(e))
-        expanded = []
-        for seed in seed_keywords:
-            expanded.extend([
-                seed,
-                f"best {seed}",
-                f"{seed} near me",
-                f"top {seed}",
-                f"{seed} reviews",
-            ])
-        unique = list(set(expanded))
-        return {"keywords": unique, "count": len(unique), "source": "fallback"}
+        logger.warning("dataforseo_expand_failed_using_llm", error=str(e))
+        try:
+            from uuid import UUID
+            from pydantic import BaseModel
+            from seo_platform.llm.gateway import RenderedPrompt, TaskType, llm_gateway
+            class ExpandedKeywordSchema(BaseModel):
+                keywords: list[str]
+            prompt = RenderedPrompt(
+                template_id="expand_keywords",
+                system_prompt="You are an SEO expert. Given a list of seed keywords, generate 10 closely related, highly relevant long-tail keywords. Return ONLY a JSON object with a 'keywords' array.",
+                user_prompt=f"Seed keywords: {', '.join(seed_keywords)}\nTarget: {geo_target}",
+            )
+            result = await llm_gateway.complete(
+                task_type=TaskType.SEO_ANALYSIS, prompt=prompt, output_schema=ExpandedKeywordSchema, tenant_id=UUID(tenant_id)
+            )
+            unique = list(set(result.content.keywords + seed_keywords))
+            return {"keywords": unique, "count": len(unique), "source": "llm_fallback"}
+        except Exception as llm_e:
+            logger.error("llm_expand_failed", error=str(llm_e))
+            raise
 
 
 @activity.defn(name="enrich_keywords_activity")
@@ -172,20 +180,53 @@ async def enrich_keywords_activity(
         return {"enriched_keywords": enriched, "count": len(enriched), "source": "dataforseo"}
 
     except Exception as e:
-        logger.warning("dataforseo_enrich_failed", error=str(e))
-        import hashlib
-        enriched = []
-        for kw in keywords:
-            h = int(hashlib.md5(kw.encode()).hexdigest()[:8], 16)
-            enriched.append({
-                "keyword": kw,
-                "search_volume": 200 + (h % 4800),
-                "difficulty": round(20 + (h % 6000) / 100, 1),
-                "cpc": round(0.5 + (h % 950) / 100, 2),
-                "competition": round(0.3 + (h % 60) / 100, 2),
-                "intent": "informational",
-            })
-        return {"enriched_keywords": enriched, "count": len(enriched), "source": "fallback"}
+        logger.warning("dataforseo_enrich_failed_using_llm", error=str(e))
+        try:
+            from uuid import UUID
+            from pydantic import BaseModel
+            from seo_platform.llm.gateway import RenderedPrompt, TaskType, llm_gateway
+            class EnrichedKeyword(BaseModel):
+                keyword: str
+                search_volume: int
+                difficulty: float
+                cpc: float
+                competition: float
+                intent: str
+            class EnrichedKeywordSchema(BaseModel):
+                keywords: list[EnrichedKeyword]
+
+            enriched = []
+            for i in range(0, len(keywords), 20):
+                batch = keywords[i:i+20]
+                prompt = RenderedPrompt(
+                    template_id="enrich_keywords",
+                    system_prompt="You are an SEO expert estimator. Estimate realistic search volume (0-100000), difficulty (0-100), CPC (0.0-10.0), competition (0.0-1.0), and intent (informational, commercial, navigational, transactional) for the given keywords. Return ONLY a JSON object with a 'keywords' array containing objects with keys: keyword, search_volume, difficulty, cpc, competition, intent.",
+                    user_prompt=f"Keywords to estimate for {geo_target}:\n{', '.join(batch)}",
+                )
+                result = await llm_gateway.complete(
+                    task_type=TaskType.SEO_ANALYSIS, prompt=prompt, output_schema=EnrichedKeywordSchema, tenant_id=UUID(tenant_id)
+                )
+                for item in result.content.keywords:
+                    enriched.append(item.model_dump())
+            
+            final_enriched = []
+            enriched_map = {item["keyword"]: item for item in enriched}
+            for kw in keywords:
+                if kw in enriched_map:
+                    final_enriched.append(enriched_map[kw])
+                else:
+                    final_enriched.append({
+                        "keyword": kw,
+                        "search_volume": 100,
+                        "difficulty": 50.0,
+                        "cpc": 1.0,
+                        "competition": 0.5,
+                        "intent": "informational",
+                    })
+            return {"enriched_keywords": final_enriched, "count": len(final_enriched), "source": "llm_fallback"}
+        except Exception as llm_e:
+            logger.error("llm_enrich_failed", error=str(llm_e))
+            raise
 
 
 @activity.defn(name="generate_keyword_embeddings")
