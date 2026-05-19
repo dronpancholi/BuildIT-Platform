@@ -838,13 +838,13 @@ class BusinessStateEvolutionEngine:
         return count
 
     def _compute_keyword_opportunity(self, keyword) -> float:
-        volume = keyword.search_volume or 0
-        difficulty = keyword.difficulty or 50
-        cpc = keyword.cpc or 0
+        volume = float(keyword.search_volume or 0)
+        difficulty = float(keyword.difficulty or 50)
+        cpc = float(keyword.cpc or 0)
 
-        volume_score = min(volume / 1000, 1.0)
-        difficulty_score = max(0.0, 1.0 - (difficulty / 100))
-        cpc_score = min(cpc / 10, 1.0)
+        volume_score = min(volume / 1000.0, 1.0)
+        difficulty_score = max(0.0, 1.0 - (difficulty / 100.0))
+        cpc_score = min(cpc / 10.0, 1.0)
 
         serp_features = keyword.serp_features or []
         feature_bonus = len(serp_features) * 0.05
