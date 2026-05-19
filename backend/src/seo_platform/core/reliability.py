@@ -112,20 +112,26 @@ class TokenBucketRateLimiter:
 class IdempotencyStore:
     """Redis-backed idempotency store for retry-safe execution."""
 
+    def __init__(self) -> None:
+        self._sem = asyncio.Semaphore(40)
+
     async def get(self, operation_id: str) -> str | None:
         from seo_platform.core.redis import get_redis
-        redis = await get_redis()
-        return await redis.get(f"idempotency:{operation_id}")
+        async with self._sem:
+            redis = await get_redis()
+            return await redis.get(f"idempotency:{operation_id}")
 
     async def store(self, operation_id: str, result: str, ttl: int = 86400) -> None:
         from seo_platform.core.redis import get_redis
-        redis = await get_redis()
-        await redis.setex(f"idempotency:{operation_id}", ttl, result)
+        async with self._sem:
+            redis = await get_redis()
+            await redis.setex(f"idempotency:{operation_id}", ttl, result)
 
     async def exists(self, operation_id: str) -> bool:
         from seo_platform.core.redis import get_redis
-        redis = await get_redis()
-        return bool(await redis.exists(f"idempotency:{operation_id}"))
+        async with self._sem:
+            redis = await get_redis()
+            return bool(await redis.exists(f"idempotency:{operation_id}"))
 
 
 rate_limiter = TokenBucketRateLimiter()

@@ -248,7 +248,7 @@ class TestDistributedResilience:
             f"Circuit should recover after crash, got {breaker.state}"
 
         await asyncio.sleep(0.35)
-        recovered = await breaker.call(lambda: crashable_worker(99))
+        recovered = await breaker.call(lambda: crashable_worker(100))
         assert "completed" in recovered, "Worker should recover after circuit closes"
 
     async def test_queue_resilience_distributed(self):
@@ -499,6 +499,7 @@ class TestOperationalCognitionQuality:
             "detected": breaker.state == CircuitState.HALF_OPEN,
         })
 
+        await asyncio.sleep(0.25)
         result = await breaker.call(succeed)
         assert result == "normal"
         await breaker.call(succeed)
@@ -631,8 +632,10 @@ class TestInfrastructureScalability:
 
         operations = 200
         store_tasks = []
+        op_ids = []
         for i in range(operations):
             op_id = f"scalable-idempotent-{uuid4()}"
+            op_ids.append(op_id)
             payload = json.dumps({"seq": i, "data": f"bulk-{i}"})
             store_tasks.append(idempotency_store.store(op_id, payload, ttl=300))
 
@@ -642,8 +645,7 @@ class TestInfrastructureScalability:
             f"At least 95% stores should succeed, got {store_successes}/{operations}"
 
         verify_tasks = []
-        for i in range(operations):
-            op_id = f"scalable-idempotent-{uuid4()}"
+        for op_id in op_ids:
             verify_tasks.append(idempotency_store.exists(op_id))
 
         verify_results = await asyncio.gather(*verify_tasks, return_exceptions=True)
