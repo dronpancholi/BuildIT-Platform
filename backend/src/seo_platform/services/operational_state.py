@@ -309,7 +309,7 @@ class OperationalStateService:
         from temporalio.api.enums.v1 import TaskQueueType
 
         try:
-            client = await get_temporal_client()
+            client = await asyncio.wait_for(get_temporal_client(), timeout=5.0)
             settings = get_settings()
 
             new_workflows: dict[str, WorkflowStateEntry] = {}

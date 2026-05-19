@@ -202,29 +202,40 @@ async def full_event_generator(tenant_id: str):
         await sse_manager.subscribe(tenant_id, channel, queue)
 
     try:
-        init_payload = await operational_state.get_snapshot()
+        init_payload = await asyncio.wait_for(operational_state.get_snapshot(), timeout=8.0)
         yield make_sse_event(
             event_type=EVENT_STATE_SYNC,
             channel="full",
             tenant_id=tenant_id,
             payload=init_payload,
         )
+    except Exception:
+        yield make_sse_event(
+            event_type=EVENT_STATE_SYNC,
+            channel="full",
+            tenant_id=tenant_id,
+            payload={"status": "degraded", "timestamp": datetime.now(UTC).isoformat()},
+        )
 
+    try:
         while True:
             try:
                 message = await asyncio.wait_for(queue.get(), timeout=5)
                 yield message
             except TimeoutError:
-                snapshot = await operational_state.get_snapshot()
-                summary = {
-                    "workflow_count": len(snapshot.get("workflows", [])),
-                    "worker_count": len(snapshot.get("workers", [])),
-                    "queue_depths": snapshot.get("queues", {}),
-                    "infra_health": snapshot.get("infrastructure", {}),
-                    "approval_count": len(snapshot.get("approvals", [])),
-                    "campaign_count": len(snapshot.get("campaigns", [])),
-                    "timestamp": datetime.now(UTC).isoformat(),
-                }
+                try:
+                    snapshot = await operational_state.get_snapshot()
+                    summary = {
+                        "workflow_count": len(snapshot.get("workflows", [])),
+                        "worker_count": len(snapshot.get("workers", [])),
+                        "queue_depths": snapshot.get("queues", {}),
+                        "infra_health": snapshot.get("infrastructure", {}),
+                        "approval_count": len(snapshot.get("approvals", [])),
+                        "campaign_count": len(snapshot.get("campaigns", [])),
+                        "timestamp": datetime.now(UTC).isoformat(),
+                    }
+                except Exception:
+                    summary = {"status": "degraded", "timestamp": datetime.now(UTC).isoformat()}
                 yield make_sse_event(
                     event_type=EVENT_HEARTBEAT,
                     channel="full",

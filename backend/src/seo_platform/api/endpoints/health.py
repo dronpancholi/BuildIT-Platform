@@ -6,6 +6,8 @@ Deep health checks with per-component status reporting.
 
 from __future__ import annotations
 
+import asyncio
+import os
 import time
 from datetime import UTC, datetime
 
@@ -21,83 +23,40 @@ router = APIRouter()
 async def health_check() -> HealthResponse:
     """
     Deep health check — verifies connectivity to all infrastructure components.
-    Returns per-component status and overall system health.
+    All checks run in parallel with bounded timeouts.
+    Overall is UNHEALTHY only if Postgres or Redis is down (hard requirements).
+    Everything else is DEGRADED at worst.
     """
     settings = get_settings()
-    components: list[ComponentHealth] = []
-    overall = HealthStatus.HEALTHY
 
-    # PostgreSQL
-    pg_health = await _check_postgres()
-    components.append(pg_health)
-    if pg_health.status != HealthStatus.HEALTHY:
-        overall = HealthStatus.DEGRADED
+    pg, redis, kafka, temporal, qdrant, minio, workers, evt, nim, playwright, ext = \
+        await asyncio.gather(
+            _check_postgres(),
+            _check_redis(),
+            _check_kafka(),
+            _check_temporal(),
+            _check_qdrant(),
+            _check_minio(),
+            _check_workers(),
+            _check_event_bus(),
+            _check_nvidia_nim(),
+            _check_playwright(),
+            _check_external_apis(),
+        )
+    components = [pg, redis, kafka, temporal, qdrant, minio, workers, evt, nim, playwright, ext]
 
-    # Redis
-    redis_health = await _check_redis()
-    components.append(redis_health)
-    if redis_health.status != HealthStatus.HEALTHY:
-        overall = HealthStatus.DEGRADED
+    # Hard requirements: Postgres, Redis
+    critical_unhealthy = pg.status == HealthStatus.UNHEALTHY or redis.status == HealthStatus.UNHEALTHY
+    any_unhealthy = any(c.status == HealthStatus.UNHEALTHY for c in components)
+    any_degraded = any(c.status == HealthStatus.DEGRADED for c in components)
 
-    # Kafka
-    kafka_health = await _check_kafka()
-    components.append(kafka_health)
-    if kafka_health.status != HealthStatus.HEALTHY:
-        overall = HealthStatus.DEGRADED
-
-    # Temporal
-    temporal_health = await _check_temporal()
-    components.append(temporal_health)
-    if temporal_health.status != HealthStatus.HEALTHY:
-        overall = HealthStatus.DEGRADED
-
-    # Qdrant
-    qdrant_health = await _check_qdrant()
-    components.append(qdrant_health)
-    if qdrant_health.status != HealthStatus.HEALTHY:
-        overall = HealthStatus.DEGRADED
-
-    # MinIO
-    minio_health = await _check_minio()
-    components.append(minio_health)
-    if minio_health.status != HealthStatus.HEALTHY:
-        overall = HealthStatus.DEGRADED
-
-    # Workers
-    workers_health = await _check_workers()
-    components.append(workers_health)
-    if workers_health.status != HealthStatus.HEALTHY:
-        overall = HealthStatus.DEGRADED
-
-    # Event Bus (Kafka consumer lag)
-    event_bus_health = await _check_event_bus()
-    components.append(event_bus_health)
-    if event_bus_health.status != HealthStatus.HEALTHY:
-        overall = HealthStatus.DEGRADED
-
-    # NVIDIA NIM
-    nim_health = await _check_nvidia_nim()
-    components.append(nim_health)
-    if nim_health.status != HealthStatus.HEALTHY:
-        overall = HealthStatus.DEGRADED
-
-    # Playwright
-    playwright_health = await _check_playwright()
-    components.append(playwright_health)
-    if playwright_health.status != HealthStatus.HEALTHY:
-        overall = HealthStatus.DEGRADED
-
-    # External API Status
-    api_status = _check_external_apis()
-    components.append(api_status)
-    if api_status.status != HealthStatus.HEALTHY:
-        overall = HealthStatus.DEGRADED
-
-    # Determine overall status
-    if any(c.status == HealthStatus.UNHEALTHY for c in components):
+    if critical_unhealthy:
         overall = HealthStatus.UNHEALTHY
+    elif any_unhealthy or any_degraded:
+        overall = HealthStatus.DEGRADED
+    else:
+        overall = HealthStatus.HEALTHY
 
-    # Emit infra event for real-time subscribers
     try:
         from seo_platform.api.endpoints.realtime.sse import emit_infra_event
         await emit_infra_event(
@@ -171,7 +130,7 @@ async def _check_redis() -> ComponentHealth:
 
 
 async def _check_kafka() -> ComponentHealth:
-    """Check Kafka broker connectivity."""
+    """Check Kafka broker connectivity (optional for most features)."""
     start = time.monotonic()
     try:
         from aiokafka import AIOKafkaProducer
@@ -190,39 +149,32 @@ async def _check_kafka() -> ComponentHealth:
     except Exception as e:
         latency = (time.monotonic() - start) * 1000
         return ComponentHealth(
-            name="kafka", status=HealthStatus.UNHEALTHY,
+            name="kafka", status=HealthStatus.DEGRADED,
             latency_ms=round(latency, 1), message=str(e)[:200]
         )
 
 
 async def _check_temporal() -> ComponentHealth:
-    """Check Temporal server connectivity."""
+    """Check Temporal server connectivity (optional — DEGRADED if down)."""
     start = time.monotonic()
     try:
         import asyncio
-        from temporalio.client import Client
         from temporalio.api.workflowservice.v1 import GetSystemInfoRequest
 
-        from seo_platform.config import get_settings
+        from seo_platform.core.temporal_client import get_temporal_client
 
-        settings = get_settings()
-        client = await asyncio.wait_for(
-            Client.connect(settings.temporal.target, namespace=settings.temporal.namespace),
-            timeout=2.0
-        )
-        # Simply check system info instead of rate-limited list_workflows list scans
+        client = await get_temporal_client()
         await asyncio.wait_for(
             client.workflow_service.get_system_info(GetSystemInfoRequest()),
             timeout=2.0
         )
-        
         latency = (time.monotonic() - start) * 1000
         return ComponentHealth(name="temporal", status=HealthStatus.HEALTHY, latency_ms=round(latency, 1))
     except Exception as e:
         latency = (time.monotonic() - start) * 1000
         return ComponentHealth(
-            name="temporal", status=HealthStatus.HEALTHY,
-            latency_ms=round(latency, 1), message=f"Nominal: {str(e)[:100]}"
+            name="temporal", status=HealthStatus.DEGRADED,
+            latency_ms=round(latency, 1), message=str(e)[:200]
         )
 
 
@@ -232,8 +184,12 @@ async def _check_qdrant() -> ComponentHealth:
     try:
         import httpx
 
+        from seo_platform.config import get_settings
+
+        settings = get_settings()
+        qdrant_url = f"http://{settings.qdrant.host}:{settings.qdrant.port}/readyz"
         async with httpx.AsyncClient(timeout=2.0) as http:
-            resp = await http.get("http://localhost:6333/readyz")
+            resp = await http.get(qdrant_url)
             if resp.status_code != 200:
                 raise Exception(f"Qdrant health check failed: {resp.status_code}")
         latency = (time.monotonic() - start) * 1000
@@ -241,7 +197,7 @@ async def _check_qdrant() -> ComponentHealth:
     except Exception as e:
         latency = (time.monotonic() - start) * 1000
         return ComponentHealth(
-            name="qdrant", status=HealthStatus.HEALTHY,
+            name="qdrant", status=HealthStatus.DEGRADED,
             latency_ms=round(latency, 1), message=f"Nominal (Optional): {str(e)[:100]}"
         )
 
@@ -252,8 +208,13 @@ async def _check_minio() -> ComponentHealth:
     try:
         import httpx
 
+        from seo_platform.config import get_settings
+
+        settings = get_settings()
+        s3_url = getattr(settings, 's3_endpoint', os.environ.get('S3_ENDPOINT', 'http://localhost:9000'))
+        health_url = f"{s3_url.rstrip('/')}/minio/health/live"
         async with httpx.AsyncClient(timeout=2.0) as http:
-            resp = await http.get("http://localhost:9000/minio/health/live")
+            resp = await http.get(health_url)
             if resp.status_code != 200:
                 raise Exception(f"MinIO health check failed: {resp.status_code}")
         latency = (time.monotonic() - start) * 1000
@@ -261,13 +222,13 @@ async def _check_minio() -> ComponentHealth:
     except Exception as e:
         latency = (time.monotonic() - start) * 1000
         return ComponentHealth(
-            name="minio", status=HealthStatus.HEALTHY,
+            name="minio", status=HealthStatus.DEGRADED,
             latency_ms=round(latency, 1), message=f"Nominal (Optional): {str(e)[:100]}"
         )
 
 
 async def _check_workers() -> ComponentHealth:
-    """Check Temporal worker connectivity by verifying active tasks."""
+    """Check worker connectivity."""
     start = time.monotonic()
     try:
         from seo_platform.services.operational_state import operational_state
@@ -280,22 +241,21 @@ async def _check_workers() -> ComponentHealth:
             latency_ms=round(latency, 1),
             message=f"{running_count} active workflows"
         )
-    except Exception as e:
+    except Exception:
         latency = (time.monotonic() - start) * 1000
         return ComponentHealth(
-            name="workers", status=HealthStatus.HEALTHY,
-            latency_ms=round(latency, 1), message=str(e)[:200]
+            name="workers", status=HealthStatus.DEGRADED,
+            latency_ms=round(latency, 1), message="No workers registered yet"
         )
 
 
 async def _check_event_bus() -> ComponentHealth:
-    """Check Kafka event bus health."""
+    """Check event bus health."""
     start = time.monotonic()
     try:
         from seo_platform.core.database import get_session
         from sqlalchemy import text
 
-        # Check recent event activity
         async with get_session() as session:
             result = await session.execute(text("""
                 SELECT COUNT(*) FROM operational_events
@@ -310,10 +270,19 @@ async def _check_event_bus() -> ComponentHealth:
             message=f"{recent_events} events in last 10 minutes"
         )
     except Exception as e:
+        err = str(e)
+        # Table not existing yet is normal during initial deployment
+        if "relation" in err and "does not exist" in err:
+            latency = (time.monotonic() - start) * 1000
+            return ComponentHealth(
+                name="event_bus", status=HealthStatus.HEALTHY,
+                latency_ms=round(latency, 1),
+                message="No events table yet (normal during initial deployment)"
+            )
         latency = (time.monotonic() - start) * 1000
         return ComponentHealth(
-            name="event_bus", status=HealthStatus.HEALTHY,
-            latency_ms=round(latency, 1), message=f"Nominal (Optional): {str(e)[:100]}"
+            name="event_bus", status=HealthStatus.DEGRADED,
+            latency_ms=round(latency, 1), message=err[:200]
         )
 
 
@@ -369,24 +338,25 @@ async def _check_playwright() -> ComponentHealth:
     """Check Playwright browser automation health."""
     start = time.monotonic()
     try:
-        # Avoid heavy headless browser spins on every single health poll.
-        # Check that imports and browser drivers are installed.
         from playwright.async_api import async_playwright
+        async with async_playwright() as p:
+            browser = await p.chromium.launch(headless=True)
+            await browser.close()
         latency = (time.monotonic() - start) * 1000
         return ComponentHealth(
             name="playwright", status=HealthStatus.HEALTHY,
             latency_ms=round(latency, 1),
-            message="Playwright drivers nominal"
+            message="Playwright browser operational"
         )
     except Exception as e:
         latency = (time.monotonic() - start) * 1000
         return ComponentHealth(
-            name="playwright", status=HealthStatus.HEALTHY,
+            name="playwright", status=HealthStatus.DEGRADED,
             latency_ms=round(latency, 1), message=str(e)[:200]
         )
 
 
-def _check_external_apis() -> ComponentHealth:
+async def _check_external_apis() -> ComponentHealth:
     """Check which external SEO APIs are configured."""
     from seo_platform.config import get_settings
 

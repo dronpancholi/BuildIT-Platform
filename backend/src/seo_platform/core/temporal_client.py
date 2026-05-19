@@ -37,9 +37,12 @@ async def get_temporal_client() -> TemporalClient:
         logger.info("connecting_to_temporal", target=settings.temporal.target, namespace=settings.temporal.namespace)
 
         try:
-            _temporal_client = await TemporalClient.connect(
-                settings.temporal.target,
-                namespace=settings.temporal.namespace,
+            _temporal_client = await asyncio.wait_for(
+                TemporalClient.connect(
+                    settings.temporal.target,
+                    namespace=settings.temporal.namespace,
+                ),
+                timeout=3.0,
             )
             logger.info("temporal_connection_established")
             return _temporal_client
