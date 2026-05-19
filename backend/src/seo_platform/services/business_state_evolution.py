@@ -341,10 +341,10 @@ class BusinessStateEvolutionEngine:
                     )
                 )
                 thread_stats = threads_result.first()
-                total_threads = thread_stats[0] or 0
-                sent = thread_stats[1] or 0
-                delivered = thread_stats[2] or 0
-                replied = thread_stats[3] or 0
+                total_threads = int(thread_stats[0] or 0)
+                sent = int(thread_stats[1] or 0)
+                delivered = int(thread_stats[2] or 0)
+                replied = int(thread_stats[3] or 0)
 
                 links_result = await session.execute(
                     select(func.count()).select_from(AcquiredLink).where(
@@ -415,8 +415,8 @@ class BusinessStateEvolutionEngine:
                 kw_row = kw_result.first()
                 kw_count = kw_row[0] or 0
                 cluster_count = kw_row[1] or 0
-                avg_volume = kw_row[2] or 0
-                avg_difficulty = kw_row[3] or 50
+                avg_volume = float(kw_row[2] or 0)
+                avg_difficulty = float(kw_row[3] or 50)
 
                 cluster_coverage = min(cluster_count / 5, 1.0)
                 volume_depth = min(avg_volume / 5000, 1.0)
@@ -464,7 +464,7 @@ class BusinessStateEvolutionEngine:
                     """),
                     {"tenant_id": str(TENANT_ID)}
                 )
-                avg_opportunity = opp_result.scalar() or 0
+                avg_opportunity = float(opp_result.scalar() or 0)
 
                 vol_result = await session.execute(
                     text("""
@@ -520,12 +520,12 @@ class BusinessStateEvolutionEngine:
                 prev_row = prev_snapshot_result.first()
 
                 if prev_row:
-                    prev_health = prev_row[0]
+                    prev_health = float(prev_row[0] or 0)
                     time_delta = (now - prev_row[3]).total_seconds() / 3600 if prev_row[3] else 1
                     health_delta = composite_health - prev_health
                     momentum = max(-1.0, min(1.0, health_delta / max(time_delta, 0.01) * 2))
                 else:
-                    prev_health = 0
+                    prev_health = 0.0
                     momentum = 0.05
 
                 recent_events_24h = await session.execute(

@@ -1,7 +1,7 @@
 # Temporal Dynamic Configuration — Development
 # Relaxed limits for local development
 system.forceSearchAttributesCacheRefreshOnRead:
-  - value: true
+  - value: false
     constraints: {}
 limit.maxIDLength:
   - value: 255

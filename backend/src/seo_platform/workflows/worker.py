@@ -153,6 +153,7 @@ def get_workflows_and_activities(task_queue: str) -> tuple[list, list]:
         discover_prospects_activity,
         fallback_prospects_activity,
         generate_outreach_emails_activity,
+        record_timeline_step_activity,
         score_prospects_activity,
         send_outreach_batch_activity,
         send_single_email_activity,
@@ -260,6 +261,7 @@ def get_workflows_and_activities(task_queue: str) -> tuple[list, list]:
             discover_contacts_activity,
             create_approval_request_activity,
             update_campaign_status_activity,
+            record_timeline_step_activity,
         ]
 
     elif task_queue == TaskQueue.COMMUNICATION:

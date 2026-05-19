@@ -402,7 +402,19 @@ class SemanticMemoryService:
                 from seo_platform.core.temporal_client import get_temporal_client
                 client = await get_temporal_client()
                 try:
-                    handle = client.get_workflow_handle(workflow_run_id)
+                    # Resolve workflow_id from workflow_run_id using list_workflows query
+                    workflow_id = None
+                    try:
+                        async for wf in client.list_workflows(query=f"RunId = '{workflow_run_id}'"):
+                            workflow_id = wf.id
+                            break
+                    except Exception:
+                        pass
+
+                    if not workflow_id:
+                        workflow_id = workflow_run_id
+
+                    handle = client.get_workflow_handle(workflow_id, run_id=workflow_run_id)
                     desc = await handle.describe()
                     wf_type = getattr(desc, "type_name", "unknown")
                     context.workflow_type = wf_type

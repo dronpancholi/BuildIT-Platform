@@ -379,3 +379,16 @@ class OnboardingWorkflow:
         return output.model_dump_json()
 
 
+# Expose workflow classes to support Temporal sandbox imports
+from seo_platform.workflows.keyword_research import KeywordResearchWorkflow
+from seo_platform.workflows.backlink_campaign import BacklinkCampaignWorkflow, OutreachThreadWorkflow
+from seo_platform.workflows.citation import CitationSubmissionWorkflow
+from seo_platform.workflows.reporting import ReportGenerationWorkflow
+from seo_platform.workflows.scheduler import (
+    OperationalHealthScan,
+    OperationalLoopEngine,
+    AutonomousDiscovery,
+)
+
+
+

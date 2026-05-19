@@ -393,10 +393,20 @@ async def generate_outreach_emails_activity(
     from seo_platform.services.outreach_intelligence import outreach_intelligence
     from seo_platform.services.client_persona.service import client_persona_service
     from seo_platform.services.data_journalism.service import data_journalism_service
+    from seo_platform.core.database import get_tenant_session
+    from seo_platform.models.backlink import BacklinkCampaign
+    from sqlalchemy import select
+
+    client_id = None
+    async with get_tenant_session(UUID(tenant_id)) as session:
+        result = await session.execute(
+            select(BacklinkCampaign.client_id).where(BacklinkCampaign.id == UUID(campaign_id))
+        )
+        client_id = result.scalar_one_or_none()
 
     persona_context = await client_persona_service.get_active_persona_context(
         tenant_id=UUID(tenant_id),
-        client_id=UUID(campaign_id),
+        client_id=client_id or UUID(campaign_id),
         target_niche=campaign_type,
     )
 
@@ -511,7 +521,7 @@ Requirements:
             )
 
         async def _generate_with_grounding(
-            prompt: RenderedPrompt, max_retries: int = 2,
+            prompt: RenderedPrompt, stage: str = "", max_retries: int = 2,
         ) -> dict | None:
             for attempt in range(max_retries):
                 try:
@@ -597,8 +607,8 @@ Requirements:
             "TASK: Write a gentle re-engagement email. It's been some time. Fresh approach with a new angle. Low pressure."
         )
 
-        followup_1 = await _generate_with_grounding(followup_1_prompt) if initial_email else None
-        followup_2 = await _generate_with_grounding(followup_2_prompt) if followup_1 else None
+        followup_1 = await _generate_with_grounding(followup_1_prompt, "follow-up") if initial_email else None
+        followup_2 = await _generate_with_grounding(followup_2_prompt, "re-engagement") if followup_1 else None
 
         if initial_email:
             email_sequences.append({
@@ -1043,7 +1053,7 @@ class BacklinkCampaignWorkflow:
 
             await workflow.execute_activity(
                 update_campaign_status_activity,
-                args=[str(input_data.tenant_id), str(input_data.campaign_id), "generating_emails"],
+                args=[str(input_data.tenant_id), str(input_data.campaign_id), "outreach_prep"],
                 task_queue=TaskQueue.BACKLINK_ENGINE,
                 start_to_close_timeout=timedelta(seconds=30),
                 retry_policy=RetryPreset.DATABASE,
