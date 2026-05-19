@@ -24,9 +24,9 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
+    env_file:
+      - ../../.env.production
     environment:
-      - APP_ENV=production
-      - APP_DEBUG=false
       - POSTGRES_HOST=postgres
       - POSTGRES_PORT=5432
       - POSTGRES_DB=seo_platform
@@ -41,6 +41,9 @@ services:
       - QDRANT_HOST=qdrant
       - QDRANT_PORT=6333
       - CORS_ORIGINS=http://localhost,http://localhost:3000,https://${DOMAIN:-localhost}
+      # Internal use — no auth
+      - AUTH_PROVIDER=internal
+      - DEV_AUTH_BYPASS=true
       # Start with single worker for SSE/in-memory state safety
       - UVICORN_WORKERS=1
     ports:

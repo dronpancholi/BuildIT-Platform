@@ -1,17 +1,18 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, Fragment } from "react";
 import { motion } from "framer-motion";
 import {
   Plus, Search, Loader2, GitBranch,
   TrendingUp, TrendingDown, Activity, Link2,
-  Mail, Radio, CheckCircle2,
+  Mail, Radio, CheckCircle2, Eye,
 } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { fetchApi } from "@/lib/api";
 import { useCommandCenter } from "@/hooks/use-command-center";
 import { CampaignEvolutionPanel } from "@/components/operational/campaign-evolution-panel";
 import { CampaignWorkflowStepper } from "@/components/operational/campaign-workflow-stepper";
+import { EmailThreadViewer } from "@/components/operational/email-thread-viewer";
 import type { CampaignIntelligence } from "@/types/business-intelligence";
 
 function getHealthColor(score: number): string {
@@ -46,6 +47,16 @@ export default function CampaignsPage() {
   const { openCommand } = useCommandCenter();
   const [searchQuery, setSearchQuery] = useState("");
   const [viewMode, setViewMode] = useState<"table" | "evolution">("evolution");
+  const [expandedEmails, setExpandedEmails] = useState<Set<string>>(new Set());
+
+  const toggleEmails = (campaignId: string) => {
+    setExpandedEmails((prev) => {
+      const next = new Set(prev);
+      if (next.has(campaignId)) next.delete(campaignId);
+      else next.add(campaignId);
+      return next;
+    });
+  };
 
   const { data: campaigns = [], isLoading, isError } = useQuery<CampaignIntelligence[]>({
     queryKey: ["campaigns"],
@@ -178,82 +189,101 @@ export default function CampaignsPage() {
                   const healthPct = Math.round(c.health_score * 100);
                   const progressPct = Math.round(c.progress * 100);
                   return (
-                    <motion.tr
-                      key={c.id}
-                      initial={{ opacity: 0, y: 5 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{ delay: i * 0.03 }}
-                      className="hover:bg-surface-border/30 transition-colors group"
-                    >
-                      <td className="px-5 py-3.5">
-                        <div className="font-medium text-slate-200 text-sm">{c.name}</div>
-                        <div className="text-[10px] text-slate-500 font-mono mt-0.5 capitalize">
-                          {c.campaign_type.replace("_", " ")}
-                        </div>
-                      </td>
-                      <td className="px-5 py-3.5">
-                        <span className={`px-2 py-0.5 text-[10px] font-mono rounded-full border uppercase ${
-                          c.status === "active" ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/20" :
-                          c.status === "monitoring" ? "bg-platform-500/10 text-platform-400 border-platform-500/20" :
-                          c.status === "draft" ? "bg-slate-500/10 text-slate-400 border-slate-500/20" :
-                          "bg-amber-500/10 text-amber-400 border-amber-500/20"
-                        }`}>
-                          {c.status.replace("_", " ")}
-                        </span>
-                      </td>
-                      <td className="px-5 py-3.5 text-center">
-                        <div className="flex items-center justify-center gap-2">
-                          <div className="w-16 h-2 bg-surface-darker rounded-full overflow-hidden">
-                            <motion.div
-                              initial={{ width: 0 }}
-                              animate={{ width: `${healthPct}%` }}
-                              transition={{ duration: 0.5, delay: i * 0.05 }}
-                              className={`h-full rounded-full ${getHealthBarColor(c.health_score)}`}
-                            />
+                    <Fragment key={c.id}>
+                      <motion.tr
+                        initial={{ opacity: 0, y: 5 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: i * 0.03 }}
+                        className="hover:bg-surface-border/30 transition-colors group"
+                      >
+                        <td className="px-5 py-3.5">
+                          <div className="font-medium text-slate-200 text-sm">{c.name}</div>
+                          <div className="text-[10px] text-slate-500 font-mono mt-0.5 capitalize">
+                            {c.campaign_type.replace("_", " ")}
                           </div>
-                          <span className={`text-[10px] font-mono font-bold ${getHealthColor(c.health_score)}`}>
-                            {healthPct}%
-                          </span>
-                        </div>
-                      </td>
-                      <td className="px-5 py-3.5 text-center">
-                        <div className="flex items-center justify-center gap-1">
-                          {getMomentumIcon(momentum)}
-                          <span className={`text-[10px] font-mono ${
-                            momentum > 0.01 ? "text-emerald-500" :
-                            momentum < -0.01 ? "text-red-400" : "text-slate-500"
+                        </td>
+                        <td className="px-5 py-3.5">
+                          <span className={`px-2 py-0.5 text-[10px] font-mono rounded-full border uppercase ${
+                            c.status === "active" ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/20" :
+                            c.status === "monitoring" ? "bg-platform-500/10 text-platform-400 border-platform-500/20" :
+                            c.status === "draft" ? "bg-slate-500/10 text-slate-400 border-slate-500/20" :
+                            "bg-amber-500/10 text-amber-400 border-amber-500/20"
                           }`}>
-                            {getMomentumLabel(momentum)}
+                            {c.status.replace("_", " ")}
                           </span>
-                        </div>
-                      </td>
-                      <td className="px-5 py-3.5 text-center">
-                        <span className="text-[10px] font-mono text-slate-500">
-                          {velocity > 0 ? `${velocity.toFixed(3)}/s` : "—"}
-                        </span>
-                      </td>
-                      <td className="px-5 py-3.5 text-right">
-                        <span className="inline-flex items-center gap-1 px-2 py-1 rounded bg-platform-900/30 text-platform-400 font-mono font-bold text-xs border border-platform-500/20">
-                          <Link2 className="w-3 h-3" />
-                          {c.acquired_link_count}/{c.target_link_count}
-                        </span>
-                      </td>
-                      <td className="px-5 py-3.5 text-right">
-                        <span className={`text-[11px] font-mono font-bold ${
-                          progressPct >= 80 ? "text-emerald-400" :
-                          progressPct >= 50 ? "text-amber-400" :
-                          "text-slate-500"
-                        }`}>
-                          {progressPct}%
-                        </span>
-                      </td>
-                      <td className="px-5 py-3.5 text-right text-[11px] font-mono text-slate-500">
-                        <span className="flex items-center justify-end gap-1">
-                          <Mail className="w-3 h-3" />
-                          {c.total_emails_sent}
-                        </span>
-                      </td>
-                    </motion.tr>
+                        </td>
+                        <td className="px-5 py-3.5 text-center">
+                          <div className="flex items-center justify-center gap-2">
+                            <div className="w-16 h-2 bg-surface-darker rounded-full overflow-hidden">
+                              <motion.div
+                                initial={{ width: 0 }}
+                                animate={{ width: `${healthPct}%` }}
+                                transition={{ duration: 0.5, delay: i * 0.05 }}
+                                className={`h-full rounded-full ${getHealthBarColor(c.health_score)}`}
+                              />
+                            </div>
+                            <span className={`text-[10px] font-mono font-bold ${getHealthColor(c.health_score)}`}>
+                              {healthPct}%
+                            </span>
+                          </div>
+                        </td>
+                        <td className="px-5 py-3.5 text-center">
+                          <div className="flex items-center justify-center gap-1">
+                            {getMomentumIcon(momentum)}
+                            <span className={`text-[10px] font-mono ${
+                              momentum > 0.01 ? "text-emerald-500" :
+                              momentum < -0.01 ? "text-red-400" : "text-slate-500"
+                            }`}>
+                              {getMomentumLabel(momentum)}
+                            </span>
+                          </div>
+                        </td>
+                        <td className="px-5 py-3.5 text-center">
+                          <span className="text-[10px] font-mono text-slate-500">
+                            {velocity > 0 ? `${velocity.toFixed(3)}/s` : "—"}
+                          </span>
+                        </td>
+                        <td className="px-5 py-3.5 text-right">
+                          <span className="inline-flex items-center gap-1 px-2 py-1 rounded bg-platform-900/30 text-platform-400 font-mono font-bold text-xs border border-platform-500/20">
+                            <Link2 className="w-3 h-3" />
+                            {c.acquired_link_count}/{c.target_link_count}
+                          </span>
+                        </td>
+                        <td className="px-5 py-3.5 text-right">
+                          <span className={`text-[11px] font-mono font-bold ${
+                            progressPct >= 80 ? "text-emerald-400" :
+                            progressPct >= 50 ? "text-amber-400" :
+                            "text-slate-500"
+                          }`}>
+                            {progressPct}%
+                          </span>
+                        </td>
+                        <td className="px-5 py-3.5 text-right">
+                          <button
+                            onClick={() => toggleEmails(c.id)}
+                            className={`inline-flex items-center gap-1 px-2 py-1 rounded text-[11px] font-mono transition-colors ${
+                              expandedEmails.has(c.id)
+                                ? "bg-platform-500/15 text-platform-400 border border-platform-500/30"
+                                : "text-slate-500 hover:text-slate-300 hover:bg-surface-border/30"
+                            }`}
+                          >
+                            <Mail className="w-3 h-3" />
+                            {c.total_emails_sent}
+                            <Eye className={`w-3 h-3 ${expandedEmails.has(c.id) ? "opacity-100" : "opacity-0 group-hover:opacity-50"}`} />
+                          </button>
+                        </td>
+                      </motion.tr>
+                      {expandedEmails.has(c.id) && (
+                        <motion.tr
+                          initial={{ opacity: 0 }}
+                          animate={{ opacity: 1 }}
+                        >
+                          <td colSpan={8} className="px-5 py-3 bg-surface-darker/30">
+                            <EmailThreadViewer campaignId={c.id} />
+                          </td>
+                        </motion.tr>
+                      )}
+                    </Fragment>
                   );
                 })}
               </tbody>

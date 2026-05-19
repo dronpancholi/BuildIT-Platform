@@ -173,16 +173,15 @@ class NvidiaSettings(BaseSettings):
 
 
 class AuthSettings(BaseSettings):
-    """Authentication and authorization configuration."""
+    """Authentication configuration (internal — no external auth)."""
 
     model_config = SettingsConfigDict(env_prefix="AUTH_")
 
-    provider: str = "clerk"  # clerk | auth0 | internal
-    secret_key: str = "change-me-to-a-secure-random-string"
+    provider: str = "internal"
+    secret_key: str = "internal-dev-key"
     issuer_url: str = ""
     audience: str = "seo-platform-api"
 
-    # JWT
     access_token_ttl_minutes: int = 15
     refresh_token_ttl_days: int = 7
     algorithm: str = "HS256"
