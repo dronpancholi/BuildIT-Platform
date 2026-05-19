@@ -16,7 +16,11 @@ from datetime import datetime, timedelta, timezone
 from typing import Any
 from uuid import UUID
 
+from seo_platform.clients.contact_crawler import ContactCrawler
+from seo_platform.clients.scrapling import ScraplingClient
+from seo_platform.clients.wappalyzer import WappalyzerProfiler
 from seo_platform.core.logging import get_logger
+from seo_platform.services.seo_intelligence.authority_resolver import AuthorityResolver
 
 logger = get_logger(__name__)
 
@@ -799,9 +803,53 @@ class OutreachIntelligenceService:
 
         author_name = prospect_data.get("contact_name", "Editor")
         social_signal = prospect_data.get("social_graph_signal", "Recent discussion on industry trends and content strategy.")
-        
+
+        domain = prospect_data.get("domain", "")
+
         client_name = client_context.get("client_name", "Our Platform")
         value_add_asset = client_context.get("value_add_asset", "Proprietary benchmark data and custom infographics.")
+
+        tech_stack: list[str] = []
+        domain_quality_str = ""
+        contact_info_str = ""
+
+        if domain:
+            try:
+                sc = ScraplingClient(timeout=15)
+                page = await sc.fetch(f"https://{domain}")
+                tech_stack = WappalyzerProfiler.detect_technologies(page.html_content)
+            except Exception:
+                pass
+
+            try:
+                quality = await AuthorityResolver.get_metrics(domain)
+                domain_quality_str = (
+                    f"Authority: {quality.authority:.0f}/100, "
+                    f"Trust: {quality.trust_score:.0f}/100, "
+                    f"Spam risk: {quality.spam_score:.0%}"
+                )
+            except Exception:
+                pass
+
+            try:
+                crawler = ContactCrawler()
+                contacts = await crawler.extract_contacts(domain)
+                if contacts.get("emails"):
+                    contact_info_str = f"Contact page emails: {', '.join(contacts['emails'][:3])}"
+                if contacts.get("social_links"):
+                    contact_info_str += f" | Social: {', '.join(contacts['social_links'].keys())}"
+                if contacts.get("author_bio") and not author_name:
+                    author_name = contacts.get("author_bio", "Editor")[:100]
+            except Exception:
+                pass
+
+        enrichment_context = ""
+        if tech_stack:
+            enrichment_context += f"Tech stack: {', '.join(tech_stack)}\n"
+        if domain_quality_str:
+            enrichment_context += f"Domain quality: {domain_quality_str}\n"
+        if contact_info_str:
+            enrichment_context += f"Contact info: {contact_info_str}\n"
 
         try:
             from seo_platform.llm.gateway import RenderedPrompt, TaskType, llm_gateway
@@ -813,6 +861,7 @@ class OutreachIntelligenceService:
                 social_signal=social_signal,
                 client_name=client_name,
                 value_add_asset=value_add_asset,
+                enrichment_context=enrichment_context,
             )
             prompt = RenderedPrompt(
                 template_id="humanized_bespoke_pitch",
