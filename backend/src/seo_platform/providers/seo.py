@@ -12,7 +12,7 @@ from dataclasses import dataclass, field
 from typing import Any
 from uuid import UUID
 
-from seo_platform.clients.scrapling import ScraplingClient
+from seo_platform.clients.scrapling import SERPItem, ScraplingClient
 from seo_platform.core.logging import get_logger
 
 logger = get_logger(__name__)
@@ -175,7 +175,8 @@ class DataForSEOProvider(SEODataProvider):
 class ScraplingSEOProvider(SEODataProvider):
     """
     Scrapling SEO Data Provider.
-    Implements stealth search extraction and crawling for zero-cost fallback.
+    Implements stealth search extraction, paginated SERP parsing,
+    and recursive crawl depth for zero-cost backlink discovery.
     """
 
     name = "scrapling"
@@ -187,45 +188,77 @@ class ScraplingSEOProvider(SEODataProvider):
         return await SimulatedSEOProvider().get_keyword_metrics(keywords)
 
     async def get_domain_authority(self, domain: str) -> DomainAuthority:
-        return await SimulatedSEOProvider().get_domain_authority(domain)
+        try:
+            res = await self.client.fetch(f"https://{domain}")
+            ext_links = [l for l in res.outbound_links if domain not in l]
+            authority = min(90.0, max(10.0, 15.0 + len(ext_links) * 1.5))
+            return DomainAuthority(
+                domain=domain,
+                authority=authority,
+                trust=authority * 0.8,
+                referring_domains=len(ext_links),
+                backlinks=len(res.outbound_links),
+                source="scrapling_crawled",
+            )
+        except Exception:
+            return await SimulatedSEOProvider().get_domain_authority(domain)
 
     async def discover_backlink_prospects(self, domain: str, limit: int = 20) -> list[BacklinkProspect]:
         """
-        Crawls competitor pages and search listings to extract outbound prospects.
+        Crawls search listings and recursively follows links (depth 1) to find backlink prospects.
         """
         try:
-            search_url = f"https://html.duckduckgo.com/html/?q=site:{domain}"
-            res = await self.client.fetch(search_url)
+            serp_items = await self.client.extract_ddg_serp(f'"{domain}" -site:{domain}', limit=limit)
+            prospects: list[BacklinkProspect] = []
 
-            prospects = []
-            for link in res.outbound_links[:limit]:
-                clean_domain = link.split("//")[-1].split("/")[0]
+            for item in serp_items:
+                clean_domain = item.url.split("//")[-1].split("/")[0]
                 if clean_domain and clean_domain != domain:
                     prospects.append(BacklinkProspect(
                         domain=clean_domain,
-                        domain_authority=45.0,
-                        relevance_score=0.75,
+                        domain_authority=50.0,
+                        relevance_score=0.80,
                         spam_score=0.01,
-                        source="scrapling_search",
+                        source="scrapling_crawled_direct",
                     ))
-            return prospects
+                    if len(prospects) >= limit:
+                        break
+
+                    try:
+                        res = await self.client.fetch(item.url)
+                        for link in res.outbound_links[:5]:
+                            link_domain = link.split("//")[-1].split("/")[0]
+                            if link_domain and link_domain != domain and link_domain != clean_domain:
+                                prospects.append(BacklinkProspect(
+                                    domain=link_domain,
+                                    domain_authority=40.0,
+                                    relevance_score=0.60,
+                                    spam_score=0.02,
+                                    source="scrapling_crawled_depth1",
+                                ))
+                                if len(prospects) >= limit:
+                                    break
+                    except Exception:
+                        continue
+
+            return prospects[:limit]
         except Exception as e:
-            logger.warning("scrapling_prospecting_failed_falling_back", error=str(e))
+            logger.warning("scrapling_prospecting_failed", error=str(e))
             return []
 
     async def get_serp_data(self, keyword: str, geo: str = "us") -> dict[str, Any]:
         """
-        Scrapes and parses organic search engine results.
+        Scrapes and parses organic search engine results with paginated metadata.
         """
         try:
-            search_url = f"https://html.duckduckgo.com/html/?q={keyword.replace(' ', '+')}"
-            res = await self.client.fetch(search_url)
+            serp_items = await self.client.extract_ddg_serp(keyword, limit=10)
             return {
                 "keyword": keyword,
                 "success": True,
                 "provider": "scrapling",
-                "page_title": res.title,
-                "links_discovered": len(res.outbound_links),
+                "organic_results": [item.model_dump() for item in serp_items],
+                "features_present": ["organic"],
+                "total_organic_count": len(serp_items),
             }
         except Exception as e:
             return {"keyword": keyword, "success": False, "error": str(e)}

@@ -27,6 +27,13 @@ class ScraplingResult(BaseModel):
     metadata: dict[str, Any] = Field(default_factory=dict)
 
 
+class SERPItem(BaseModel):
+    title: str
+    url: str
+    snippet: str
+    position: int
+
+
 class ScraplingClient:
     """
     Stealth client using Scrapling Fetcher to scrape, bypass blocks,
@@ -79,3 +86,54 @@ class ScraplingClient:
         except Exception as e:
             logger.error("scrapling_fetch_failed", url=url, error=str(e))
             raise RuntimeError(f"Scrapling failed for {url}: {e}")
+
+    async def extract_ddg_serp(self, query: str, limit: int = 20) -> list[SERPItem]:
+        """
+        Queries DuckDuckGo HTML and parses search results with pagination.
+        """
+        from scrapling import Fetcher
+        from urllib.parse import unquote
+
+        results: list[SERPItem] = []
+        offset = 0
+
+        while len(results) < limit and offset < 50:
+            url = f"https://html.duckduckgo.com/html/?q={query.replace(' ', '+')}&s={offset}"
+            try:
+                fetcher = Fetcher(url=url, timeout=self.timeout, auto_match=True)
+
+                elements = fetcher.css("div.result").all()
+                if not elements:
+                    break
+
+                for el in elements:
+                    title_el = el.css("a.result__a")
+                    title = title_el.text().strip() if title_el else ""
+
+                    href = title_el.attrib.get("href") if title_el else ""
+                    if "uddg=" in href:
+                        href = href.split("uddg=")[-1].split("&")[0]
+                        href = unquote(href)
+
+                    snippet_el = el.css("a.result__snippet")
+                    snippet = snippet_el.text().strip() if snippet_el else ""
+
+                    if title and href and "duckduckgo.com" not in href:
+                        results.append(SERPItem(
+                            title=title,
+                            url=href,
+                            snippet=snippet,
+                            position=len(results) + 1,
+                        ))
+                        if len(results) >= limit:
+                            break
+
+                next_btn = fetcher.css("input[value='Next']")
+                if not next_btn:
+                    break
+                offset += 30
+            except Exception as e:
+                logger.warning("ddg_serp_scrape_page_failed", offset=offset, error=str(e))
+                break
+
+        return results
