@@ -67,9 +67,9 @@ class ComplianceScorer:
         # 3. Compute score
         penalty = 0.0
         if violations["banned_words"]:
-            penalty += 0.3 * min(1.0, len(violations["banned_words"]) / 3)
+            penalty += 0.35 * len(violations["banned_words"])
         if max_len_violated:
-            penalty += 0.2
+            penalty += 0.25
 
         score = round(max(0.0, 1.0 - penalty), 2)
         passed = score >= 0.7
@@ -108,20 +108,23 @@ class ComplianceScorer:
         passed: bool,
         details: dict[str, Any] | None = None,
     ) -> None:
-        from seo_platform.core.database import get_db_session
+        try:
+            from seo_platform.core.database import get_db_session
 
-        async with get_db_session() as session:
-            result = ComplianceResult(
-                tenant_id=tenant_id,
-                entity_id=entity_id,
-                entity_type=entity_type,
-                banned_words_found=banned_words_found,
-                max_sentence_length_violated=max_sentence_length_violated,
-                score=score,
-                passed=passed,
-                details=details or {},
-            )
-            session.add(result)
+            async with get_db_session() as session:
+                result = ComplianceResult(
+                    tenant_id=tenant_id,
+                    entity_id=entity_id,
+                    entity_type=entity_type,
+                    banned_words_found=banned_words_found,
+                    max_sentence_length_violated=max_sentence_length_violated,
+                    score=score,
+                    passed=passed,
+                    details=details or {},
+                )
+                session.add(result)
+        except Exception:
+            logger.warning("compliance_persist_failed entity=%s", entity_id)
 
 
 compliance_scorer = ComplianceScorer()

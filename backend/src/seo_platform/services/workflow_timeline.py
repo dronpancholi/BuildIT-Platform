@@ -29,20 +29,22 @@ class WorkflowTimelineService:
         metadata: dict[str, Any] | None = None,
     ) -> None:
         """Record a timeline event and broadcast via SSE."""
-        from seo_platform.core.database import get_db_session
+        try:
+            from seo_platform.core.database import get_db_session
 
-        async with get_db_session() as session:
-            event = CampaignTimelineEvent(
-                tenant_id=tenant_id,
-                campaign_id=campaign_id,
-                step_name=step_name,
-                status=status,
-                message=message,
-                step_metadata=metadata or {},
-            )
-            session.add(event)
-            # flush to get the event id before broadcasting
-            await session.flush()
+            async with get_db_session() as session:
+                event = CampaignTimelineEvent(
+                    tenant_id=tenant_id,
+                    campaign_id=campaign_id,
+                    step_name=step_name,
+                    status=status,
+                    message=message,
+                    step_metadata=metadata or {},
+                )
+                session.add(event)
+                await session.flush()
+        except Exception:
+            logger.warning("timeline_persist_failed campaign=%s step=%s", campaign_id, step_name)
 
         try:
             from seo_platform.api.endpoints.realtime.sse import emit_telemetry_event

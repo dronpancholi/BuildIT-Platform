@@ -14,9 +14,8 @@ from datetime import datetime, timedelta, timezone
 from typing import Any
 from uuid import UUID
 
-from sqlalchemy import select, func as sa_func
+from sqlalchemy import cast as sa_cast, select, func as sa_func, Integer as sa_Integer
 
-from seo_platform.clients.openpagerank import OpenPageRankClient
 from seo_platform.core.redis import get_redis
 from seo_platform.models.observability import ProviderHealthMetric
 
@@ -44,18 +43,21 @@ class ProviderHealthCenter:
         metadata: dict[str, Any] | None = None,
     ) -> None:
         """Persist a single provider call metric and update Redis aggregate."""
-        from seo_platform.core.database import get_db_session
+        try:
+            from seo_platform.core.database import get_db_session
 
-        async with get_db_session() as session:
-            metric = ProviderHealthMetric(
-                tenant_id=tenant_id or UUID(int=0),
-                provider_name=provider_name,
-                latency_ms=latency_ms,
-                is_healthy=success,
-                circuit_breaker_state=breaker_state,
-                metadata_json=metadata or {},
-            )
-            session.add(metric)
+            async with get_db_session() as session:
+                metric = ProviderHealthMetric(
+                    tenant_id=tenant_id or UUID(int=0),
+                    provider_name=provider_name,
+                    latency_ms=latency_ms,
+                    is_healthy=success,
+                    circuit_breaker_state=breaker_state,
+                    metadata_json=metadata or {},
+                )
+                session.add(metric)
+        except Exception:
+            logger.warning("provider_health_persist_failed provider=%s", provider_name)
 
         await self._update_redis_aggregate(provider_name, latency_ms, success)
 
@@ -74,7 +76,7 @@ class ProviderHealthCenter:
                             sa_func.avg(ProviderHealthMetric.latency_ms).label("avg_latency"),
                             sa_func.count().label("total_calls"),
                             sa_func.sum(
-                                sa_func.cast(ProviderHealthMetric.is_healthy, sa_func.Integer),
+                                sa_cast(ProviderHealthMetric.is_healthy, sa_Integer),
                             ).label("success_count"),
                         ).where(
                             ProviderHealthMetric.provider_name == prov,

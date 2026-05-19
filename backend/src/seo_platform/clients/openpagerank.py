@@ -12,7 +12,6 @@ import httpx
 from pydantic import BaseModel, Field
 
 from seo_platform.config import get_settings
-from seo_platform.services.provider_health import provider_health_center
 
 logger = logging.getLogger(__name__)
 
@@ -56,6 +55,8 @@ class OpenPageRankClient:
         headers = {"API-OPR": self.api_key}
         params = [("domains[]", dom) for dom in domains]
 
+        from seo_platform.services.provider_health import provider_health_center
+
         t0 = time.monotonic()
         try:
             async with httpx.AsyncClient(timeout=self.timeout) as client:
@@ -64,18 +65,24 @@ class OpenPageRankClient:
                     raise RuntimeError(f"OpenPageRank API returned status {response.status_code}")
 
                 latency = (time.monotonic() - t0) * 1000
-                await provider_health_center.record_provider_call(
-                    provider_name="OpenPageRank",
-                    latency_ms=latency,
-                    success=True,
-                )
+                try:
+                    await provider_health_center.record_provider_call(
+                        provider_name="OpenPageRank",
+                        latency_ms=latency,
+                        success=True,
+                    )
+                except Exception:
+                    pass
                 return OpenPageRankResponse.model_validate(response.json())
         except Exception as e:
             latency = (time.monotonic() - t0) * 1000
-            await provider_health_center.record_provider_call(
-                provider_name="OpenPageRank",
-                latency_ms=latency,
-                success=False,
-            )
+            try:
+                await provider_health_center.record_provider_call(
+                    provider_name="OpenPageRank",
+                    latency_ms=latency,
+                    success=False,
+                )
+            except Exception:
+                pass
             logger.error("openpagerank_request_failed", domains=domains, error=str(e))
             raise RuntimeError(f"OpenPageRank request failed: {e}")
