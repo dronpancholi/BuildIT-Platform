@@ -13,6 +13,7 @@ from typing import Any
 from uuid import UUID
 
 from seo_platform.clients.scrapling import SERPItem, ScraplingClient
+from seo_platform.clients.scrapling_cache import ScraplingCache
 from seo_platform.core.logging import get_logger
 
 logger = get_logger(__name__)
@@ -206,7 +207,20 @@ class ScraplingSEOProvider(SEODataProvider):
     async def discover_backlink_prospects(self, domain: str, limit: int = 20) -> list[BacklinkProspect]:
         """
         Crawls search listings and recursively follows links (depth 1) to find backlink prospects.
+        Results cached for 3 days.
         """
+        cache_payload = {"domain": domain, "limit": limit}
+        cache_val = await ScraplingCache.get("prospects", cache_payload, BacklinkProspect)
+        if cache_val is not None:
+            return cache_val
+
+        prospects = await self._discover_prospects_live(domain, limit)
+
+        await ScraplingCache.set("prospects", cache_payload, prospects, ttl=259200)
+        return prospects
+
+    async def _discover_prospects_live(self, domain: str, limit: int = 20) -> list[BacklinkProspect]:
+        """Live backlink crawl without caching."""
         try:
             serp_items = await self.client.extract_ddg_serp(f'"{domain}" -site:{domain}', limit=limit)
             prospects: list[BacklinkProspect] = []

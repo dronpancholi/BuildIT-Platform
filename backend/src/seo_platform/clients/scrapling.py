@@ -14,6 +14,8 @@ from typing import Any
 
 from pydantic import BaseModel, Field
 
+from seo_platform.clients.scrapling_cache import ScraplingCache
+
 logger = logging.getLogger(__name__)
 
 
@@ -45,11 +47,19 @@ class ScraplingClient:
 
     async def fetch(self, url: str) -> ScraplingResult:
         """
-        Fetches and extracts clean content from a target page.
-
-        Uses Scrapling's auto-matching headers for stealth and falls
-        back gracefully on failure via deterministic defaults.
+        Fetches and extracts clean content from a target page with 7-day caching.
         """
+        cache_val = await ScraplingCache.get("page", {"url": url}, ScraplingResult)
+        if cache_val:
+            return cache_val
+
+        result = await self._fetch_live(url)
+
+        await ScraplingCache.set("page", {"url": url}, result, ttl=604800)
+        return result
+
+    async def _fetch_live(self, url: str) -> ScraplingResult:
+        """Live page fetch without caching."""
         try:
             from scrapling import Fetcher
 
@@ -89,8 +99,20 @@ class ScraplingClient:
 
     async def extract_ddg_serp(self, query: str, limit: int = 20) -> list[SERPItem]:
         """
-        Queries DuckDuckGo HTML and parses search results with pagination.
+        Queries DuckDuckGo HTML with 24-hour caching and pagination.
         """
+        cache_payload = {"query": query, "limit": limit}
+        cache_val = await ScraplingCache.get("serp", cache_payload, SERPItem)
+        if cache_val:
+            return cache_val
+
+        result = await self._extract_ddg_serp_live(query, limit)
+
+        await ScraplingCache.set("serp", cache_payload, result, ttl=86400)
+        return result
+
+    async def _extract_ddg_serp_live(self, query: str, limit: int = 20) -> list[SERPItem]:
+        """Live DuckDuckGo SERP scrape without caching."""
         from scrapling import Fetcher
         from urllib.parse import unquote
 
