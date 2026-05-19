@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { fetchApi } from "@/lib/api";
 import { motion, AnimatePresence } from "framer-motion";
@@ -47,9 +47,11 @@ export function HealthIndicator() {
   const isDegraded = data?.status === "degraded";
 
   const statusChanged = prevStatus !== null && prevStatus !== data?.status;
-  if (data?.status && data.status !== prevStatus) {
-    setPrevStatus(data.status);
-  }
+  useEffect(() => {
+    if (data?.status && data.status !== prevStatus) {
+      setPrevStatus(data.status);
+    }
+  }, [data?.status]);
 
   const colorClass = isHealthy
     ? "bg-emerald-500 shadow-emerald-500/30"

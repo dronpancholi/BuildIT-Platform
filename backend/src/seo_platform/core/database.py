@@ -153,7 +153,7 @@ async def get_db_session() -> AsyncGenerator[AsyncSession, None]:
         await session.rollback()
         raise
     finally:
-        await session.close()
+        await scoped.remove()
 
 
 @asynccontextmanager

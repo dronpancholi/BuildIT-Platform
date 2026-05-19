@@ -46,7 +46,11 @@ def emit_event(event_type: str, tenant_id: str, payload: dict, correlation_id: s
                 payload=payload,
             )
             import asyncio
-            asyncio.create_task(_event_publisher.publish(event))
+            try:
+                loop = asyncio.get_running_loop()
+                loop.create_task(_event_publisher.publish(event))
+            except RuntimeError:
+                logger.warning("event_emit_no_loop", event_type=event_type)
     except Exception as e:
         logger.warning("event_emit_failed", event_type=event_type, error=str(e))
 

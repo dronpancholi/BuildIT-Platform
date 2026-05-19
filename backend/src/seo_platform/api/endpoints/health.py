@@ -320,6 +320,7 @@ async def _check_nvidia_nim() -> ComponentHealth:
                     name="nim", status=HealthStatus.HEALTHY,
                     latency_ms=0.0, message="Nominal (Simulated fallback)"
                 )
+            resp.raise_for_status()
         latency = (time.monotonic() - start) * 1000
         return ComponentHealth(
             name="nim", status=HealthStatus.HEALTHY,
@@ -329,8 +330,8 @@ async def _check_nvidia_nim() -> ComponentHealth:
     except Exception as e:
         latency = (time.monotonic() - start) * 1000
         return ComponentHealth(
-            name="nim", status=HealthStatus.HEALTHY,
-            latency_ms=round(latency, 1), message=f"Nominal (Simulated): {str(e)[:100]}"
+            name="nim", status=HealthStatus.DEGRADED,
+            latency_ms=round(latency, 1), message=str(e)[:200]
         )
 
 
@@ -379,10 +380,11 @@ async def _check_external_apis() -> ComponentHealth:
 
     if configured:
         msg = f"Configured: {', '.join(configured)}"
+        status = HealthStatus.HEALTHY if not missing else HealthStatus.DEGRADED
         if missing:
             msg += f" | Missing: {', '.join(missing)}"
         return ComponentHealth(
-            name="external_apis", status=HealthStatus.DEGRADED,
+            name="external_apis", status=status,
             latency_ms=0, message=msg,
         )
     return ComponentHealth(
@@ -390,6 +392,9 @@ async def _check_external_apis() -> ComponentHealth:
         latency_ms=0,
         message="No external SEO APIs configured. Set DATAFORSEO_LOGIN/PASSWORD, AHREFS_API_KEY, HUNTER_API_KEY",
     )
+
+
+@router.get("/metrics")
 async def prometheus_metrics():
     """Prometheus metrics endpoint."""
     from fastapi.responses import Response

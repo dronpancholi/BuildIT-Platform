@@ -72,7 +72,7 @@ class SSEManager:
 
     def __init__(self):
         self._connections: dict[str, set[asyncio.Queue]] = {}
-        self._connection_filters: dict[str, set[str] | None] = {}
+        self._subscriber_filters: dict[str, dict[int, set[str]]] = {}
 
     async def subscribe(self, tenant_id: str, channel: str, queue: asyncio.Queue) -> None:
         """Subscribe a connection to a channel."""
@@ -90,54 +90,50 @@ class SSEManager:
     ) -> None:
         """Subscribe a connection to a channel with optional event type filtering."""
         key = f"{tenant_id}:{channel}"
-        filter_key = f"{tenant_id}:{channel}:filter"
         if key not in self._connections:
             self._connections[key] = set()
         self._connections[key].add(queue)
         if event_types:
-            if filter_key not in self._connection_filters:
-                self._connection_filters[filter_key] = set(event_types)
-            else:
-                self._connection_filters[filter_key].update(event_types)
+            self._subscriber_filters.setdefault(key, {})[id(queue)] = set(event_types)
 
     async def unsubscribe(self, tenant_id: str, channel: str, queue: asyncio.Queue) -> None:
         """Unsubscribe a connection from a channel."""
         key = f"{tenant_id}:{channel}"
         if key in self._connections:
             self._connections[key].discard(queue)
+            self._subscriber_filters.get(key, {}).pop(id(queue), None)
             if not self._connections[key]:
                 del self._connections[key]
-                filter_key = f"{tenant_id}:{channel}:filter"
-                self._connection_filters.pop(filter_key, None)
+                self._subscriber_filters.pop(key, None)
 
     async def publish(self, tenant_id: str, channel: str, event: dict) -> None:
         """Publish an event to all subscribers of a channel."""
         key = f"{tenant_id}:{channel}"
-        filter_key = f"{tenant_id}:{channel}:filter"
-        allowed_types = self._connection_filters.get(filter_key)
-
-        if key in self._connections:
-            event_type = event.get("event_type", event.get("type", ""))
-            if allowed_types and event_type not in allowed_types:
-                return
-            message = f"data: {json.dumps(event)}\n\n"
-            for queue in self._connections[key]:
-                try:
-                    await queue.put(message)
-                except Exception as e:
-                    logger.warning("sse_publish_failed", error=str(e))
+        if key not in self._connections:
+            return
+        event_type = event.get("event_type", event.get("type", ""))
+        filters = self._subscriber_filters.get(key, {})
+        message = f"data: {json.dumps(event)}\n\n"
+        for queue in list(self._connections[key]):
+            allowed = filters.get(id(queue))
+            if allowed is not None and event_type not in allowed:
+                continue
+            try:
+                await queue.put(message)
+            except Exception as e:
+                logger.warning("sse_publish_failed", error=str(e))
 
     async def broadcast(self, event: dict, channel: str = "global") -> None:
         """Broadcast to all tenants on a specific channel."""
         event_type = event.get("event_type", event.get("type", ""))
-        for key, queues in self._connections.items():
+        message = f"data: {json.dumps(event)}\n\n"
+        for key, queues in list(self._connections.items()):
             if key.endswith(f":{channel}"):
-                filter_key = f"{key}:filter"
-                allowed_types = self._connection_filters.get(filter_key)
-                if allowed_types and event_type not in allowed_types:
-                    continue
-                message = f"data: {json.dumps(event)}\n\n"
-                for queue in queues:
+                filters = self._subscriber_filters.get(key, {})
+                for queue in list(queues):
+                    allowed = filters.get(id(queue))
+                    if allowed is not None and event_type not in allowed:
+                        continue
                     try:
                         await queue.put(message)
                     except Exception:
@@ -312,7 +308,7 @@ async def emit_workflow_event(tenant_id: UUID, workflow_type: str, status: str, 
     )
 
 
-async def emit_approval_event(tenant_id: UUID, approval_id: str, status: str, summary: str = ""):
+async def emit_approval_event(tenant_id: UUID, approval_id: str, status: str, summary: str = "", risk_level: str = ""):
     """Publish approval event to subscribers."""
     await sse_manager.publish(
         str(tenant_id),
@@ -326,6 +322,7 @@ async def emit_approval_event(tenant_id: UUID, approval_id: str, status: str, su
                 "approval_id": approval_id,
                 "status": status,
                 "summary": summary,
+                "risk_level": risk_level,
             },
         },
     )
@@ -370,7 +367,9 @@ async def emit_infra_event(status: str, component: str, message: str = ""):
 
 async def emit_telemetry_event(tenant_id: UUID, telemetry_type: str, data: dict):
     """Publish crawling, scraping, or processing metrics to subscribers."""
-    await sse_manager.broadcast(
+    await sse_manager.publish(
+        str(tenant_id),
+        "telemetry",
         {
             "event_type": EVENT_TELEMETRY_UPDATE,
             "channel": "telemetry",
@@ -381,7 +380,6 @@ async def emit_telemetry_event(tenant_id: UUID, telemetry_type: str, data: dict)
                 "data": data,
             },
         },
-        "telemetry",
     )
 
 
