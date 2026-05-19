@@ -343,10 +343,10 @@ async def list_citation_directories(
         data = []
         for s in submissions:
             data.append({
-                "directory": s.platform,
-                "quality_score": 0.85 if s.status == "verified" else 0.45,
+                "directory": s.directory_adapter,
+                "quality_score": 0.85 if s.verification_state == "live" else 0.45,
                 "citation_count": 1,
-                "verification_rate": 1.0 if s.status == "verified" else 0.0,
+                "verification_rate": 1.0 if s.verification_state == "live" else 0.0,
             })
 
         return APIResponse(data=data)

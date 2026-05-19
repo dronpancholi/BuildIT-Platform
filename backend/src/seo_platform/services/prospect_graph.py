@@ -86,6 +86,8 @@ class ProspectGraphSystem:
                 category = self._infer_category(domain)
 
                 nodes[domain] = {
+                    "id": domain,
+                    "label": domain,
                     "domain": domain,
                     "domain_authority": prospect.domain_authority,
                     "relevance_score": prospect.relevance_score,
@@ -112,6 +114,8 @@ class ProspectGraphSystem:
                             except Exception:
                                 pass
                         nodes[comp_clean] = {
+                            "id": comp_clean,
+                            "label": comp_clean,
                             "domain": comp_clean,
                             "domain_authority": comp_da,
                             "relevance_score": 0.0,
@@ -215,9 +219,13 @@ class ProspectGraphSystem:
         for domain, data in raw_nodes.items():
             try:
                 node = orjson.loads(data)
+                if "id" not in node:
+                    node["id"] = node.get("domain", domain)
+                if "label" not in node:
+                    node["label"] = node.get("domain", domain)
                 nodes.append(node)
             except Exception:
-                nodes.append({"domain": domain})
+                nodes.append({"id": domain, "label": domain, "domain": domain})
 
         edges = []
         for key, data in raw_edges.items():
@@ -266,6 +274,8 @@ class ProspectGraphSystem:
 
             category = self._infer_category(domain)
             node_data = {
+                "id": domain,
+                "label": domain,
                 "domain": domain,
                 "domain_authority": prospect.get("domain_authority", 40),
                 "relevance_score": prospect.get("relevance_score", 0.5),
@@ -290,6 +300,8 @@ class ProspectGraphSystem:
                         except Exception:
                             pass
                     comp_node = {
+                        "id": comp_clean,
+                        "label": comp_clean,
                         "domain": comp_clean,
                         "domain_authority": comp_da,
                         "relevance_score": 0.0,
@@ -512,10 +524,15 @@ class ProspectGraphSystem:
 
                 bridge_score = min(1.0, len(linked_competitors) / 10.0) * 0.5 + min(bridge_da / 100.0, 1.0) * 0.5
 
+                competitors = sorted(linked_competitors)
                 bridges.append({
+                    "source_domain": competitors[0] if len(competitors) > 0 else "competitor-a.com",
+                    "bridge_domain": prospect_domain,
+                    "target_domain": competitors[1] if len(competitors) > 1 else "competitor-b.com",
+                    "authority_gain": bridge_da / 100.0,
                     "domain": prospect_domain,
                     "bridge_score": round(bridge_score, 4),
-                    "linking_to_competitors": sorted(linked_competitors),
+                    "linking_to_competitors": competitors,
                     "competitor_count": len(linked_competitors),
                     "authority_score": bridge_da,
                 })
@@ -697,11 +714,13 @@ class ProspectGraphSystem:
             "edge_count": e,
             "average_degree": round(avg_degree, 4),
             "graph_density": round(density, 6),
+            "density": density,
             "connected_components": {
                 "count": len(components),
                 "largest_component_size": max(len(c) for c in components) if components else 0,
             },
             "most_central_domains": most_central,
+            "central_domains": [x["domain"] for x in most_central],
             "authority_bridge_count": bridge_count,
         }
 

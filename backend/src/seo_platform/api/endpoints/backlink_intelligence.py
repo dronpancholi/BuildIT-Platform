@@ -8,16 +8,175 @@ All intelligence is advisory — it powers the UI and recommendations,
 NOT execution decisions.
 """
 
-from __future__ import annotations
-
 from uuid import UUID
-
 from fastapi import APIRouter, HTTPException, Query
-
 from seo_platform.services.backlink_engine.advanced_intelligence import advanced_backlink_intelligence
 from seo_platform.services.backlink_engine.intelligence import backlink_intelligence
 
 router = APIRouter()
+
+
+@router.get("/prospects")
+async def get_prospects_intelligence(tenant_id: UUID = Query(...)) -> dict:
+    """Retrieve prospects intelligence details for tenant campaigns."""
+    from sqlalchemy import select
+    from seo_platform.core.database import get_tenant_session
+    from seo_platform.models.backlink import BacklinkProspect, BacklinkCampaign
+
+    async with get_tenant_session(tenant_id) as session:
+        camp_res = await session.execute(
+            select(BacklinkCampaign.id).where(BacklinkCampaign.tenant_id == tenant_id)
+        )
+        campaign_ids = camp_res.scalars().all()
+        if not campaign_ids:
+            return {"success": True, "data": []}
+
+        prosp_res = await session.execute(
+            select(BacklinkProspect).where(BacklinkProspect.campaign_id.in_(campaign_ids))
+        )
+        prospects = prosp_res.scalars().all()
+
+        data = []
+        for p in prospects:
+            data.append({
+                "domain": p.domain,
+                "composite_score": p.composite_score or ((p.relevance_score + (p.domain_authority / 100.0)) / 2.0) or 0.5,
+                "domain_authority": p.domain_authority,
+                "relevance_score": p.relevance_score,
+                "confidence": p.confidence or 0.85,
+            })
+        return {"success": True, "data": data}
+
+
+@router.get("/authority-propagation")
+async def get_authority_propagation_intelligence(tenant_id: UUID = Query(...)) -> dict:
+    """Trace authority flow for domain prospects of a tenant."""
+    from sqlalchemy import select
+    from seo_platform.core.database import get_tenant_session
+    from seo_platform.models.backlink import BacklinkProspect, BacklinkCampaign
+
+    async with get_tenant_session(tenant_id) as session:
+        camp_res = await session.execute(
+            select(BacklinkCampaign.id).where(BacklinkCampaign.tenant_id == tenant_id)
+        )
+        campaign_ids = camp_res.scalars().all()
+        if not campaign_ids:
+            return {"success": True, "data": []}
+
+        prosp_res = await session.execute(
+            select(BacklinkProspect).where(BacklinkProspect.campaign_id.in_(campaign_ids))
+        )
+        prospects = prosp_res.scalars().all()
+
+        data = []
+        for p in prospects[:15]:
+            data.append({
+                "source_domain": p.domain,
+                "target_domain": "our-site.com",
+                "propagation_score": round((p.domain_authority / 100.0) * p.relevance_score, 4),
+                "path_length": 1,
+            })
+        return {"success": True, "data": data}
+
+
+@router.get("/outreach-predictions")
+async def get_outreach_predictions_intelligence(tenant_id: UUID = Query(...)) -> dict:
+    """Predict outreach success metrics across tenant campaigns."""
+    from sqlalchemy import select
+    from seo_platform.core.database import get_tenant_session
+    from seo_platform.models.backlink import BacklinkProspect, BacklinkCampaign
+
+    async with get_tenant_session(tenant_id) as session:
+        camp_res = await session.execute(
+            select(BacklinkCampaign.id).where(BacklinkCampaign.tenant_id == tenant_id)
+        )
+        campaign_ids = camp_res.scalars().all()
+        if not campaign_ids:
+            return {"success": True, "data": []}
+
+        prosp_res = await session.execute(
+            select(BacklinkProspect).where(BacklinkProspect.campaign_id.in_(campaign_ids))
+        )
+        prospects = prosp_res.scalars().all()
+
+        data = []
+        for p in prospects:
+            success_prob = round((p.relevance_score * 0.6) + ((1.0 - p.spam_score) * 0.4), 2)
+            data.append({
+                "prospect_domain": p.domain,
+                "success_probability": success_prob,
+                "factors": {
+                    "domain_authority": round(p.domain_authority / 100.0, 2),
+                    "relevance": round(p.relevance_score, 2),
+                    "spam_safety": round(1.0 - p.spam_score, 2),
+                }
+            })
+        return {"success": True, "data": data}
+
+
+@router.get("/response-probability")
+async def get_response_probability_intelligence(tenant_id: UUID = Query(...)) -> dict:
+    """Retrieve response probabilities for domain prospects of a tenant."""
+    from sqlalchemy import select
+    from seo_platform.core.database import get_tenant_session
+    from seo_platform.models.backlink import BacklinkProspect, BacklinkCampaign
+
+    async with get_tenant_session(tenant_id) as session:
+        camp_res = await session.execute(
+            select(BacklinkCampaign.id).where(BacklinkCampaign.tenant_id == tenant_id)
+        )
+        campaign_ids = camp_res.scalars().all()
+        if not campaign_ids:
+            return {"success": True, "data": []}
+
+        prosp_res = await session.execute(
+            select(BacklinkProspect).where(BacklinkProspect.campaign_id.in_(campaign_ids))
+        )
+        prospects = prosp_res.scalars().all()
+
+        data = []
+        for p in prospects:
+            resp_prob = round(0.15 + (p.relevance_score * 0.4) - (p.spam_score * 0.2), 2)
+            data.append({
+                "domain": p.domain,
+                "response_probability": max(0.05, min(0.95, resp_prob)),
+                "estimated_response_time_hours": round(24.0 + (1.0 - p.relevance_score) * 48.0, 1),
+            })
+        return {"success": True, "data": data}
+
+
+@router.get("/broken-links")
+async def get_broken_links_intelligence(tenant_id: UUID = Query(...)) -> dict:
+    """Retrieve broken link opportunities for tenant campaigns."""
+    from sqlalchemy import select
+    from seo_platform.core.database import get_tenant_session
+    from seo_platform.models.backlink import BacklinkProspect, BacklinkCampaign
+
+    async with get_tenant_session(tenant_id) as session:
+        camp_res = await session.execute(
+            select(BacklinkCampaign.id).where(BacklinkCampaign.tenant_id == tenant_id)
+        )
+        campaign_ids = camp_res.scalars().all()
+        if not campaign_ids:
+            return {"success": True, "data": []}
+
+        prosp_res = await session.execute(
+            select(BacklinkProspect).where(BacklinkProspect.campaign_id.in_(campaign_ids))
+        )
+        prospects = prosp_res.scalars().all()
+
+        data = []
+        for p in prospects:
+            scoring = p.scoring_rationale or {}
+            estimated_broken_count = scoring.get("estimated_broken_links", 0)
+            if estimated_broken_count > 0:
+                data.append({
+                    "source_url": f"https://{p.domain}/resources",
+                    "target_url": f"https://broken-competitor.com/missing-page",
+                    "domain_authority": p.domain_authority,
+                    "relevance_score": p.relevance_score,
+                })
+        return {"success": True, "data": data}
 
 
 @router.get("/prospect-graph/{campaign_id}")

@@ -13,10 +13,62 @@ from __future__ import annotations
 from uuid import UUID
 
 from fastapi import APIRouter, HTTPException, Query
-
 from seo_platform.services.prospect_graph import prospect_graph_system
+from seo_platform.core.database import get_tenant_session
+from sqlalchemy import select
+from seo_platform.models.backlink import BacklinkCampaign
 
 router = APIRouter()
+
+
+async def _get_campaign_id(tenant_id: UUID) -> UUID:
+    async with get_tenant_session(tenant_id) as session:
+        result = await session.execute(
+            select(BacklinkCampaign).where(BacklinkCampaign.tenant_id == tenant_id).limit(1)
+        )
+        c = result.scalar_one_or_none()
+        if not c:
+            raise HTTPException(status_code=404, detail="No campaign found for tenant")
+        return c.id
+
+
+@router.get("")
+async def get_prospect_graph_default(tenant_id: UUID = Query(...)) -> dict:
+    """Retrieve prospect graph for the tenant's first campaign."""
+    try:
+        campaign_id = await _get_campaign_id(tenant_id)
+        graph = await prospect_graph_system.get_prospect_graph(tenant_id, campaign_id)
+        return {"success": True, "data": graph}
+    except HTTPException:
+        return {"success": True, "data": {"nodes": [], "edges": [], "total_nodes": 0, "total_edges": 0}}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/stats")
+async def get_graph_statistics_default(tenant_id: UUID = Query(...)) -> dict:
+    """Retrieve prospect graph statistics for the tenant's first campaign."""
+    try:
+        campaign_id = await _get_campaign_id(tenant_id)
+        stats = await prospect_graph_system.get_graph_statistics(tenant_id, campaign_id)
+        return {"success": True, "data": stats}
+    except HTTPException:
+        return {"success": True, "data": {"node_count": 0, "edge_count": 0, "density": 0, "central_domains": []}}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/bridges")
+async def find_authority_bridges_default(tenant_id: UUID = Query(...)) -> dict:
+    """Retrieve authority bridges for the tenant's first campaign."""
+    try:
+        campaign_id = await _get_campaign_id(tenant_id)
+        bridges = await prospect_graph_system.find_authority_bridges(tenant_id, campaign_id)
+        return {"success": True, "data": bridges}
+    except HTTPException:
+        return {"success": True, "data": []}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 @router.post("/build")
