@@ -436,6 +436,7 @@ function dispatchEvent(store: RealtimeStore, msg: SSEMessage): void {
 export function useRealtime(tenantId: string = MOCK_TENANT_ID): void {
   const eventSourceRef = useRef<EventSource | null>(null);
   const retryCountRef = useRef(0);
+  const reconnectTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const maxRetryDelay = 30_000;
 
   useEffect(() => {
@@ -481,7 +482,7 @@ export function useRealtime(tenantId: string = MOCK_TENANT_ID): void {
             maxRetryDelay,
           );
 
-          setTimeout(connect, delay);
+          reconnectTimeoutRef.current = setTimeout(connect, delay);
         };
       } catch (err) {
         const msg = err instanceof Error ? err.message : "Failed to connect";
@@ -493,13 +494,17 @@ export function useRealtime(tenantId: string = MOCK_TENANT_ID): void {
           1000 * 2 ** retryCountRef.current,
           maxRetryDelay,
         );
-        setTimeout(connect, delay);
+        reconnectTimeoutRef.current = setTimeout(connect, delay);
       }
     };
 
     connect();
 
     return () => {
+      if (reconnectTimeoutRef.current) {
+        clearTimeout(reconnectTimeoutRef.current);
+        reconnectTimeoutRef.current = null;
+      }
       if (eventSourceRef.current) {
         eventSourceRef.current.close();
         eventSourceRef.current = null;

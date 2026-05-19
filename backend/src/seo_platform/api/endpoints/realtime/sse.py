@@ -70,13 +70,26 @@ class SSEManager:
     Manages SSE connections for real-time updates.
     """
 
+    MAX_CONNECTIONS_PER_TENANT = 10
+    MAX_TOTAL_CONNECTIONS = 100
+
     def __init__(self):
         self._connections: dict[str, set[asyncio.Queue]] = {}
         self._subscriber_filters: dict[str, dict[int, set[str]]] = {}
 
+    def _count_connections(self) -> int:
+        return sum(len(q) for q in self._connections.values())
+
     async def subscribe(self, tenant_id: str, channel: str, queue: asyncio.Queue) -> None:
         """Subscribe a connection to a channel."""
         key = f"{tenant_id}:{channel}"
+        tenant_connections = sum(
+            len(q) for k, q in self._connections.items() if k.startswith(f"{tenant_id}:")
+        )
+        if tenant_connections >= self.MAX_CONNECTIONS_PER_TENANT:
+            raise RuntimeError(f"Max connections ({self.MAX_CONNECTIONS_PER_TENANT}) reached for tenant {tenant_id}")
+        if self._count_connections() >= self.MAX_TOTAL_CONNECTIONS:
+            raise RuntimeError(f"Max total connections ({self.MAX_TOTAL_CONNECTIONS}) reached")
         if key not in self._connections:
             self._connections[key] = set()
         self._connections[key].add(queue)

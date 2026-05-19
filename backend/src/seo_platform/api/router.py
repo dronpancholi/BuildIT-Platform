@@ -116,7 +116,7 @@ api_router.include_router(observability_router, prefix="/observability", tags=["
 api_router.include_router(seo_intelligence_router, prefix="/seo-intelligence", tags=["seo-intelligence"])
 api_router.include_router(keyword_intelligence_router, prefix="/seo-intelligence", tags=["keyword-intelligence"])
 api_router.include_router(serp_intelligence_router, prefix="/serp-intelligence", tags=["serp-intelligence"])
-api_router.include_router(intelligence_queries_router)
+api_router.include_router(intelligence_queries_router, prefix="/intelligence-queries", tags=["intelligence-queries"])
 api_router.include_router(backlink_intelligence_router, prefix="/backlink-intelligence", tags=["backlink-intelligence"])
 api_router.include_router(outreach_intelligence_router, prefix="/outreach-intelligence", tags=["outreach-intelligence"])
 api_router.include_router(prospect_graph_router, prefix="/prospect-graph", tags=["prospect-graph"])

@@ -196,11 +196,10 @@ async def get_tenant_session(tenant_id: UUID) -> AsyncGenerator[AsyncSession, No
     factory = get_session_factory()
     session = factory()
     try:
-        # SET commands don't support parameterized values in PostgreSQL.
-        # The tenant_id is a validated UUID (Python type-checked), so it is
-        # safe to format as a literal string. This is NOT user input.
+        # Use parameterized query to prevent SQL injection
         await session.execute(
-            text(f"SET app.current_tenant = '{tenant_id!s}'")
+            text("SET app.current_tenant = :tenant_id"),
+            {"tenant_id": str(tenant_id)}
         )
         logger.debug("tenant_session_opened", tenant_id=str(tenant_id))
         yield session

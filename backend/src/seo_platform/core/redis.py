@@ -119,7 +119,7 @@ class TenantRedis:
         client = await self._client()
         if mapping is not None:
             return await client.hset(self._key(key), mapping=mapping)
-        return await client.hset(self._key(key), key=field, value=value)
+        return await client.hset(self._key(key), field, value)
 
     async def hget(self, key: str, field: str) -> str | None:
         """Get a hash field."""

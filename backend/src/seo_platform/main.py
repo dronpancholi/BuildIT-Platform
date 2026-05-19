@@ -37,7 +37,8 @@ def emit_event(event_type: str, tenant_id: str, payload: dict, correlation_id: s
     """Emit a domain event. Fire-and-forget for non-blocking operation."""
     from uuid import UUID
     try:
-        if _event_publisher and _event_publisher._producer:
+        publisher = _event_publisher
+        if publisher and publisher._producer:
             from seo_platform.core.events import DomainEvent
             event = DomainEvent(
                 event_type=event_type,
@@ -48,7 +49,8 @@ def emit_event(event_type: str, tenant_id: str, payload: dict, correlation_id: s
             import asyncio
             try:
                 loop = asyncio.get_running_loop()
-                loop.create_task(_event_publisher.publish(event))
+                task = loop.create_task(publisher.publish(event))
+                task.add_done_callback(lambda t: t.exception() if t.exception() else None)
             except RuntimeError:
                 logger.warning("event_emit_no_loop", event_type=event_type)
     except Exception as e:

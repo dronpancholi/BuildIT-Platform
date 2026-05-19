@@ -156,7 +156,7 @@ class NvidiaSettings(BaseSettings):
     model_config = SettingsConfigDict(env_prefix="NVIDIA_NIM_")
 
     api_url: str = "https://integrate.api.nvidia.com/v1"
-    api_key: str = "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"
+    api_key: str = ""
 
     # Enterprise NIM Model Fleet
     orchestration_model: str = "DeepSeek-V4-Pro"

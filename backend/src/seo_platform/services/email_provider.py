@@ -50,12 +50,12 @@ class SendGridProvider(EmailProvider):
                 response = await client.post(
                     "https://api.sendgrid.com/v3/mail/send",
                     headers={
-                        "Authorization": f"Bearer {settings.sendgrid_api_key}",
+                        "Authorization": f"Bearer {settings.sendgrid.api_key}",
                         "Content-Type": "application/json",
                     },
                     json={
                         "personalizations": [{"to": [{"email": to_email}]}],
-                        "from": {"email": settings.sendgrid_sender_email, "name": "SEO Platform"},
+                        "from": {"email": settings.sendgrid.sender_email, "name": "SEO Platform"},
                         "subject": subject,
                         "content": [{"type": "text/html", "value": body}],
                     },
@@ -77,7 +77,7 @@ class SendGridProvider(EmailProvider):
 
     async def _track_email(
         self, tenant_id: str, campaign_id: str, prospect_id: str,
-        to_email: str, subject: str, body: str, status: str, error: str = None,
+        to_email: str, subject: str, body: str, status: str, error: str | None = None,
     ) -> None:
         if not tenant_id:
             return

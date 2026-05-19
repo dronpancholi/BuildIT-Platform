@@ -303,9 +303,9 @@ class OperationalLoopEngine:
 async def scan_backlink_opportunities(tenant_id: str) -> dict[str, Any]:
     """Scan for new backlink opportunities using the scraping system."""
     from uuid import UUID
-    from seo_platform.services.scraping.base import BacklinkScraper
+    from seo_platform.services.scraping.engines.backlinks import BacklinkScraperEngine
 
-    scraper = BacklinkScraper()
+    scraper = BacklinkScraperEngine()
     opportunities = await scraper.search_prospects("example.com")
     count = len(opportunities) if opportunities else 0
 
@@ -626,7 +626,7 @@ class ContinuousIntelligenceLoop:
                         retry_policy=RetryPreset.DATABASE,
                     )
             except Exception as e:
-                workflow.logger.warning(f"serp_monitoring_failed: {e}")
+                logger.warning("serp_monitoring_failed", error=str(e))
 
             # 2. Verify citations
             try:
@@ -638,7 +638,7 @@ class ContinuousIntelligenceLoop:
                     retry_policy=RetryPreset.DATABASE,
                 )
             except Exception as e:
-                workflow.logger.warning(f"citation_verification_failed: {e}")
+                logger.warning("citation_verification_failed", error=str(e))
 
             # 3. Analyze rankings
             try:
@@ -650,7 +650,7 @@ class ContinuousIntelligenceLoop:
                     retry_policy=RetryPreset.DATABASE,
                 )
             except Exception as e:
-                workflow.logger.warning(f"ranking_analysis_failed: {e}")
+                logger.warning("ranking_analysis_failed", error=str(e))
 
             # 4. Generate recommendations
             try:
@@ -675,7 +675,7 @@ class ContinuousIntelligenceLoop:
                         retry_policy=RetryPreset.DATABASE,
                     )
             except Exception as e:
-                workflow.logger.warning(f"recommendation_generation_failed: {e}")
+                logger.warning("recommendation_generation_failed", error=str(e))
 
             # 5. Create intelligence pulse event
             await workflow.execute_activity(

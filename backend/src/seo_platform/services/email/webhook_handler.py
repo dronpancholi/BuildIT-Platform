@@ -15,16 +15,16 @@ from seo_platform.core.logging import get_logger
 logger = get_logger(__name__)
 
 
-def _get_temporal_client():
+async def _get_temporal_client():
     """Lazy import to avoid circular dependency at module load."""
-    from seo_platform.core.temporal import get_temporal_client
-    return get_temporal_client()
+    from seo_platform.core.temporal_client import get_temporal_client
+    return await get_temporal_client()
 
 
 def _emit_kafka_event(topic: str, tenant_id: str, payload: dict) -> None:
     """Publish a domain event to Kafka. Best-effort, non-blocking."""
     try:
-        from seo_platform.core.event_bus import kafka_producer
+        from seo_platform.core.events import kafka_producer
         kafka_producer.emit(topic, tenant_id, payload)
     except Exception as e:
         logger.warning("kafka_emit_failed", topic=topic, error=str(e))
@@ -65,7 +65,7 @@ async def process_webhook_event(payload: dict, provider: str) -> dict[str, Any]:
 
     if event_type == "replied" and thread_id:
         try:
-            temporal = _get_temporal_client()
+            temporal = await _get_temporal_client()
             handle = temporal.get_workflow_handle(thread_id)
             reply_data = json.dumps({
                 "thread_id": thread_id,
@@ -99,7 +99,7 @@ def _detect_event_type(payload: dict, provider: str) -> str:
         if event == "opened":
             return "opened"
         if event in ("complained", "unsubscribed"):
-            return "replied"
+            return event
         if event == "stored":
             return "delivered"
         return event
@@ -113,7 +113,7 @@ def _detect_event_type(payload: dict, provider: str) -> str:
         if event_type == "email.opened":
             return "opened"
         if event_type == "email.complained":
-            return "replied"
+            return "complained"
         return event_type
 
     return payload.get("event", "unknown")

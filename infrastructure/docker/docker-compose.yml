@@ -101,6 +101,7 @@ services:
       - POSTGRES_PWD=seo_platform_dev
       - POSTGRES_SEEDS=postgres
       - DYNAMIC_CONFIG_FILE_PATH=config/dynamicconfig/development.yaml
+      - DBNAME=temporal
     ports:
       - "7233:7233"
     volumes:
