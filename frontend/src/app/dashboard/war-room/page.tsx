@@ -118,74 +118,116 @@ export default function WarRoomPage() {
 
   const { data: topology, isLoading: loadingTopology } = useQuery<InfraTopology>({
     queryKey: ["sre-topology"],
-    queryFn: () => fetchApi("/sre/topology"),
+    queryFn: () => fetchApi("/sre/topology").then((d: any) => d?.data ?? d),
     refetchInterval: 10000,
   });
 
-  const { data: queuePressure } = useQuery<{ entries: QueuePressureEntry[] }>({
+  const { data: queuePressure } = useQuery<{ queues: QueuePressureEntry[]; entries: QueuePressureEntry[] }>({
     queryKey: ["sre-queue-pressure"],
-    queryFn: () => fetchApi("/sre/queue-pressure"),
+    queryFn: () => fetchApi("/sre/queue-pressure").then((d: any) => d?.data ?? d),
     refetchInterval: 10000,
   });
 
-  const { data: workerSaturation, isLoading: loadingWorkers } = useQuery<{ entries: WorkerSaturationEntry[] }>({
+  const { data: workerSaturation, isLoading: loadingWorkers } = useQuery<WorkerSaturationEntry[] | { entries: WorkerSaturationEntry[] }>({
     queryKey: ["sre-worker-saturation"],
-    queryFn: () => fetchApi("/sre/worker-saturation"),
+    queryFn: () => fetchApi("/sre/worker-saturation").then((d: any) => d?.data ?? d),
     refetchInterval: 10000,
   });
 
   const { data: pressure } = useQuery<PressureTelemetry>({
     queryKey: ["overload-pressure"],
-    queryFn: () => fetchApi("/overload/pressure"),
+    queryFn: () => fetchApi("/sre/queue-pressure").then((d: any) => {
+      const data = d?.data ?? d;
+      const overallScore = data?.overall_pressure_score ?? data?.overall_pressure ?? 0;
+      const queueItems = data?.queues ?? data?.entries ?? [];
+      return {
+        overall_pressure: overallScore,
+        level: overallScore > 70 ? "high" : overallScore > 40 ? "moderate" : "none",
+        queue_pressures: queueItems.map((q: any) => ({
+          queue: q.queue_name ?? q.queue ?? "",
+          score: q.pressure_score ?? 0,
+        })),
+      };
+    }),
     refetchInterval: 10000,
+    retry: false,
   });
 
   const { data: alerts } = useQuery<SaturationAlert[]>({
     queryKey: ["overload-saturation-alerts"],
-    queryFn: () => fetchApi("/overload/saturation-alerts"),
+    queryFn: async () => {
+      try {
+        return await fetchApi("/overload/saturation-alerts");
+      } catch {
+        return [];
+      }
+    },
     refetchInterval: 10000,
+    retry: false,
   });
 
   const { data: throughput } = useQuery<EventThroughput>({
     queryKey: ["event-throughput"],
-    queryFn: () => fetchApi("/event-infrastructure/throughput"),
+    queryFn: () => fetchApi("/event-infrastructure/throughput").then((d: any) => d?.data ?? d),
     refetchInterval: 10000,
   });
 
   const { data: anomalyDashboard } = useQuery<PredictiveDashboard>({
     queryKey: ["anomaly-prediction"],
-    queryFn: () => fetchApi("/anomaly-prediction/dashboard"),
+    queryFn: () => fetchApi("/anomaly-prediction/dashboard").then((d: any) => d?.data ?? d),
     refetchInterval: 10000,
   });
 
   const { data: pressureData } = useQuery<OperationalPressureReport>({
     queryKey: ["operational-pressure"],
-    queryFn: () => fetchApi("/infra-self-analysis/pressure"),
+    queryFn: () => fetchApi("/infra-self-analysis/pressure").then((d: any) => d?.data ?? d),
     refetchInterval: 10000,
   });
 
   const operationalPressureEntries = pressureData?.components ?? [];
 
-  const { data: imbalanceData } = useQuery<WorkerImbalanceEntry[]>({
+  const { data: imbalanceData } = useQuery<WorkerImbalanceEntry[] | { pairs: WorkerImbalanceEntry[] }>({
     queryKey: ["worker-imbalance"],
-    queryFn: () => fetchApi("/infra-self-analysis/worker-imbalance"),
+    queryFn: () => fetchApi("/infra-self-analysis/worker-imbalance").then((d: any) => d?.data ?? d),
     refetchInterval: 10000,
   });
 
+  const imbalancePairs = imbalanceData && 'pairs' in (imbalanceData as any)
+    ? ((imbalanceData as any).pairs as WorkerImbalanceEntry[])
+    : Array.isArray(imbalanceData)
+      ? imbalanceData
+      : [];
+
   const { data: crossSystemData } = useQuery<CrossSystemAwareness>({
     queryKey: ["cross-system-awareness"],
-    queryFn: () => fetchApi("/orchestration-intelligence/cross-system-awareness"),
+    queryFn: () => fetchApi("/orchestration-intelligence/cross-system-awareness").then((d: any) => d?.data ?? d),
     refetchInterval: 10000,
   });
 
   const { data: providerHealth } = useQuery<{ providers: Record<string, { provider: string; circuit_breaker_state: string; healthy: boolean; uptime_pct: number; avg_latency_ms: number }> }>({
     queryKey: ["provider-health", "war-room"],
-    queryFn: () => fetchApi("/providers/status"),
+    queryFn: () => fetchApi("/providers/status").then((d: any) => ({
+      providers: d?.data?.providers ?? d?.providers ?? {},
+    })),
     refetchInterval: 10000,
+    retry: false,
   });
 
   const pressureEntries = useMemo(() => {
-    const base: QueuePressureEntry[] = (queuePressure as { entries?: QueuePressureEntry[] } | null)?.entries ?? [];
+    const qp = queuePressure as Record<string, any> | null | undefined;
+    let base: QueuePressureEntry[] = [];
+    if (qp?.entries && Array.isArray(qp.entries)) {
+      base = qp.entries;
+    } else if (qp?.queues && Array.isArray(qp.queues)) {
+      base = qp.queues.map((q: any) => ({
+        queue_name: q.queue_name,
+        depth: q.current_depth ?? q.depth ?? 0,
+        pressure_score: q.pressure_score ?? 0,
+        level: q.depth_trend ?? 'stable',
+      }));
+    } else if (Array.isArray(qp)) {
+      base = qp as any;
+    }
     if (!sseQueues || Object.keys(sseQueues).length === 0) return base;
     return base.map((q) => ({
       ...q,
@@ -194,8 +236,19 @@ export default function WarRoomPage() {
   }, [queuePressure, sseQueues]);
 
   const workerEntries = useMemo(() => {
-    const raw = workerSaturation as { entries?: WorkerSaturationEntry[] } | null | undefined;
-    const base: WorkerSaturationEntry[] = raw?.entries ?? [];
+    const raw = workerSaturation as Record<string, any> | null | undefined;
+    let base: WorkerSaturationEntry[] = [];
+    if (raw?.entries && Array.isArray(raw.entries)) {
+      base = raw.entries;
+    } else if (Array.isArray(raw)) {
+      base = raw.map((w: any) => ({
+        worker_id: w.worker_id ?? '',
+        task_queue: w.task_queue ?? '',
+        active_tasks: w.active_tasks ?? w.active_tasks ?? 0,
+        max_concurrent: w.max_concurrent_tasks ?? w.max_concurrent ?? 0,
+        saturation_pct: w.slot_utilization_pct ?? w.saturation_pct ?? 0,
+      }));
+    }
     if (!sseWorkers || sseWorkers.length === 0) return base;
     return base.map((w) => ({
       ...w,
@@ -736,13 +789,11 @@ export default function WarRoomPage() {
                 <Activity className="w-5 h-5 text-red-500" />
                 <h3 className="text-lg font-medium text-slate-200 font-mono">WORKER_IMBALANCE</h3>
               </div>
-              {!imbalanceData ? (
-                <div className="text-sm text-slate-500 font-mono py-8 text-center">Loading imbalance data...</div>
-              ) : imbalanceData.length === 0 ? (
+              {!imbalancePairs || imbalancePairs.length === 0 ? (
                 <div className="text-sm text-slate-500 font-mono py-8 text-center">No imbalance detected</div>
               ) : (
                 <div className="space-y-3">
-                  {imbalanceData.map((im, i) => (
+                  {imbalancePairs.map((im, i) => (
                     <motion.div
                       key={i}
                       initial={{ opacity: 0, y: 5 }}

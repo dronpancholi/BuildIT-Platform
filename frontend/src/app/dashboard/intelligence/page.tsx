@@ -22,6 +22,7 @@ import {
 import Link from "next/link";
 import { useQuery } from "@tanstack/react-query";
 import { fetchApi } from "@/lib/api";
+import { useRealtimeStore } from "@/hooks/use-realtime";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -183,6 +184,7 @@ export default function IntelligencePage() {
     ...bottlenecks.map((b) => b.p95),
     1
   );
+  const infrastructure = useRealtimeStore((s) => s.infrastructure);
 
   return (
     <div className="space-y-6">
@@ -533,29 +535,51 @@ export default function IntelligencePage() {
 
       {/* Infrastructure Health & AI Confidence Row */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Infra Health */}
+        {/* Infra Health — driven by SSE heartbeat */}
         <div className="glass-panel p-6">
           <h3 className="text-lg font-medium text-slate-200 mb-4 flex items-center gap-2 font-mono">
             <Shield className="w-5 h-5 text-emerald-500" />
             INFRASTRUCTURE_HEALTH
           </h3>
           <div className="grid grid-cols-2 gap-3">
-            {["database", "redis", "temporal", "kafka"].map((comp) => (
-              <div
-                key={comp}
-                className="p-3 rounded-md bg-surface-darker border border-surface-border"
-              >
-                <div className="flex items-center justify-between mb-1">
-                  <span className="text-xs font-mono text-slate-400 uppercase">
-                    {comp}
-                  </span>
-                  <div className="w-2 h-2 rounded-full bg-emerald-500" />
-                </div>
-                <span className="text-[10px] font-mono text-slate-500">
-                  HEALTHY
-                </span>
-              </div>
-            ))}
+            {Object.keys(infrastructure).length === 0
+              ? ["database", "redis", "temporal", "kafka"].map((comp) => (
+                  <div
+                    key={comp}
+                    className="p-3 rounded-md bg-surface-darker border border-surface-border animate-pulse"
+                  >
+                    <div className="flex items-center justify-between mb-1">
+                      <span className="text-xs font-mono text-slate-400 uppercase">{comp}</span>
+                      <div className="w-2 h-2 rounded-full bg-slate-600" />
+                    </div>
+                    <span className="text-[10px] font-mono text-slate-600">CONNECTING...</span>
+                  </div>
+                ))
+              : Object.entries(infrastructure).map(([comp, status]) => {
+                  const isHealthy = status === "healthy";
+                  return (
+                    <div
+                      key={comp}
+                      className="p-3 rounded-md bg-surface-darker border border-surface-border"
+                    >
+                      <div className="flex items-center justify-between mb-1">
+                        <span className="text-xs font-mono text-slate-400 uppercase">{comp}</span>
+                        <div
+                          className={`w-2 h-2 rounded-full ${
+                            isHealthy ? "bg-emerald-500" : "bg-red-500"
+                          }`}
+                        />
+                      </div>
+                      <span
+                        className={`text-[10px] font-mono ${
+                          isHealthy ? "text-emerald-500" : "text-red-400"
+                        }`}
+                      >
+                        {String(status).toUpperCase()}
+                      </span>
+                    </div>
+                  );
+                })}
           </div>
         </div>
 

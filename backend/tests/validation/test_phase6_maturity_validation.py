@@ -16,6 +16,18 @@ import pytest
 pytestmark = pytest.mark.asyncio(loop_scope="module")
 
 
+# ---------------------------------------------------------------------------
+# Module-level fixture: clear global database engine so it's recreated
+# on THIS module's event loop, preventing cross-loop errors when other
+# test modules run first in the same pytest invocation.
+# ---------------------------------------------------------------------------
+@pytest.fixture(autouse=True, scope="module")
+async def _ensure_db_engine_on_correct_loop():
+    """Dispose any global engine created on another event loop."""
+    from seo_platform.core.database import close_database
+    await close_database()
+
+
 class TestLongTermSurvivability:
 
     async def test_lifecycle_scoring_accuracy(self):

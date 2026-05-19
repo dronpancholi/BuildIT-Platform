@@ -8,7 +8,6 @@ All AI advisory only — no direct execution.
 
 from __future__ import annotations
 
-import random
 from datetime import UTC, datetime, timedelta
 from typing import Any
 from uuid import UUID, uuid4

@@ -9,7 +9,6 @@ scraping/ai latency, event propagation, anomaly heatmaps, and incident dashboard
 from __future__ import annotations
 
 import json
-import random
 import statistics
 from collections import Counter
 from datetime import UTC, datetime, timedelta
@@ -261,7 +260,7 @@ class SREObservabilityService:
                 edges.append(InfraEdge(
                     source=source,
                     target=target,
-                    latency_ms=round(random.uniform(0.5, 5.0), 1),
+                    latency_ms=1.5,
                     dependency_health=dep_health,
                 ))
 

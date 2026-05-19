@@ -53,13 +53,15 @@ async def _simulate_queue_task_burst(
             from seo_platform.core.temporal_client import get_temporal_client
 
             client = await get_temporal_client()
+            import uuid
+            run_id = uuid.uuid4().hex[:12]
             handle = await client.start_workflow(
                 "ReportGenerationWorkflow",
                 f'{{"task": "queue_pressure", "index": {i}}}',
-                id=f"queue-pressure-{i:06d}",
+                id=f"queue-pressure-{run_id}-{i:06d}",
                 task_queue="seo-platform-reporting",
             )
-            await handle.result(timeout=30)
+            await handle.result(rpc_timeout=timedelta(seconds=30))
         except Exception as exc:
             errors.append((i, str(exc)))
 

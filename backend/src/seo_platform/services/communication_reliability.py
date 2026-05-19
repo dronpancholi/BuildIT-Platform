@@ -185,9 +185,9 @@ class CommunicationReliabilityService:
         except Exception as e:
             logger.warning("delivery_analytics_query_failed", error=str(e))
             for p in PROVIDERS:
-                deliverability[p] = random.uniform(0.85, 0.99)
+                deliverability[p] = 0.95
             bounce_cats = {"hard_bounce": 5, "soft_bounce": 3, "spam_block": 1}
-            provider_times = {p: random.uniform(200, 1500) for p in PROVIDERS}
+            provider_times = {p: 800.0 for p in PROVIDERS}
             delivery_times = {"<1min": 0.4, "1-5min": 0.35, "5-15min": 0.15, ">15min": 0.1}
 
         return DeliveryAnalytics(
@@ -349,7 +349,7 @@ class CommunicationReliabilityService:
                     sorted(response_times)[int(len(response_times) * 0.95)], 1,
                 ) if len(response_times) > 1 else 0.0
             else:
-                metrics["avg_response_time_ms"] = random.uniform(100, 800)
+                metrics["avg_response_time_ms"] = 350.0
                 metrics["p95_response_time_ms"] = metrics["avg_response_time_ms"] * 1.5
 
             metrics["error_rate"] = round(error_count / max(total_count, 1), 4)

@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-import random
+import asyncio
 import statistics
 import time
 from datetime import UTC, datetime
@@ -108,7 +108,7 @@ class ScrapingScaleService:
         active = max(0, total - 1)
         idle = 1 if active < total else 0
         crashed = 0
-        avg_load = random.uniform(800, 2500) if not self._browser_pool else 1200.0
+        avg_load = 1200.0
 
         session_ages: dict[str, int] = {"<1m": 0, "1-5m": 0, "5-15m": 0, ">15m": 0}
         now = datetime.now(UTC)
@@ -192,8 +192,8 @@ class ScrapingScaleService:
             pending_count=int(pending),
             failed_count=int(failed),
             completed_count=int(completed),
-            avg_queue_wait_ms=random.uniform(500, 5000),
-            queue_growth_rate=random.uniform(-0.1, 0.3),
+            avg_queue_wait_ms=1500.0,
+            queue_growth_rate=0.05,
         )
 
     async def requeue_failed_scrapes(self) -> int:
@@ -256,10 +256,10 @@ class ScrapingScaleService:
     async def escalate_anti_bot(self) -> dict[str, Any]:
         escalation = {
             "user_agent_rotated": True,
-            "delay_between_requests_ms": random.randint(3000, 8000),
-            "browser_fingerprint_switched": True,
-            "proxy_routed": bool(random.choice([True, False])),
-            "escalation_level": random.choice(["low", "medium", "high"]),
+            "delay_between_requests_ms": 4500,
+            "user_agent_rotation": True,
+            "proxy_routed": True,
+            "escalation_level": "medium",
         }
 
         try:
@@ -390,12 +390,12 @@ class ScrapingScaleService:
             avg_extraction_confidence=avg_confidence,
             selector_success_rate=round(sel_success, 4),
             first_selector_rate=round(first_sel_rate, 4),
-            data_completeness=round(random.uniform(0.75, 0.95), 4),
+            data_completeness=0.85,
             per_engine={
                 engine: {
                     "confidence": avg_confidence.get(engine, 0.85),
                     "selector_success": round(sel_success, 4),
-                    "completeness": round(random.uniform(0.7, 0.95), 4),
+                    "completeness": 0.88,
                 }
                 for engine in engines
             },
@@ -413,7 +413,7 @@ class ScrapingScaleService:
             key = f"selector_history:{selector}"
             history = self._selector_success_history.get(key, [])
             if not history:
-                history = [bool(random.choice([True, True, True, False])) for _ in range(20)]
+                history = [True] * 18 + [False] * 2
                 self._selector_success_history[key] = history
             success_rate = sum(1 for h in history if h) / max(len(history), 1) if history else 0.5
             success_rates[selector] = round(success_rate, 4)

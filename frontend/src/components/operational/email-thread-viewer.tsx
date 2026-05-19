@@ -8,7 +8,7 @@ import {
   AlertCircle, User, Building2, Sparkles,
 } from "lucide-react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { fetchApi } from "@/lib/api";
+import { fetchApi, MOCK_TENANT_ID } from "@/lib/api";
 
 export interface ThreadData {
   id: string;
@@ -138,7 +138,7 @@ export function EmailThreadViewer({ campaignId }: EmailThreadViewerProps) {
     try {
       await fetchApi(`/campaigns/${campaignId}/generate-emails`, {
         method: "POST",
-        body: JSON.stringify({ tenant_id: "00000000-0000-0000-0000-000000000001" }),
+        body: JSON.stringify({ tenant_id: MOCK_TENANT_ID }),
       });
       queryClient.invalidateQueries({ queryKey: ["campaign-threads", campaignId] });
     } catch (err) {

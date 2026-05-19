@@ -10,7 +10,7 @@ All AI advisory only — no direct execution.
 
 from __future__ import annotations
 
-import random
+import json
 from datetime import UTC, datetime, timedelta
 from typing import Any
 from uuid import UUID, uuid4
@@ -115,7 +115,7 @@ class StrategicSeoCognitionService:
                 current_da = float(mem.content.get("domain_authority", 35))
 
             current_da = max(1.0, min(100.0, current_da))
-            monthly_gain = random.uniform(0.3, 1.5)
+            monthly_gain = 0.5
             predicted = min(100.0, current_da + monthly_gain * months)
 
             factors = [
@@ -192,7 +192,7 @@ class StrategicSeoCognitionService:
                 max_da = da_row[2] or 0
 
             linking_domains = max(1, total)
-            total_backlinks = max(total, linking_domains + random.randint(1, 5))
+            total_backlinks = max(total, linking_domains + 2)
 
             dist = {
                 "low_authority_0_30": max(0, int(total * 0.3)),
@@ -249,12 +249,12 @@ class StrategicSeoCognitionService:
             except Exception:
                 pass
 
-            improvement = random.randint(1, 5)
+            improvement = 2
             predicted_pos = max(1, current_pos - improvement)
 
             directions = ["improving", "stable", "declining"]
             weights = [0.5, 0.3, 0.2] if improvement > 2 else [0.2, 0.5, 0.3]
-            trend = random.choices(directions, weights=weights)[0]
+            trend = "improving" if improvement > 2 else "stable"
 
             seasonality = "moderate"
             confidence = round(min(0.85, 0.4 + campaign_count * 0.02), 2)
@@ -348,7 +348,7 @@ class StrategicSeoCognitionService:
             current_pos = 30
             months = 12
             for m in range(1, months + 1):
-                improvement = int(m * random.uniform(1.0, 3.0))
+                improvement = int(m * 1.5)
                 predicted = max(1, current_pos - improvement)
                 conf = max(0.2, 0.8 - m * 0.04)
                 trajectory.append({
@@ -471,9 +471,9 @@ class StrategicSeoCognitionService:
             target_domain,
         ]
 
-        source_da = random.uniform(30, 80)
-        transfer = round(source_da * random.uniform(0.05, 0.15), 1)
-        timeframe = random.randint(3, 9)
+        source_da = 45.0
+        transfer = round(source_da * 0.1, 1)
+        timeframe = 6
 
         return AuthorityPropagationSimulation(
             source_domain=source_domain,
@@ -595,7 +595,7 @@ class StrategicSeoCognitionService:
             opportunities.append({
                 "prospect": prospect["domain"],
                 "authority": prospect["da"],
-                "relevance": round(random.uniform(0.5, 0.95), 2),
+                "relevance": 0.85,
                 "difficulty": difficulty,
             })
 

@@ -11,7 +11,19 @@ from uuid import UUID, uuid4
 
 import pytest
 
-pytestmark = pytest.mark.asyncio(loop_scope="function")
+pytestmark = pytest.mark.asyncio(loop_scope="module")
+
+
+# ---------------------------------------------------------------------------
+# Module-level fixture: clear global database engine so it's recreated
+# on THIS module's event loop, preventing cross-loop errors when other
+# test modules run first in the same pytest invocation.
+# ---------------------------------------------------------------------------
+@pytest.fixture(autouse=True, scope="module")
+async def _ensure_db_engine_on_correct_loop():
+    """Dispose any global engine created on another event loop."""
+    from seo_platform.core.database import close_database
+    await close_database()
 
 
 # =========================================================================
@@ -24,9 +36,10 @@ class TestProviderHealthCenter:
 
     async def test_get_health_contains_predefined_providers(self):
         """Health status should include all predefined providers."""
-        from seo_platform.services.provider_health import provider_health_center
+        from seo_platform.services.provider_health import ProviderHealthCenter
 
-        status = await provider_health_center.get_health_status()
+        center = ProviderHealthCenter()
+        status = await center.get_health_status()
         for name in ["Scrapling", "SearXNG", "OpenPageRank", "DataForSEO", "Ahrefs"]:
             assert name in status["providers"], f"Missing {name}"
         assert status["total_providers"] >= 5
@@ -34,9 +47,10 @@ class TestProviderHealthCenter:
 
     async def test_health_status_structure(self):
         """Each provider entry should have the expected fields."""
-        from seo_platform.services.provider_health import provider_health_center
+        from seo_platform.services.provider_health import ProviderHealthCenter
 
-        status = await provider_health_center.get_health_status()
+        center = ProviderHealthCenter()
+        status = await center.get_health_status()
         for prov_name, prov_data in status["providers"].items():
             assert "uptime_pct" in prov_data
             assert "avg_latency_ms" in prov_data
