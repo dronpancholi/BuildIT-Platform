@@ -76,18 +76,7 @@ class OperationalLoopService:
             temporal = await get_temporal_client()
             tenant_id = "00000000-0000-0000-0000-000000000001"
 
-            # Check if already running
-            existing = False
-            async for wf in temporal.list_workflows():
-                if (
-                    wf.workflow_type == "OperationalLoopEngine"
-                    and wf.status.name == "RUNNING"
-                ):
-                    existing = True
-                    logger.info("operational_loop_already_running", workflow_id=wf.id)
-                    break
-
-            if not existing:
+            try:
                 await temporal.start_workflow(
                     "OperationalLoopEngine",
                     args=[tenant_id],
@@ -95,22 +84,18 @@ class OperationalLoopService:
                     task_queue=TaskQueue.AI_ORCHESTRATION,
                 )
                 logger.info("operational_loop_started")
+            except Exception as e:
+                # Catch workflow already running to avoid crash/overhead
+                if "AlreadyStarted" in str(e) or "already running" in str(e).lower() or "ALREADY_EXISTS" in str(e):
+                    logger.info("operational_loop_already_running", workflow_id=f"operational-loop-{tenant_id}")
+                else:
+                    logger.warning("operational_loop_start_failed", error=str(e))
 
             # 3. Register cron schedules
             await self._register_schedules(temporal, tenant_id)
 
             # 4. Start Continuous Intelligence Loop
-            existing_intelligence = False
-            async for wf in temporal.list_workflows():
-                if (
-                    wf.workflow_type == "ContinuousIntelligenceLoop"
-                    and wf.status.name == "RUNNING"
-                ):
-                    existing_intelligence = True
-                    logger.info("continuous_intelligence_loop_already_running", workflow_id=wf.id)
-                    break
-
-            if not existing_intelligence:
+            try:
                 await temporal.start_workflow(
                     "ContinuousIntelligenceLoop",
                     args=[tenant_id],
@@ -118,6 +103,11 @@ class OperationalLoopService:
                     task_queue=TaskQueue.AI_ORCHESTRATION,
                 )
                 logger.info("continuous_intelligence_loop_started")
+            except Exception as e:
+                if "AlreadyStarted" in str(e) or "already running" in str(e).lower() or "ALREADY_EXISTS" in str(e):
+                    logger.info("continuous_intelligence_loop_already_running", workflow_id=f"continuous-intelligence-{tenant_id}")
+                else:
+                    logger.warning("continuous_intelligence_loop_start_failed", error=str(e))
 
         except Exception as e:
             logger.warning("operational_loop_start_failed", error=str(e))
@@ -145,31 +135,27 @@ class OperationalLoopService:
 
         for s in schedules:
             try:
-                existing = False
-                async for wf in temporal.list_workflows():
-                    if wf.id == s["id"] and wf.status.name in ("RUNNING", "COMPLETED"):
-                        existing = True
-                        break
-
-                if not existing:
-                    await temporal.start_workflow(
-                        s["workflow"],
-                        args=s["args"],
-                        id=s["id"],
-                        task_queue=s["queue"],
-                        cron_schedule=s["cron"],
-                    )
-                    logger.info(
-                        "schedule_registered",
-                        schedule_id=s["id"],
-                        cron=s["cron"],
-                    )
-            except Exception as e:
-                logger.warning(
-                    "schedule_registration_failed",
-                    schedule_id=s["id"],
-                    error=str(e),
+                await temporal.start_workflow(
+                    s["workflow"],
+                    args=s["args"],
+                    id=s["id"],
+                    task_queue=s["queue"],
+                    cron_schedule=s["cron"],
                 )
+                logger.info(
+                    "schedule_registered",
+                    schedule_id=s["id"],
+                    cron=s["cron"],
+                )
+            except Exception as e:
+                if "AlreadyStarted" in str(e) or "already running" in str(e).lower() or "ALREADY_EXISTS" in str(e):
+                    logger.info("schedule_already_registered", schedule_id=s["id"])
+                else:
+                    logger.warning(
+                        "schedule_registration_failed",
+                        schedule_id=s["id"],
+                        error=str(e),
+                    )
 
 
 # Global singleton
