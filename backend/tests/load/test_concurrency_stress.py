@@ -26,13 +26,11 @@ async def _simulate_workflow_burst(
     """Simulate initiating a Temporal workflow under concurrency pressure."""
     async with semaphore:
         try:
-            from temporalio.client import WorkflowHandle
-
             from seo_platform.core.temporal_client import get_temporal_client
 
             client = await get_temporal_client()
 
-            handle: WorkflowHandle = await client.execute_workflow(
+            handle = await client.start_workflow(
                 "ReportGenerationWorkflow",
                 f'{{"tenant_id": "{tenant_id}", "report_type": "stress_test", "initiated_by": "load_test"}}',
                 id=f"stress-report-{tenant_id.hex[:8]}-{i:05d}",
@@ -54,11 +52,13 @@ async def _simulate_queue_task_burst(
             from seo_platform.core.temporal_client import get_temporal_client
 
             client = await get_temporal_client()
-            await client.signal_workflow(
-                f"stress-signal-{i:06d}",
-                "dummy_signal",
-                arg=None,
+            handle = await client.start_workflow(
+                "ReportGenerationWorkflow",
+                f'{{"task": "queue_pressure", "index": {i}}}',
+                id=f"queue-pressure-{i:06d}",
+                task_queue="seo-platform-reporting",
             )
+            await handle.result(timeout=30)
         except Exception as exc:
             errors.append((i, str(exc)))
 
@@ -202,7 +202,7 @@ async def test_sustained_concurrency(
             async with semaphore:
                 try:
                     client = await get_temporal_client()
-                    handle = await client.execute_workflow(
+                    handle = await client.start_workflow(
                         "ReportGenerationWorkflow",
                         f'{{"tenant_id": "{load_tenant_id}", "report_type": "sustained_stress", "initiated_by": "load_test"}}',
                         id=f"sustained-{load_tenant_id.hex[:8]}-{i:06d}",

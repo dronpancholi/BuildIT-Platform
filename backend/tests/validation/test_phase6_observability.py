@@ -11,7 +11,7 @@ from uuid import UUID, uuid4
 
 import pytest
 
-pytestmark = pytest.mark.asyncio(loop_scope="module")
+pytestmark = pytest.mark.asyncio(loop_scope="function")
 
 
 # =========================================================================
