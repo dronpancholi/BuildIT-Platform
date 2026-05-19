@@ -17,6 +17,7 @@ from pydantic import BaseModel, Field
 from seo_platform.clients.scrapling_cache import ScraplingCache
 from seo_platform.clients.trafilatura import TrafilaturaClient
 from seo_platform.core.reliability import CircuitBreaker
+from seo_platform.services.provider_health import provider_health_center
 
 logger = logging.getLogger(__name__)
 
@@ -113,12 +114,28 @@ class ScraplingClient:
                 raise RuntimeError(f"Scrapling failed for {url}: {e}")
 
         from uuid import UUID
+        import time
+        t0 = time.monotonic()
         try:
             await emit_telemetry_event(UUID(int=0), "scrapling_fetch", {"url": url, "status": "started"})
             result = await _scrapling_circuit_breaker.call(_do_fetch)
+            latency = (time.monotonic() - t0) * 1000
+            await provider_health_center.record_provider_call(
+                provider_name="Scrapling",
+                latency_ms=latency,
+                success=True,
+                breaker_state=_scrapling_circuit_breaker.state,
+            )
             await emit_telemetry_event(UUID(int=0), "scrapling_fetch", {"url": url, "status": "completed"})
             return result
         except Exception as e:
+            latency = (time.monotonic() - t0) * 1000
+            await provider_health_center.record_provider_call(
+                provider_name="Scrapling",
+                latency_ms=latency,
+                success=False,
+                breaker_state=_scrapling_circuit_breaker.state,
+            )
             await emit_telemetry_event(UUID(int=0), "scrapling_fetch", {"url": url, "status": "failed", "error": str(e)})
             raise
 
@@ -138,8 +155,11 @@ class ScraplingClient:
 
     async def _extract_ddg_serp_live(self, query: str, limit: int = 20) -> list[SERPItem]:
         """Live DuckDuckGo SERP scrape without caching."""
+        import time
         from scrapling import Fetcher
         from urllib.parse import unquote
+
+        t0 = time.monotonic()
 
         results: list[SERPItem] = []
         offset = 0
@@ -183,4 +203,11 @@ class ScraplingClient:
                 logger.warning("ddg_serp_scrape_page_failed", offset=offset, error=str(e))
                 break
 
+        latency = (time.monotonic() - t0) * 1000
+        await provider_health_center.record_provider_call(
+            provider_name="Scrapling",
+            latency_ms=latency,
+            success=True,
+            breaker_state=_scrapling_circuit_breaker.state,
+        )
         return results

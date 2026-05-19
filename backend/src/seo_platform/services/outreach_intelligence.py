@@ -905,12 +905,28 @@ class OutreachIntelligenceService:
             )
 
             content = llm_result.content
+            body = self._enforce_pitch_quality(content.body_content)
+
+            try:
+                from seo_platform.services.compliance_scorer import compliance_scorer
+                compliance = await compliance_scorer.score_email_pitch(
+                    tenant_id=tenant_id,
+                    email_body=body,
+                    entity_id=tenant_id,
+                    entity_type="email_pitch",
+                )
+            except Exception:
+                compliance = {"score": 0.0, "passed": True, "violations": {}}
+
             return {
                 "subject_line": content.subject_line,
-                "body_content": self._enforce_pitch_quality(content.body_content),
+                "body_content": body,
                 "value_add_type": content.value_add_type,
                 "personalization_angle": content.personalization_angle,
                 "generation_source": "social_graph_bespoke_ai",
+                "compliance_score": compliance.get("score", 0.0),
+                "compliance_passed": compliance.get("passed", True),
+                "needs_review": not compliance.get("passed", True),
             }
 
         except Exception as e:
@@ -933,12 +949,28 @@ class OutreachIntelligenceService:
                 f"Would you be open to me sending over a quick preview link to see if it aligns?\n\n"
                 f"Best regards,\n{client_name} Team"
             )
+            body = self._enforce_pitch_quality(fallback_body)
+
+            try:
+                from seo_platform.services.compliance_scorer import compliance_scorer
+                compliance = await compliance_scorer.score_email_pitch(
+                    tenant_id=tenant_id,
+                    email_body=body,
+                    entity_id=tenant_id,
+                    entity_type="email_pitch",
+                )
+            except Exception:
+                compliance = {"score": 0.0, "passed": True, "violations": {}}
+
             return {
                 "subject_line": fallback_subj,
-                "body_content": self._enforce_pitch_quality(fallback_body),
+                "body_content": body,
                 "value_add_type": "proprietary_data_charts",
                 "personalization_angle": "social_commentary_alignment",
                 "generation_source": "elite_deterministic_fallback",
+                "compliance_score": compliance.get("score", 0.0),
+                "compliance_passed": compliance.get("passed", True),
+                "needs_review": not compliance.get("passed", True),
             }
 
 

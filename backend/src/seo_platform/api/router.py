@@ -87,6 +87,9 @@ from seo_platform.api.endpoints.business_intelligence import router as business_
 from seo_platform.api.endpoints.intelligence_queries import router as intelligence_queries_router
 from seo_platform.api.endpoints.providers import router as providers_router
 from seo_platform.api.endpoints.webhooks import router as webhooks_router
+from seo_platform.api.endpoints.provider_health import router as provider_health_router
+from seo_platform.api.endpoints.demo_scenarios import router as demo_scenarios_router
+from seo_platform.api.endpoints.campaign_timeline import router as campaign_timeline_router
 
 # Root API router — all service routers mount here
 api_router = APIRouter(prefix="/api/v1")
@@ -168,5 +171,8 @@ api_router.include_router(platform_stewardship_router, prefix="/platform-steward
 api_router.include_router(realtime_telemetry_router, prefix="/queue-telemetry", tags=["realtime-telemetry"])
 api_router.include_router(operations_feed_router, prefix="/operations", tags=["operations-feed"])
 api_router.include_router(business_intelligence_router, prefix="/business-intelligence", tags=["business-intelligence"])
+api_router.include_router(provider_health_router, tags=["provider-health"])
+api_router.include_router(demo_scenarios_router, tags=["demo-scenarios"])
+api_router.include_router(campaign_timeline_router, tags=["campaign-timeline"])
 api_router.include_router(providers_router)
 api_router.include_router(webhooks_router)

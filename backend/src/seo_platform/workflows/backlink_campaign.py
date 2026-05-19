@@ -742,6 +742,27 @@ async def create_approval_request_activity(
     return {"approval_request_id": str(result.id), "sla_deadline": result.sla_deadline.isoformat() if result.sla_deadline else ""}
 
 
+@activity.defn(name="record_timeline_step_activity")
+async def record_timeline_step_activity(
+    tenant_id: str, campaign_id: str, step_name: str, status: str, message: str = "",
+) -> dict[str, Any]:
+    """Record a campaign timeline step for real-time frontend progress tracking."""
+    from uuid import UUID
+    from seo_platform.services.workflow_timeline import workflow_timeline
+
+    try:
+        await workflow_timeline.record_step(
+            tenant_id=UUID(tenant_id),
+            campaign_id=UUID(campaign_id),
+            step_name=step_name,
+            status=status,
+            message=message,
+        )
+    except Exception as e:
+        logger.warning("timeline_step_failed", step=step_name, error=str(e))
+    return {"step_name": step_name, "status": status}
+
+
 @activity.defn(name="update_campaign_status_activity")
 async def update_campaign_status_activity(
     tenant_id: str, campaign_id: str, status: str, metrics: dict | None = None,
@@ -860,6 +881,15 @@ class BacklinkCampaignWorkflow:
         try:
             # --- Phase 1: Prospect Discovery ---
             await workflow.execute_activity(
+                record_timeline_step_activity,
+                args=[str(input_data.tenant_id), str(input_data.campaign_id),
+                      "discovery", "processing", "Searching for prospects via Ahrefs and fallback providers"],
+                task_queue=TaskQueue.BACKLINK_ENGINE,
+                start_to_close_timeout=timedelta(seconds=30),
+                retry_policy=RetryPreset.DATABASE,
+            )
+
+            await workflow.execute_activity(
                 update_campaign_status_activity,
                 args=[str(input_data.tenant_id), str(input_data.campaign_id), "prospecting"],
                 task_queue=TaskQueue.BACKLINK_ENGINE,
@@ -877,6 +907,15 @@ class BacklinkCampaignWorkflow:
             )
             output.prospects_discovered = discovery_result["count"]
 
+            await workflow.execute_activity(
+                record_timeline_step_activity,
+                args=[str(input_data.tenant_id), str(input_data.campaign_id),
+                      "discovery", "completed", f"Discovered {discovery_result['count']} prospects"],
+                task_queue=TaskQueue.BACKLINK_ENGINE,
+                start_to_close_timeout=timedelta(seconds=30),
+                retry_policy=RetryPreset.DATABASE,
+            )
+
             if discovery_result["count"] == 0:
                 discovery_result = await workflow.execute_activity(
                     fallback_prospects_activity,
@@ -888,6 +927,15 @@ class BacklinkCampaignWorkflow:
                 output.prospects_discovered = discovery_result["count"]
 
             # --- Phase 2: Scoring & Filtering ---
+            await workflow.execute_activity(
+                record_timeline_step_activity,
+                args=[str(input_data.tenant_id), str(input_data.campaign_id),
+                      "scoring", "processing", "Scoring prospects by authority, relevance, and spam"],
+                task_queue=TaskQueue.BACKLINK_ENGINE,
+                start_to_close_timeout=timedelta(seconds=30),
+                retry_policy=RetryPreset.DATABASE,
+            )
+
             scoring_result = await workflow.execute_activity(
                 score_prospects_activity,
                 args=[str(input_data.tenant_id), str(input_data.campaign_id),
@@ -900,7 +948,25 @@ class BacklinkCampaignWorkflow:
             scored_prospects = scoring_result["scored_prospects"]
             output.prospects_scored = len(scored_prospects)
 
+            await workflow.execute_activity(
+                record_timeline_step_activity,
+                args=[str(input_data.tenant_id), str(input_data.campaign_id),
+                      "scoring", "completed", f"{len(scored_prospects)} viable prospects after filtering"],
+                task_queue=TaskQueue.BACKLINK_ENGINE,
+                start_to_close_timeout=timedelta(seconds=30),
+                retry_policy=RetryPreset.DATABASE,
+            )
+
             # --- Phase 3: Contact Discovery ---
+            await workflow.execute_activity(
+                record_timeline_step_activity,
+                args=[str(input_data.tenant_id), str(input_data.campaign_id),
+                      "enrichment", "processing", "Crawling target sites for contact emails and technology profiles"],
+                task_queue=TaskQueue.BACKLINK_ENGINE,
+                start_to_close_timeout=timedelta(seconds=30),
+                retry_policy=RetryPreset.DATABASE,
+            )
+
             contacts_result = await workflow.execute_activity(
                 discover_contacts_activity,
                 args=[str(input_data.tenant_id), scored_prospects],
@@ -909,6 +975,15 @@ class BacklinkCampaignWorkflow:
                 retry_policy=RetryPreset.EXTERNAL_API,
             )
             enriched_prospects = contacts_result["enriched_prospects"]
+
+            await workflow.execute_activity(
+                record_timeline_step_activity,
+                args=[str(input_data.tenant_id), str(input_data.campaign_id),
+                      "enrichment", "completed", f"Enriched {len(enriched_prospects)} prospects with contacts"],
+                task_queue=TaskQueue.BACKLINK_ENGINE,
+                start_to_close_timeout=timedelta(seconds=30),
+                retry_policy=RetryPreset.DATABASE,
+            )
 
             # --- Phase 3.5: Human Approval Gate ---
             approval_result = await workflow.execute_activity(
@@ -958,6 +1033,15 @@ class BacklinkCampaignWorkflow:
 
             # --- Phase 4: Outreach Email Generation (3-email sequences) ---
             await workflow.execute_activity(
+                record_timeline_step_activity,
+                args=[str(input_data.tenant_id), str(input_data.campaign_id),
+                      "outreach_generation", "processing", "Crafting personalized email pitches via AI"],
+                task_queue=TaskQueue.BACKLINK_ENGINE,
+                start_to_close_timeout=timedelta(seconds=30),
+                retry_policy=RetryPreset.DATABASE,
+            )
+
+            await workflow.execute_activity(
                 update_campaign_status_activity,
                 args=[str(input_data.tenant_id), str(input_data.campaign_id), "generating_emails"],
                 task_queue=TaskQueue.BACKLINK_ENGINE,
@@ -974,6 +1058,15 @@ class BacklinkCampaignWorkflow:
                 retry_policy=RetryPreset.LLM_INFERENCE,
             )
             output.emails_generated = emails_result["count"]
+
+            await workflow.execute_activity(
+                record_timeline_step_activity,
+                args=[str(input_data.tenant_id), str(input_data.campaign_id),
+                      "outreach_generation", "completed", f"Generated {emails_result['count']} email sequences"],
+                task_queue=TaskQueue.BACKLINK_ENGINE,
+                start_to_close_timeout=timedelta(seconds=30),
+                retry_policy=RetryPreset.DATABASE,
+            )
 
             # --- Phase 5: Spawn Child Outreach Threads ---
             await workflow.execute_activity(
@@ -1028,8 +1121,26 @@ class BacklinkCampaignWorkflow:
 
             # --- Phase 6: Complete ---
             await workflow.execute_activity(
+                record_timeline_step_activity,
+                args=[str(input_data.tenant_id), str(input_data.campaign_id),
+                      "completion", "processing", f"Sent {output.threads_contacted} emails across {len(child_results)} threads"],
+                task_queue=TaskQueue.BACKLINK_ENGINE,
+                start_to_close_timeout=timedelta(seconds=30),
+                retry_policy=RetryPreset.DATABASE,
+            )
+
+            await workflow.execute_activity(
                 update_campaign_status_activity,
                 args=[str(input_data.tenant_id), str(input_data.campaign_id), "monitoring"],
+                task_queue=TaskQueue.BACKLINK_ENGINE,
+                start_to_close_timeout=timedelta(seconds=30),
+                retry_policy=RetryPreset.DATABASE,
+            )
+
+            await workflow.execute_activity(
+                record_timeline_step_activity,
+                args=[str(input_data.tenant_id), str(input_data.campaign_id),
+                      "completion", "completed", "Campaign workflow finished successfully"],
                 task_queue=TaskQueue.BACKLINK_ENGINE,
                 start_to_close_timeout=timedelta(seconds=30),
                 retry_policy=RetryPreset.DATABASE,
@@ -1039,6 +1150,14 @@ class BacklinkCampaignWorkflow:
             output.status = "monitoring"
 
         except Exception as e:
+            await workflow.execute_activity(
+                record_timeline_step_activity,
+                args=[str(input_data.tenant_id), str(input_data.campaign_id),
+                      "completion", "failed", f"Campaign failed: {e}"],
+                task_queue=TaskQueue.BACKLINK_ENGINE,
+                start_to_close_timeout=timedelta(seconds=30),
+                retry_policy=RetryPreset.DATABASE,
+            )
             output.success = False
             output.status = "failed"
             output.errors.append(str(e))

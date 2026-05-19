@@ -13,6 +13,7 @@ import httpx
 from pydantic import BaseModel, Field
 
 from seo_platform.core.reliability import CircuitBreaker
+from seo_platform.services.provider_health import provider_health_center
 
 logger = logging.getLogger(__name__)
 
@@ -89,12 +90,28 @@ class SearXNGClient:
                 )
 
         from uuid import UUID
+        import time
+        t0 = time.monotonic()
         try:
             await emit_telemetry_event(UUID(int=0), "searxng_search", {"query": query, "status": "started"})
             result = await _searxng_circuit_breaker.call(_do_search)
+            latency = (time.monotonic() - t0) * 1000
+            await provider_health_center.record_provider_call(
+                provider_name="SearXNG",
+                latency_ms=latency,
+                success=True,
+                breaker_state=_searxng_circuit_breaker.state,
+            )
             await emit_telemetry_event(UUID(int=0), "searxng_search", {"query": query, "status": "completed"})
             return result
         except Exception as e:
+            latency = (time.monotonic() - t0) * 1000
+            await provider_health_center.record_provider_call(
+                provider_name="SearXNG",
+                latency_ms=latency,
+                success=False,
+                breaker_state=_searxng_circuit_breaker.state,
+            )
             await emit_telemetry_event(UUID(int=0), "searxng_search", {"query": query, "status": "failed", "error": str(e)})
             logger.error("searxng_request_failed", query=query, error=str(e))
             raise RuntimeError(f"SearXNG search request failed: {e}")

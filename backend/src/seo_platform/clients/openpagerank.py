@@ -12,6 +12,7 @@ import httpx
 from pydantic import BaseModel, Field
 
 from seo_platform.config import get_settings
+from seo_platform.services.provider_health import provider_health_center
 
 logger = logging.getLogger(__name__)
 
@@ -46,6 +47,8 @@ class OpenPageRankClient:
         """
         Fetch PageRank metrics for a batch of domains.
         """
+        import time
+
         if not self.api_key:
             raise ValueError("OpenPageRank API key not configured")
 
@@ -53,13 +56,26 @@ class OpenPageRankClient:
         headers = {"API-OPR": self.api_key}
         params = [("domains[]", dom) for dom in domains]
 
+        t0 = time.monotonic()
         try:
             async with httpx.AsyncClient(timeout=self.timeout) as client:
                 response = await client.get(url, headers=headers, params=params)
                 if response.status_code != 200:
                     raise RuntimeError(f"OpenPageRank API returned status {response.status_code}")
 
+                latency = (time.monotonic() - t0) * 1000
+                await provider_health_center.record_provider_call(
+                    provider_name="OpenPageRank",
+                    latency_ms=latency,
+                    success=True,
+                )
                 return OpenPageRankResponse.model_validate(response.json())
         except Exception as e:
+            latency = (time.monotonic() - t0) * 1000
+            await provider_health_center.record_provider_call(
+                provider_name="OpenPageRank",
+                latency_ms=latency,
+                success=False,
+            )
             logger.error("openpagerank_request_failed", domains=domains, error=str(e))
             raise RuntimeError(f"OpenPageRank request failed: {e}")

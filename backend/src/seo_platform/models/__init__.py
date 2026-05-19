@@ -32,6 +32,12 @@ from seo_platform.models.communication import (
     OutreachEmail,
 )
 from seo_platform.models.keywords import KeywordResearch
+from seo_platform.models.observability import (
+    AuditTrailLog,
+    CampaignTimelineEvent,
+    ComplianceResult,
+    ProviderHealthMetric,
+)
 from seo_platform.models.seo import (
     Keyword,
     KeywordCluster,
@@ -51,6 +57,11 @@ __all__ = [
     "UUIDPrimaryKeyMixin",
     # Core
     "AuditLog",
+    # Observability
+    "AuditTrailLog",
+    "CampaignTimelineEvent",
+    "ComplianceResult",
+    "ProviderHealthMetric",
     "Client",
     "Tenant",
     "User",
