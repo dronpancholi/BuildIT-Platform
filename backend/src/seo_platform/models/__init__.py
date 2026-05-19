@@ -4,6 +4,7 @@ SEO Platform — Models Package
 All SQLAlchemy ORM models are registered here for Alembic discovery.
 """
 
+from seo_platform.core.database import Base
 from seo_platform.models.approval import (
     ApprovalRequestModel,
 )

@@ -718,7 +718,7 @@ class BusinessStateEvolutionEngine:
                     await self._generate_keyword_prospects(session, campaign)
 
     async def _generate_keyword_prospects(self, session, campaign) -> None:
-        from sqlalchemy import select
+        from sqlalchemy import select, text
         from uuid import uuid4
         from seo_platform.models.backlink import BacklinkProspect
         from seo_platform.models.seo import Keyword
@@ -937,6 +937,7 @@ class BusinessStateEvolutionEngine:
             return 0
 
     async def _update_client_intelligence(self) -> int:
+        from sqlalchemy import select
         from seo_platform.core.database import get_tenant_session
         from uuid import UUID
         from seo_platform.models.tenant import Client
