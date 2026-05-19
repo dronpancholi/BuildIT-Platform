@@ -18,6 +18,7 @@ logger = logging.getLogger(__name__)
 SCENARIOS: dict[str, dict[str, Any]] = {
     "TechStart": {
         "niche": "enterprise-saas",
+        "campaign_type": "guest_post",
         "target_keywords": [
             "cloud infrastructure pricing",
             "kubernetes cost optimization",
@@ -43,6 +44,7 @@ SCENARIOS: dict[str, dict[str, Any]] = {
     },
     "LocalFlorist": {
         "niche": "local-floral",
+        "campaign_type": "resource_page",
         "target_keywords": [
             "flower delivery near me",
             "wedding bouquets",
@@ -82,11 +84,12 @@ class ScenarioManager:
             raise ValueError(f"Unknown scenario '{name}'. Available: {list(SCENARIOS.keys())}")
 
         await self._clear_tenant_data(tenant_id)
-        await self._inject_personas(tenant_id, name_normalized, scenario)
-        await self._inject_keywords(tenant_id, scenario)
-        await self._inject_campaign_config(tenant_id, scenario)
+        client_id = await self._ensure_client(tenant_id, scenario)
+        await self._inject_personas(tenant_id, client_id, name_normalized, scenario)
+        await self._inject_keywords(tenant_id, client_id, scenario)
+        await self._inject_campaign_config(tenant_id, client_id, scenario)
 
-        logger.info("scenario_loaded", tenant_id=str(tenant_id), scenario=name_normalized)
+        logger.info("scenario_loaded tenant=%s scenario=%s", str(tenant_id), name_normalized)
         return {
             "scenario": name_normalized,
             "niche": scenario["niche"],
@@ -102,23 +105,54 @@ class ScenarioManager:
         ]
 
     @staticmethod
+    async def _ensure_client(tenant_id: UUID, scenario: dict[str, Any]) -> UUID:
+        """Create or return a demo client matching the scenario."""
+        from seo_platform.core.database import get_db_session
+        from seo_platform.models.tenant import Client
+
+        async with get_db_session() as session:
+            from sqlalchemy import select
+            result = await session.execute(
+                select(Client).where(
+                    Client.tenant_id == tenant_id,
+                    Client.domain == f"{scenario['niche'].replace('-', '')}.io",
+                ).limit(1)
+            )
+            existing = result.scalar_one_or_none()
+            if existing:
+                return existing.id
+
+            client = Client(
+                tenant_id=tenant_id,
+                name=f"Demo {scenario['niche'].replace('-', ' ').title()} Client",
+                domain=f"{scenario['niche'].replace('-', '')}.io",
+                niche=scenario["niche"],
+            )
+            session.add(client)
+            await session.flush()
+            return client.id
+
+    @staticmethod
     async def _clear_tenant_data(tenant_id: UUID) -> None:
         """Remove previous demo data for a clean scenario load."""
         from seo_platform.core.database import get_db_session
         from seo_platform.models.backlink import BacklinkCampaign, BacklinkProspect
-        from seo_platform.models.keywords import KeywordResearch
         from seo_platform.models.seo import Keyword
+        from seo_platform.models.tenant import Client
         from sqlalchemy import delete
 
         async with get_db_session() as session:
-            for model in [BacklinkProspect, BacklinkCampaign, Keyword, KeywordResearch]:
+            for model in [BacklinkProspect, BacklinkCampaign, Keyword]:
                 await session.execute(
                     delete(model).where(model.tenant_id == tenant_id)
                 )
+            await session.execute(
+                delete(Client).where(Client.tenant_id == tenant_id)
+            )
 
     @staticmethod
     async def _inject_personas(
-        tenant_id: UUID, scenario_name: str, scenario: dict[str, Any],
+        tenant_id: UUID, client_id: UUID, scenario_name: str, scenario: dict[str, Any],
     ) -> None:
         """Register personas matching the scenario brand voice."""
         try:
@@ -126,54 +160,65 @@ class ScenarioManager:
 
             await client_persona_service.ingest_persona_guidelines(
                 tenant_id=tenant_id,
-                client_id=tenant_id,
+                client_id=client_id,
                 guidelines={
                     "voice_rules": scenario["brand_voice_rules"],
                     "negative_personas": scenario.get("negative_personas", []),
                 },
             )
         except Exception as e:
-            logger.warning("persona_injection_skipped", error=str(e))
+            logger.warning("persona_injection_skipped: %s", str(e))
 
     @staticmethod
-    async def _inject_keywords(tenant_id: UUID, scenario: dict[str, Any]) -> None:
+    async def _inject_keywords(tenant_id: UUID, client_id: UUID, scenario: dict[str, Any]) -> None:
         """Seed target keywords for the scenario."""
         from seo_platform.core.database import get_db_session
-        from seo_platform.models.keywords import KeywordResearch
+        from seo_platform.models.seo import Keyword, SearchIntent
 
         async with get_db_session() as session:
             for kw in scenario["target_keywords"]:
-                kr = KeywordResearch(
+                keyword = Keyword(
                     tenant_id=tenant_id,
+                    client_id=client_id,
                     keyword=kw,
                     search_volume=0,
-                    difficulty=0.0,
+                    difficulty=50,
                     cpc=0.0,
-                    intent="informational",
-                    status="demo_seed",
-                    data={},
+                    competition=0.0,
+                    intent=SearchIntent.INFORMATIONAL,
+                    is_seed=True,
                 )
-                session.add(kr)
+                session.add(keyword)
 
     @staticmethod
     async def _inject_campaign_config(
-        tenant_id: UUID, scenario: dict[str, Any],
+        tenant_id: UUID, client_id: UUID, scenario: dict[str, Any],
     ) -> None:
         """Seed a demo campaign configuration."""
         from seo_platform.core.database import get_db_session
-        from seo_platform.models.backlink import BacklinkCampaign
+        from seo_platform.models.backlink import BacklinkCampaign, CampaignType, CampaignStatus
+
+        ct_map = {
+            "guest_post": CampaignType.GUEST_POST,
+            "resource_page": CampaignType.RESOURCE_PAGE,
+            "niche_edit": CampaignType.NICHE_EDIT,
+            "broken_link": CampaignType.BROKEN_LINK,
+            "skyscraper": CampaignType.SKYSCRAPER,
+            "haro": CampaignType.HARO,
+        }
 
         async with get_db_session() as session:
             campaign = BacklinkCampaign(
                 tenant_id=tenant_id,
-                campaign_type=scenario["niche"],
-                status="draft",
+                client_id=client_id,
+                campaign_type=ct_map.get(scenario.get("campaign_type", "guest_post"), CampaignType.GUEST_POST),
+                status=CampaignStatus.DRAFT,
                 name=f"Demo Campaign — {scenario['niche']}",
-                target_domain_authority_min=scenario["target_domain_authority_min"],
-                max_spam_score=scenario["max_spam_score"],
                 target_link_count=scenario["target_link_count"],
-                competitor_domains=[],
-                approved_prospects=[],
+                config={
+                    "target_domain_authority_min": scenario["target_domain_authority_min"],
+                    "max_spam_score": scenario["max_spam_score"],
+                },
             )
             session.add(campaign)
 
@@ -187,7 +232,7 @@ class ScenarioManager:
             await redis.flushdb()
         except Exception:
             logger.warning("redis_flush_skipped")
-        logger.info("workspace_reset", tenant_id=str(tenant_id))
+        logger.info("workspace_reset tenant=%s", str(tenant_id))
         return {"status": "reset", "tenant_id": str(tenant_id)}
 
 
