@@ -70,6 +70,19 @@ class HunterClient:
 
     async def domain_search(self, domain: str, limit: int = 10) -> list[dict[str, Any]]:
         """Find email addresses associated with a domain."""
+        settings = get_settings()
+        if settings.use_mock_providers:
+            return [
+                {
+                    "email": f"editor@{domain}",
+                    "type": "personal",
+                    "confidence": 95,
+                    "first_name": "John",
+                    "last_name": "Doe",
+                    "position": "Editor",
+                }
+            ]
+
         client = await self._get_client()
         async with _semaphore:
             response = await _circuit.call(
@@ -100,6 +113,14 @@ class HunterClient:
 
     async def find_email(self, domain: str, first_name: str, last_name: str) -> dict[str, Any]:
         """Find a specific person's email at a domain."""
+        settings = get_settings()
+        if settings.use_mock_providers:
+            return {
+                "email": f"{first_name.lower()}.{last_name.lower()}@{domain}",
+                "confidence": 95,
+                "sources": ["mock"],
+            }
+
         client = await self._get_client()
         async with _semaphore:
             response = await _circuit.call(
@@ -127,6 +148,15 @@ class HunterClient:
 
     async def verify_email(self, email: str) -> dict[str, Any]:
         """Verify email deliverability."""
+        settings = get_settings()
+        if settings.use_mock_providers:
+            return {
+                "email": email,
+                "result": "deliverable",
+                "score": 100,
+                "status": "valid",
+            }
+
         client = await self._get_client()
         async with _semaphore:
             response = await _circuit.call(
