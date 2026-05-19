@@ -22,7 +22,7 @@ RUN pip install --no-cache-dir --upgrade pip && \
     pip install --no-cache-dir .
 
 # --- Stage 2: Runtime ---
-FROM python:3.12-slim as runtime
+FROM python:3.12-slim AS runtime
 
 WORKDIR /app
 
@@ -58,4 +58,4 @@ HEALTHCHECK --interval=30s --timeout=10s --start-period=15s --retries=3 \
 EXPOSE 8000
 
 # Default command: run API server (workers via env var, defaults to 1 for in-memory state safety)
-CMD uvicorn seo_platform.main:app --host 0.0.0.0 --port 8000 --workers ${UVICORN_WORKERS:-1}
+CMD ["sh", "-c", "uvicorn seo_platform.main:app --host 0.0.0.0 --port 8000 --workers ${UVICORN_WORKERS:-1}"]
