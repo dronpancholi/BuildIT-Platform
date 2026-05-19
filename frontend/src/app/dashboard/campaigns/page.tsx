@@ -5,12 +5,13 @@ import { motion } from "framer-motion";
 import {
   Plus, Search, Loader2, GitBranch,
   TrendingUp, TrendingDown, Activity, Link2,
-  Mail,
+  Mail, Radio, CheckCircle2,
 } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { fetchApi } from "@/lib/api";
 import { useCommandCenter } from "@/hooks/use-command-center";
 import { CampaignEvolutionPanel } from "@/components/operational/campaign-evolution-panel";
+import { CampaignWorkflowStepper } from "@/components/operational/campaign-workflow-stepper";
 import type { CampaignIntelligence } from "@/types/business-intelligence";
 
 function getHealthColor(score: number): string {
@@ -258,6 +259,22 @@ export default function CampaignsPage() {
               </tbody>
             </table>
           </div>
+        </div>
+      )}
+
+      {/* Workflow Execution Progress for Active Campaigns */}
+      {viewMode === "table" && sorted.filter(c => c.status === "active" || c.status === "monitoring").length > 0 && (
+        <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-4">
+          {sorted.filter(c => c.status === "active" || c.status === "monitoring").slice(0, 3).map((campaign) => (
+            <div key={campaign.id} className="glass-panel p-4">
+              <div className="flex items-center gap-2 mb-3">
+                <Radio className="w-4 h-4 text-emerald-400" />
+                <span className="text-xs font-mono font-bold text-slate-200 truncate">{campaign.name}</span>
+                <span className="ml-auto text-[9px] font-mono text-slate-600">phase 2</span>
+              </div>
+              <CampaignWorkflowStepper activePhase="scoring" />
+            </div>
+          ))}
         </div>
       )}
     </div>

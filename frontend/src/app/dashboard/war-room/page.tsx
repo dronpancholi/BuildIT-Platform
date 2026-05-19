@@ -168,6 +168,12 @@ export default function WarRoomPage() {
     refetchInterval: 10000,
   });
 
+  const { data: providerHealth } = useQuery<{ providers: Record<string, { provider: string; circuit_breaker_state: string; healthy: boolean; uptime_pct: number; avg_latency_ms: number }> }>({
+    queryKey: ["provider-health", "war-room"],
+    queryFn: () => fetchApi("/providers/status"),
+    refetchInterval: 10000,
+  });
+
   const pressureEntries = useMemo(() => {
     const base = queuePressure?.entries || [];
     if (!sseQueues || Object.keys(sseQueues).length === 0) return base;
@@ -530,35 +536,44 @@ export default function WarRoomPage() {
               </div>
             </div>
 
-            {/* AI Status */}
+            {/* Provider Circuit Breakers */}
             <div className="glass-panel p-6">
               <div className="flex items-center gap-2 mb-4">
-                <BrainCircuit className="w-5 h-5 text-purple-500" />
-                <h3 className="text-lg font-medium text-slate-200 font-mono">AI_STATUS</h3>
+                <Shield className="w-5 h-5 text-amber-500" />
+                <h3 className="text-lg font-medium text-slate-200 font-mono">CIRCUIT_BREAKERS</h3>
               </div>
               <div className="space-y-3">
-                <div className="flex items-center justify-between p-3 rounded-md bg-surface-darker/50 border border-surface-border/50">
-                  <span className="text-xs font-mono text-slate-400">NIM Gateway</span>
-                  <span className={`flex items-center gap-1.5 text-xs font-mono ${sseInfra["nim"] === "healthy" || !sseInfra["nim"] ? "text-emerald-400" : "text-red-400"}`}>
-                    <span className={`w-2 h-2 rounded-full ${sseInfra["nim"] === "healthy" || !sseInfra["nim"] ? "bg-emerald-500" : "bg-red-500 animate-pulse"}`} />
-                    {(sseInfra["nim"] || "HEALTHY").toUpperCase()}
-                  </span>
-                </div>
-                <div className="flex items-center justify-between p-3 rounded-md bg-surface-darker/50 border border-surface-border/50">
-                  <span className="text-xs font-mono text-slate-400">Circuit Breaker</span>
-                  <span className={`text-xs font-mono ${sseInfra["circuit_breaker"] === "open" ? "text-red-400" : "text-emerald-400"}`}>
-                    {(sseInfra["circuit_breaker"] || "CLOSED").toUpperCase()}
-                  </span>
-                </div>
-                <div className="flex items-center justify-between p-3 rounded-md bg-surface-darker/50 border border-surface-border/50">
-                  <span className="text-xs font-mono text-slate-400">Inference Rate</span>
-                  <span className="text-xs font-mono text-slate-300">{sseInfra["inference_rate"] || "—"}/min</span>
-                </div>
-                <div className="flex items-center justify-between p-3 rounded-md bg-surface-darker/50 border border-surface-border/50">
-                  <span className="text-xs font-mono text-slate-400">Model</span>
-                  <span className="text-xs font-mono text-slate-300">{sseInfra["model"] || "llama-3-70b"}</span>
-                </div>
+                {providerHealth ? (
+                  Object.entries(providerHealth.providers).map(([name, prov]) => (
+                    <div key={name} className="flex items-center justify-between p-2.5 rounded-md bg-surface-darker/50 border border-surface-border/50">
+                      <div className="flex items-center gap-2 min-w-0">
+                        <span className={`w-2 h-2 rounded-full flex-shrink-0 ${
+                          prov.circuit_breaker_state === "OPEN" ? "bg-red-500 animate-pulse" :
+                          prov.circuit_breaker_state === "HALF_OPEN" ? "bg-amber-500 animate-pulse" :
+                          "bg-emerald-500"
+                        }`} />
+                        <span className="text-[11px] font-mono text-slate-300 truncate">{name}</span>
+                      </div>
+                      <div className="flex items-center gap-3 flex-shrink-0">
+                        <span className="text-[9px] font-mono text-slate-500">{prov.uptime_pct}%</span>
+                        <span className={`text-[10px] font-mono font-bold ${
+                          prov.circuit_breaker_state === "OPEN" ? "text-red-400" :
+                          prov.circuit_breaker_state === "HALF_OPEN" ? "text-amber-400" :
+                          "text-emerald-400"
+                        }`}>{prov.circuit_breaker_state}</span>
+                      </div>
+                    </div>
+                  ))
+                ) : (
+                  <div className="text-sm text-slate-500 font-mono py-4 text-center">Loading...</div>
+                )}
               </div>
+              {providerHealth && (
+                <div className="mt-3 pt-3 border-t border-surface-border flex items-center justify-between text-[9px] font-mono text-slate-600">
+                  <span>Healthy: {Object.values(providerHealth.providers).filter(p => p.healthy).length}/{Object.keys(providerHealth.providers).length}</span>
+                  <span>Avg latency</span>
+                </div>
+              )}
             </div>
 
             {/* Event Throughput */}

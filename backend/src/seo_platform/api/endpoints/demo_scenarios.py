@@ -41,3 +41,12 @@ async def load_demo_scenario(
         return {"success": True, "data": result}
     except ValueError as e:
         raise HTTPException(status_code=404, detail=str(e))
+
+
+@router.post("/demo/reset")
+async def reset_demo_workspace(
+    tenant_id: UUID = Query(..., description="Target tenant UUID"),
+):
+    """Wipe all demo data, clear Redis caches, reset circuit breakers."""
+    result = await scenario_manager.reset_workspace(tenant_id)
+    return {"success": True, "data": result}

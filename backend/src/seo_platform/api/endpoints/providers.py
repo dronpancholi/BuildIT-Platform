@@ -26,6 +26,23 @@ async def list_providers() -> APIResponse:
     })
 
 
+@router.get("/providers/status")
+async def get_providers_status() -> APIResponse:
+    """Return health status + fallback chain for all providers."""
+    from seo_platform.services.provider_health import provider_health_center
+
+    health = await provider_health_center.get_health_status()
+    return APIResponse(data={
+        **health,
+        "fallback_chain": {
+            "seo": ["DataForSEO", "Ahrefs", "Scrapling", "SearXNG"],
+            "email": ["Hunter"],
+            "crawl": ["Scrapling", "Trafilatura"],
+            "authority": ["OpenPageRank"],
+        },
+    })
+
+
 @router.post("/providers/seo/{provider_name}")
 async def set_seo_provider(provider_name: str) -> APIResponse:
     """Switch SEO data provider at runtime."""

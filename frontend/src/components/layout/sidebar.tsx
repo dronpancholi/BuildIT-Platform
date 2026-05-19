@@ -6,7 +6,7 @@ import { usePathname } from "next/navigation";
 import {
   LayoutDashboard, Link2, Search, Lightbulb, Activity,
   GitBranch, Radio, Settings, ChevronDown, ChevronRight,
-  Bot, Users, Globe, Check,
+  Bot, Users, Globe, Check, Shield, Sparkles, Server,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useClientStore, type ClientInfo } from "@/hooks/use-client";
@@ -30,10 +30,12 @@ const BUSINESS_NAV = [
 
 const SYSTEM_NAV = [
   { href: "/dashboard/system", icon: <Activity size={17} />, label: "Platform Health" },
+  { href: "/dashboard/providers", icon: <Server size={17} />, label: "Providers" },
   { href: "/dashboard/approvals", icon: <Link2 size={17} />, label: "Approvals" },
   { href: "/dashboard/events", icon: <Radio size={17} />, label: "Event Stream" },
   { href: "/dashboard/topology", icon: <GitBranch size={17} />, label: "Workflows" },
   { href: "/dashboard/war-room", icon: <Activity size={17} />, label: "War Room" },
+  { href: "/dashboard/demo-control", icon: <Sparkles size={17} />, label: "Demo Control" },
   { href: "/dashboard/settings", icon: <Settings size={17} />, label: "Settings" },
 ];
 

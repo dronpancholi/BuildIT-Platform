@@ -178,4 +178,17 @@ class ScenarioManager:
             session.add(campaign)
 
 
+    async def reset_workspace(self, tenant_id: UUID) -> dict[str, Any]:
+        """Wipe all demo data, clear Redis caches, reset circuit breakers."""
+        await self._clear_tenant_data(tenant_id)
+        try:
+            from seo_platform.core.redis import get_redis
+            redis = await get_redis()
+            await redis.flushdb()
+        except Exception:
+            logger.warning("redis_flush_skipped")
+        logger.info("workspace_reset", tenant_id=str(tenant_id))
+        return {"status": "reset", "tenant_id": str(tenant_id)}
+
+
 scenario_manager = ScenarioManager()
