@@ -14,6 +14,7 @@ from uuid import UUID
 
 from seo_platform.clients.scrapling import SERPItem, ScraplingClient
 from seo_platform.clients.scrapling_cache import ScraplingCache
+from seo_platform.clients.searxng import SearXNGClient
 from seo_platform.core.logging import get_logger
 
 logger = get_logger(__name__)
@@ -279,6 +280,76 @@ class ScraplingSEOProvider(SEODataProvider):
 
 
 # ---------------------------------------------------------------------------
+# SearXNG Provider (local aggregator fallback)
+# ---------------------------------------------------------------------------
+class SearXNGSEOProvider(SEODataProvider):
+    """
+    SearXNG SEO Data Provider.
+    Interfaces with local aggregator engines for zero-cost query discovery.
+    """
+
+    name = "searxng"
+
+    def __init__(self, base_url: str = "http://localhost:8080") -> None:
+        self.client = SearXNGClient(base_url=base_url)
+
+    async def get_keyword_metrics(self, keywords: list[str]) -> list[KeywordMetrics]:
+        return await SimulatedSEOProvider().get_keyword_metrics(keywords)
+
+    async def get_domain_authority(self, domain: str) -> DomainAuthority:
+        return await SimulatedSEOProvider().get_domain_authority(domain)
+
+    async def discover_backlink_prospects(self, domain: str, limit: int = 20) -> list[BacklinkProspect]:
+        """
+        Discovers pages mentioning the domain using SearXNG search queries.
+        """
+        try:
+            query = f'"{domain}" -site:{domain}'
+            resp = await self.client.search(query=query)
+
+            prospects = []
+            for item in resp.results[:limit]:
+                prospect_domain = item.url.split("//")[-1].split("/")[0]
+                if prospect_domain and prospect_domain != domain:
+                    prospects.append(BacklinkProspect(
+                        domain=prospect_domain,
+                        domain_authority=40.0,
+                        relevance_score=0.70,
+                        spam_score=0.02,
+                        source="searxng_discovery",
+                    ))
+            return prospects
+        except Exception as e:
+            logger.warning("searxng_prospecting_failed_falling_back", error=str(e))
+            return []
+
+    async def get_serp_data(self, keyword: str, geo: str = "us") -> dict[str, Any]:
+        """
+        Queries SearXNG and formats response into standardized organic snapshots.
+        """
+        try:
+            resp = await self.client.search(query=keyword)
+            organic = []
+            for item in resp.results:
+                organic.append({
+                    "title": item.title,
+                    "url": item.url,
+                    "snippet": item.content,
+                    "position": item.position,
+                })
+            return {
+                "keyword": keyword,
+                "success": True,
+                "provider": "searxng",
+                "organic_results": organic,
+                "features_present": ["organic"],
+                "total_organic_count": len(organic),
+            }
+        except Exception as e:
+            return {"keyword": keyword, "success": False, "error": str(e)}
+
+
+# ---------------------------------------------------------------------------
 # Provider Registry
 # ---------------------------------------------------------------------------
 class SEOProviderRegistry:
@@ -319,6 +390,7 @@ seo_provider_registry = SEOProviderRegistry()
 seo_provider_registry.register(SimulatedSEOProvider())
 seo_provider_registry.register(DataForSEOProvider())
 seo_provider_registry.register(ScraplingSEOProvider())
+seo_provider_registry.register(SearXNGSEOProvider())
 
 
 def get_seo_provider() -> SEODataProvider:
