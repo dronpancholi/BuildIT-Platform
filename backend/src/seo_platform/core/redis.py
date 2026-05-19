@@ -108,10 +108,18 @@ class TenantRedis:
         client = await self._client()
         return await client.expire(self._key(key), ttl)
 
-    async def hset(self, key: str, mapping: dict[str, Any]) -> int:
+    async def hset(
+        self,
+        key: str,
+        field: str | None = None,
+        value: Any = None,
+        mapping: dict[str, Any] | None = None,
+    ) -> int:
         """Set hash fields."""
         client = await self._client()
-        return await client.hset(self._key(key), mapping=mapping)
+        if mapping is not None:
+            return await client.hset(self._key(key), mapping=mapping)
+        return await client.hset(self._key(key), key=field, value=value)
 
     async def hget(self, key: str, field: str) -> str | None:
         """Get a hash field."""

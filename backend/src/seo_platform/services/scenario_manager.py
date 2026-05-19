@@ -71,6 +71,7 @@ SCENARIOS: dict[str, dict[str, Any]] = {
 }
 
 
+class ScenarioManager:
     async def load_scenario(
         self, tenant_id: UUID, name: str,
     ) -> dict[str, Any]:
