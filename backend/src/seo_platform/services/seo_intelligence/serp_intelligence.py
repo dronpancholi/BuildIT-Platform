@@ -17,6 +17,7 @@ import orjson
 from pydantic import BaseModel, Field
 
 from seo_platform.core.logging import get_logger
+from seo_platform.providers.seo import get_seo_provider
 
 logger = get_logger(__name__)
 
@@ -225,9 +226,7 @@ class SERPIntelligenceEngine:
         result = SERPIntentAndEEATAnalysis(keyword=keyword)
 
         try:
-            from seo_platform.clients.dataforseo import dataforseo_client
-
-            snapshot = await dataforseo_client.get_serp_snapshot(keyword)
+            snapshot = await self._fetch_serp_snapshot(keyword)
 
             top_results: list[dict[str, Any]] = []
             for task in snapshot.get("tasks", []):
@@ -323,9 +322,7 @@ class SERPIntelligenceEngine:
         result = SERPFeatureAnalysis(keyword=keyword, geo=geo)
 
         try:
-            from seo_platform.clients.dataforseo import dataforseo_client
-
-            snapshot = await dataforseo_client.get_serp_snapshot(keyword)
+            snapshot = await self._fetch_serp_snapshot(keyword)
 
             features: dict[str, dict[str, Any]] = {
                 "featured_snippet": {"present": False, "confidence": 0.0, "details": {}},
@@ -452,9 +449,7 @@ class SERPIntelligenceEngine:
         result = PAAAnalysis(keyword=keyword, geo=geo)
 
         try:
-            from seo_platform.clients.dataforseo import dataforseo_client
-
-            snapshot = await dataforseo_client.get_serp_snapshot(keyword)
+            snapshot = await self._fetch_serp_snapshot(keyword)
 
             raw_questions: list[str] = []
             for task in snapshot.get("tasks", []):
@@ -556,9 +551,7 @@ class SERPIntelligenceEngine:
         logger.info("capturing_serp_snapshot", keyword=keyword, geo=geo, tenant_id=str(tenant_id))
 
         try:
-            from seo_platform.clients.dataforseo import dataforseo_client
-
-            snapshot = await dataforseo_client.get_serp_snapshot(keyword)
+            snapshot = await self._fetch_serp_snapshot(keyword)
 
             top_10: list[SERPSnapshotResult] = []
             features_present: list[str] = []
@@ -733,10 +726,8 @@ class SERPIntelligenceEngine:
         result = SERPOverlapAnalysis(keyword_a=keyword_a, keyword_b=keyword_b)
 
         try:
-            from seo_platform.clients.dataforseo import dataforseo_client
-
-            snap_a = await dataforseo_client.get_serp_snapshot(keyword_a)
-            snap_b = await dataforseo_client.get_serp_snapshot(keyword_b)
+            snap_a = await self._fetch_serp_snapshot(keyword_a)
+            snap_b = await self._fetch_serp_snapshot(keyword_b)
 
             urls_a: set[str] = set()
             urls_b: set[str] = set()
@@ -793,13 +784,11 @@ class SERPIntelligenceEngine:
         kw_list = keywords or []
 
         try:
-            from seo_platform.clients.dataforseo import dataforseo_client
-
             for competitor in competitors:
                 shared_keywords: list[str] = []
 
                 for kw in kw_list:
-                    snapshot = await dataforseo_client.get_serp_snapshot(kw)
+                    snapshot = await self._fetch_serp_snapshot(kw)
                     target_found = False
                     comp_found = False
 
@@ -842,8 +831,6 @@ class SERPIntelligenceEngine:
         report = SERPDominanceReport(domain=domain)
 
         try:
-            from seo_platform.clients.dataforseo import dataforseo_client
-
             entries: list[KeywordDominanceEntry] = []
             total_pos = 0
             ranked_count = 0
@@ -852,7 +839,7 @@ class SERPIntelligenceEngine:
             snippet_count = 0
 
             for keyword in keywords:
-                snapshot = await dataforseo_client.get_serp_snapshot(keyword)
+                snapshot = await self._fetch_serp_snapshot(keyword)
                 entry = KeywordDominanceEntry(keyword=keyword)
                 found = False
 
@@ -909,6 +896,38 @@ class SERPIntelligenceEngine:
     # ------------------------------------------------------------------
     # Static helpers
     # ------------------------------------------------------------------
+    @staticmethod
+    async def _fetch_serp_snapshot(keyword: str) -> dict[str, Any]:
+        """
+        Fetch SERP snapshot with fallback chain:
+        1. DataForSEO primary
+        2. Active provider registry fallback (Scrapling, SearXNG, etc.)
+        """
+        try:
+            from seo_platform.clients.dataforseo import dataforseo_client
+            return await self._fetch_serp_snapshot(keyword)
+        except Exception as e:
+            logger.warning("dataforseo_serp_failed_trying_registry", keyword=keyword, error=str(e))
+            try:
+                provider = get_seo_provider()
+                serp_data = await provider.get_serp_data(keyword)
+                if serp_data.get("success"):
+                    organic = serp_data.get("organic_results", [])
+                    items = []
+                    for item in organic:
+                        items.append({
+                            "rank_absolute": item.get("position", 0),
+                            "url": item.get("url", ""),
+                            "title": item.get("title", ""),
+                            "description": item.get("snippet", ""),
+                            "type": "organic",
+                        })
+                    return {"tasks": [{"result": [{"items": items}]}]}
+                return {"tasks": [{"result": [{"items": []}]}]}
+            except Exception as fallback_error:
+                logger.warning("serp_provider_fallback_also_failed", error=str(fallback_error))
+                return {"tasks": [{"result": [{"items": []}]}]}
+
     @staticmethod
     def _extract_domain(url: str) -> str:
         """Extract domain from a URL."""

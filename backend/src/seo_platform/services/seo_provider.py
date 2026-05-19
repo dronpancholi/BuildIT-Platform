@@ -1,45 +1,26 @@
 """
 SEO Platform — SEO Provider Abstraction
 ========================================
-Enterprise abstraction layer that toggles between high-fidelity paid APIs
-(DataForSEO) and zero-cost local scraping engines.
+DEPRECATED — Use seo_platform.providers.seo instead.
+
+This module is kept for backward compatibility and redirects to the unified
+provider registry in seo_platform.providers.seo.
 """
 
-from abc import ABC, abstractmethod
-from typing import Any
+from __future__ import annotations
 
-from seo_platform.config import get_settings
+import warnings
+
 from seo_platform.core.logging import get_logger
 
 logger = get_logger(__name__)
 
-class SEOProvider(ABC):
-    @abstractmethod
-    async def get_serp(self, query: str) -> list[Any]:
-        pass
+warnings.warn(
+    "seo_platform.services.seo_provider is deprecated. "
+    "Use seo_platform.providers.seo.get_seo_provider() instead.",
+    DeprecationWarning,
+    stacklevel=2,
+)
+logger.warning("deprecated_module_accessed", module="seo_platform.services.seo_provider")
 
-class DataForSEOProvider(SEOProvider):
-    """PRODUCTION: Real DataForSEO API integration."""
-    async def get_serp(self, query: str) -> list[Any]:
-        logger.info("dataforseo_api_call", query=query)
-        # Real production logic would go here
-        return []
-
-class ScraperSEOProvider(SEOProvider):
-    """ZERO-COST: Local Playwright-based scraping."""
-    async def get_serp(self, query: str) -> list[Any]:
-        from seo_platform.services.scraping.engines.seo import seo_scraper
-        return await seo_scraper.get_serp(query)
-
-def get_seo_provider() -> SEOProvider:
-    """
-    Factory to inject the correct provider based on environment settings.
-    Preserves production code while allowing zero-cost local development.
-    """
-    settings = get_settings()
-    if settings.use_mock_providers:
-        logger.warning("using_mock_seo_provider", mode="zero-cost")
-        return ScraperSEOProvider()
-
-    logger.info("using_production_seo_provider")
-    return DataForSEOProvider()
+from seo_platform.providers.seo import get_seo_provider  # noqa: E402, F401

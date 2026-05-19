@@ -27,6 +27,7 @@ from pydantic import BaseModel, Field
 from temporalio import activity, workflow
 
 from seo_platform.core.logging import get_logger
+from seo_platform.providers.seo import get_seo_provider
 from seo_platform.workflows import RetryPreset, TaskQueue
 
 logger = get_logger(__name__)
@@ -127,7 +128,25 @@ async def discover_prospects_activity(
             logger.warning("ahrefs_rate_limited", domain=domain)
             raise
         except Exception as e:
-            logger.warning("ahrefs_failed_for_domain", domain=domain, error=str(e))
+            logger.warning("ahrefs_failed_for_domain_trying_registry", domain=domain, error=str(e))
+            try:
+                provider = get_seo_provider()
+                registry_prospects = await provider.discover_backlink_prospects(domain, limit=20)
+                for rp in registry_prospects:
+                    dom = rp.domain
+                    if dom and dom not in seen_domains:
+                        seen_domains.add(dom)
+                        prospects.append({
+                            "domain": dom,
+                            "url": f"https://{dom}/",
+                            "source_competitor": domain,
+                            "domain_rating": rp.domain_authority,
+                            "relevance_score": rp.relevance_score,
+                            "spam_score": rp.spam_score,
+                            "source": rp.source,
+                        })
+            except Exception as reg_err:
+                logger.warning("registry_prospecting_failed", error=str(reg_err))
 
     if not prospects and competitor_domains:
         logger.info("ahrefs_returned_no_prospects_trying_link_intersect")
@@ -163,7 +182,21 @@ async def score_prospects_activity(
 
     for prospect in prospects:
         try:
-            metrics = await ahrefs_client.get_domain_metrics(prospect["domain"])
+            try:
+                metrics = await ahrefs_client.get_domain_metrics(prospect["domain"])
+            except Exception as e:
+                logger.warning("ahrefs_metrics_failed_trying_registry", domain=prospect.get("domain"), error=str(e))
+                try:
+                    provider = get_seo_provider()
+                    da = await provider.get_domain_authority(prospect["domain"])
+                    metrics = {
+                        "domain_rating": da.authority,
+                        "ref_domains": da.referring_domains,
+                        "backlinks": da.backlinks,
+                        "organic_traffic": da.organic_traffic,
+                    }
+                except Exception:
+                    metrics = {"domain_rating": 0, "ref_domains": 0, "backlinks": 0, "organic_traffic": 0}
             dr = metrics.get("domain_rating", 0)
             ref_domains = metrics.get("ref_domains", 0)
             backlinks = metrics.get("backlinks", 0)

@@ -15,6 +15,7 @@ from typing import Any
 from pydantic import BaseModel, Field
 
 from seo_platform.clients.scrapling_cache import ScraplingCache
+from seo_platform.clients.trafilatura import TrafilaturaClient
 
 logger = logging.getLogger(__name__)
 
@@ -72,8 +73,12 @@ class ScraplingClient:
             title = fetcher.get_title()
             html = fetcher.text
 
-            paragraphs = fetcher.css("p::text").all()
-            text_content = "\n".join(p.strip() for p in paragraphs if p.strip())
+            try:
+                tra_res = await TrafilaturaClient.extract(html, url=url)
+                text_content = tra_res.markdown_content
+            except Exception:
+                paragraphs = fetcher.css("p::text").all()
+                text_content = "\n".join(p.strip() for p in paragraphs if p.strip())
 
             links = fetcher.css("a::attr(href)").all()
             outbound_links = list(set(l for l in links if isinstance(l, str) and l.startswith("http")))
