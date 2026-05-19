@@ -5,7 +5,7 @@
 # ============================================================================
 
 # --- Stage 1: Builder ---
-FROM python:3.12-slim as builder
+FROM python:3.12-slim AS builder
 
 WORKDIR /app
 
@@ -17,6 +17,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 
 # Install Python dependencies
 COPY pyproject.toml .
+COPY src/ src/
 RUN pip install --no-cache-dir --upgrade pip && \
     pip install --no-cache-dir .
 
@@ -56,5 +57,5 @@ HEALTHCHECK --interval=30s --timeout=10s --start-period=15s --retries=3 \
 # Expose port
 EXPOSE 8000
 
-# Default command: run API server
-CMD ["uvicorn", "seo_platform.main:app", "--host", "0.0.0.0", "--port", "8000", "--workers", "4"]
+# Default command: run API server (workers via env var, defaults to 1 for in-memory state safety)
+CMD uvicorn seo_platform.main:app --host 0.0.0.0 --port 8000 --workers ${UVICORN_WORKERS:-1}

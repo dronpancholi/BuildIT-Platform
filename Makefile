@@ -145,8 +145,29 @@ dev-frontend: ## Run frontend dev server
 # ---------------------------------------------------------------------------
 # Docker
 # ---------------------------------------------------------------------------
-docker-build: ## Build all service Docker images
+docker-build: ## Build all Docker images (infra + app)
 	docker compose -f $(INFRA_DIR)/docker/docker-compose.yml build
+
+deploy-up: ## Full production deployment (infra + app + nginx)
+	export DOMAIN=$(DOMAIN); \
+	docker compose -f $(INFRA_DIR)/docker/docker-compose.yml \
+	               -f $(INFRA_DIR)/docker/docker-compose.prod.yml up -d --build
+	@echo "✅ Production stack started"
+	@echo "   Frontend: http://localhost"
+	@echo "   API:      http://localhost/api/v1/docs"
+	@echo "   Set DOMAIN env var for HTTPS-ready config"
+
+deploy-down: ## Stop production deployment
+	docker compose -f $(INFRA_DIR)/docker/docker-compose.yml \
+	               -f $(INFRA_DIR)/docker/docker-compose.prod.yml down
+
+deploy-logs: ## Tail production logs
+	docker compose -f $(INFRA_DIR)/docker/docker-compose.yml \
+	               -f $(INFRA_DIR)/docker/docker-compose.prod.yml logs -f
+
+deploy-reset: ## Full production reset (wipes all data)
+	docker compose -f $(INFRA_DIR)/docker/docker-compose.yml \
+	               -f $(INFRA_DIR)/docker/docker-compose.prod.yml down -v
 
 # ---------------------------------------------------------------------------
 # Cleanup
