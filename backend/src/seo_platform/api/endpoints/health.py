@@ -11,7 +11,11 @@ import os
 import time
 from datetime import UTC, datetime
 
+import logging
+
 from fastapi import APIRouter
+
+logger = logging.getLogger(__name__)
 
 from seo_platform.config import get_settings
 from seo_platform.schemas import ComponentHealth, HealthResponse, HealthStatus
@@ -65,7 +69,7 @@ async def health_check() -> HealthResponse:
             message=f"Environment: {settings.app_env.value}, Version: {settings.app_version}",
         )
     except Exception:
-        pass
+        logger.exception("Failed to emit infra event during health check")
 
     return HealthResponse(
         status=overall,

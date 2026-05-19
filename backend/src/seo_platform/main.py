@@ -123,25 +123,25 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
         from seo_platform.core.database import close_database
         await close_database()
     except Exception:
-        pass
+        logger.exception("close_database failed during shutdown")
 
     try:
         from seo_platform.core.redis import close_redis
         await close_redis()
     except Exception:
-        pass
+        logger.exception("close_redis failed during shutdown")
 
     try:
         if _event_publisher:
             await _event_publisher.stop()
     except Exception:
-        pass
+        logger.exception("event_publisher.stop failed during shutdown")
 
     try:
         from seo_platform.llm.gateway import llm_gateway
         await llm_gateway.close()
     except Exception:
-        pass
+        logger.exception("llm_gateway.close failed during shutdown")
 
     logger.info("platform_shutdown_complete")
 
