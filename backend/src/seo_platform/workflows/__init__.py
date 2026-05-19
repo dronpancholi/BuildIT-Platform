@@ -213,8 +213,10 @@ async def enrich_business_profile(
 
 
 @activity.defn(name="discover_competitors")
-async def discover_competitors(domain: str) -> list[str]:
+async def discover_competitors(tenant_id: str, domain: str) -> list[str]:
     """Discover competitors via DataForSEO or LLM inference."""
+    from uuid import UUID
+
     logger.info("discovering_competitors", domain=domain)
     try:
         from seo_platform.clients.dataforseo import dataforseo_client
@@ -244,7 +246,7 @@ async def discover_competitors(domain: str) -> list[str]:
             task_type=TaskType.SEO_ANALYSIS,
             prompt=prompt,
             output_schema=list,
-            tenant_id=None,
+            tenant_id=UUID(tenant_id),
         )
         if isinstance(result.content, list):
             return result.content[:10]
@@ -283,67 +285,36 @@ async def save_onboarding_results(tenant_id: str, client_id: str, profile_data: 
 
 
 @activity.defn(name="generate_keyword_ideas")
-async def generate_keyword_ideas(seed_keywords: list[str], domain: str) -> list[dict[str, Any]]:
-    """Generate keyword ideas using NVIDIA NIM LLMs."""
-    import httpx
+async def generate_keyword_ideas(tenant_id: str, seed_keywords: list[str], domain: str) -> list[dict[str, Any]]:
+    """Generate keyword ideas using LLM gateway."""
+    from uuid import UUID
 
-    from seo_platform.config import get_settings
+    from seo_platform.llm.gateway import RenderedPrompt, TaskType, llm_gateway
 
-    settings = get_settings()
+    prompt = RenderedPrompt(
+        template_id="keyword_ideas",
+        system_prompt=(
+            "Generate 10 high-value SEO keyword ideas for a given domain based on seed keywords. "
+            "For each keyword, provide: keyword string, estimated search volume (integer), "
+            "keyword difficulty (float 0.0 to 1.0), and search intent (informational, navigational, "
+            "transactional, commercial). Return ONLY a JSON array of objects."
+        ),
+        user_prompt=f"Domain: {domain}, Seeds: {seed_keywords}",
+    )
 
-    prompt = f"""
-    Generate 10 high-value SEO keyword ideas for the domain '{domain}' based on these seeds: {seed_keywords}.
-    For each keyword, provide:
-    1. The keyword string
-    2. Estimated search volume (integer)
-    3. Keyword difficulty (float 0.0 to 1.0)
-    4. Search intent (informational, navigational, transactional, commercial)
-    
-    Return ONLY a JSON array of objects.
-    """
-
-    async with httpx.AsyncClient() as client:
-        response = await client.post(
-            f"{settings.nvidia.api_url}/chat/completions",
-            headers={"Authorization": f"Bearer {settings.nvidia.api_key}"},
-            json={
-                "model": settings.nvidia.seo_model,
-                "messages": [{"role": "user", "content": prompt}],
-                "temperature": 0.2,
-                "max_tokens": 1024,
-                "stream": False
-            },
-            timeout=30.0
+    try:
+        result = await llm_gateway.complete(
+            task_type=TaskType.SEO_ANALYSIS,
+            prompt=prompt,
+            output_schema=list,
+            tenant_id=UUID(tenant_id),
         )
+        if isinstance(result.content, list):
+            return result.content[:10]
+    except Exception as e:
+        logger.warning("llm_keyword_ideas_failed", domain=domain, error=str(e))
 
-        try:
-            import json
-            if response.status_code != 200:
-                logger.error(f"AI API Error: {response.status_code} - {response.text}")
-                raise RuntimeError(f"NIM API returned {response.status_code}")
-
-            result = response.json()
-            data = result.get("content") or result.get("data") or result
-            if isinstance(data, str):
-                content = data
-            else:
-                content = result["choices"][0]["message"]["content"]
-
-            import re
-            json_match = re.search(r"(\[.*\]|\{.*\})", content, re.DOTALL)
-            if json_match:
-                content = json_match.group(1)
-
-            parsed = json.loads(content)
-            if isinstance(parsed, dict):
-                for val in parsed.values():
-                    if isinstance(val, list):
-                        return val
-                return [parsed]
-            return parsed
-        except Exception as e:
-            logger.error(f"Failed to parse AI response: {e!s}")
-            return [{"keyword": f"{s} strategy", "volume": 1200, "difficulty": 0.45, "intent": "informational"} for s in seed_keywords]
+    return [{"keyword": f"{s} strategy", "volume": 1200, "difficulty": 0.45, "intent": "informational"} for s in seed_keywords]
 
 
 # Workflow Definition
@@ -393,7 +364,7 @@ class OnboardingWorkflow:
         # Step 3: Discover competitors
         competitors = await workflow.execute_activity(
             discover_competitors,
-            args=[input_data.domain],
+            args=[str(input_data.tenant_id), input_data.domain],
             task_queue=TaskQueue.ONBOARDING,
             start_to_close_timeout=timedelta(minutes=5),
             retry_policy=RetryPreset.EXTERNAL_API,

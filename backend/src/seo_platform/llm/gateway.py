@@ -287,7 +287,7 @@ class LLMGateway:
         self,
         task_type: TaskType,
         prompt: RenderedPrompt,
-        output_schema: type[BaseModel],
+        output_schema: type[BaseModel] | type[dict] | type[list],
         tenant_id: UUID,
         use_cache: bool = True,
         temperature: float | None = None,
@@ -398,7 +398,11 @@ class LLMGateway:
         # Validation + Automated Repair Loop
         try:
             content_text = self._normalize_json_keys(content_text)
-            validated = output_schema.model_validate_json(content_text)
+            if output_schema in (dict, list):
+                import json
+                validated = json.loads(content_text)
+            else:
+                validated = output_schema.model_validate_json(content_text)
         except Exception as validation_error:
             logger.warning(
                 "nim_schema_repair",
@@ -508,21 +512,30 @@ class LLMGateway:
         except httpx.HTTPStatusError as e:
             raise LLMError(f"NIM API error: {e.response.status_code}")
 
-    async def _repair_and_retry(self, model_id: str, original_prompt: RenderedPrompt,
-                                 schema: type[BaseModel], raw_output: str, error: str) -> BaseModel:
+    async def _repair_and_retry(
+        self,
+        model_id: str,
+        original_prompt: RenderedPrompt,
+        schema: type[BaseModel] | type[dict] | type[list],
+        raw_output: str,
+        error: str,
+    ) -> BaseModel | dict | list:
         repair_prompt = RenderedPrompt(
             template_id="schema_repair",
             system_prompt="You are a JSON repair assistant. Return ONLY valid JSON.",
             user_prompt=(
                 f"Original output: {raw_output[:2000]}\n\n"
                 f"Validation error: {error}\n\n"
-                f"Required schema: {orjson.dumps(schema.model_json_schema()).decode()}\n\n"
+                + (f"Required schema: {orjson.dumps(schema.model_json_schema()).decode()}\n\n" if schema not in (dict, list) else "")
             ),
         )
         settings = get_settings()
         raw = await self._call_nim_api(model_id, repair_prompt, temperature=0.1,
                                         max_tokens=settings.nvidia.default_max_tokens)
         content = raw["choices"][0]["message"]["content"]
+        if schema in (dict, list):
+            import json
+            return json.loads(content)
         return schema.model_validate_json(content)
 
     async def close(self) -> None:

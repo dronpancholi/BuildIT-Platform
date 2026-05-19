@@ -225,7 +225,8 @@ async def init_database() -> None:
     async with engine.begin() as conn:
         # Verify connectivity
         result = await conn.execute(text("SELECT 1"))
-        assert result.scalar() == 1
+        if result.scalar() != 1:
+            raise RuntimeError("Database connectivity check failed")
     logger.info("database_initialized")
 
 

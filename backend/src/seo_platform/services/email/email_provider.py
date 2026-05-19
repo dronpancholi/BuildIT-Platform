@@ -62,7 +62,8 @@ class EmailDispatchResult:
     error: str = ""
 
 
-_circuit = CircuitBreaker("email_provider", failure_threshold=5, recovery_timeout=30)
+_mailgun_circuit = CircuitBreaker("mailgun_provider", failure_threshold=5, recovery_timeout=30)
+_resend_circuit = CircuitBreaker("resend_provider", failure_threshold=5, recovery_timeout=30)
 
 
 class MailgunClient:
@@ -99,7 +100,7 @@ class MailgunClient:
             "v:X-BuildIT-Thread-ID": msg.thread_id,
         }
         try:
-            resp = await _circuit.call(client.post, "/messages", data=data)
+            resp = await _mailgun_circuit.call(client.post, "/messages", data=data)
             if resp.status_code == 429:
                 raise EmailRateLimitError("Mailgun rate limited")
             if resp.status_code in (401, 402, 403):
@@ -153,7 +154,7 @@ class ResendClient:
             },
         }
         try:
-            resp = await _circuit.call(client.post, "/emails", json=payload)
+            resp = await _resend_circuit.call(client.post, "/emails", json=payload)
             if resp.status_code == 429:
                 raise EmailRateLimitError("Resend rate limited")
             if resp.status_code in (401, 403):
@@ -173,7 +174,7 @@ class ResendClient:
     async def verify_dns(self, domain: str) -> dict[str, Any]:
         """Verify SPF, DKIM, DMARC for a domain via Resend."""
         client = await self._get_client()
-        resp = await _circuit.call(client.get, f"/domains/{domain}")
+        resp = await _resend_circuit.call(client.get, f"/domains/{domain}")
         if resp.status_code in (401, 403):
             raise EmailAuthError("Resend auth failed")
         resp.raise_for_status()
@@ -182,7 +183,7 @@ class ResendClient:
     async def warmup_status(self, domain: str) -> dict[str, Any]:
         """Get daily sending limit and reputation."""
         client = await self._get_client()
-        resp = await _circuit.call(client.get, f"/domains/{domain}/daily")
+        resp = await _resend_circuit.call(client.get, f"/domains/{domain}/daily")
         if resp.status_code in (401, 403):
             raise EmailAuthError("Resend auth failed")
         resp.raise_for_status()
