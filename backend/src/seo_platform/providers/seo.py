@@ -17,6 +17,36 @@ from seo_platform.clients.scrapling_cache import ScraplingCache
 from seo_platform.clients.searxng import SearXNGClient
 from seo_platform.core.logging import get_logger
 
+
+def calculate_local_authority(domain: str, ext_links_count: int = 0) -> float:
+    """
+    Local heuristic calculation for Domain Authority when APIs are unavailable.
+    Factors in domain length, extension trust (TLD weighting), and outbound link profiles.
+    """
+    base = 15.0
+
+    tld = domain.split(".")[-1].lower()
+    tld_weights: dict[str, float] = {
+        "edu": 35.0,
+        "gov": 40.0,
+        "org": 10.0,
+        "com": 5.0,
+        "net": 3.0,
+        "io": 5.0,
+        "info": -5.0,
+        "xyz": -10.0,
+        "biz": -5.0,
+    }
+    base += tld_weights.get(tld, 0.0)
+
+    base += min(35.0, ext_links_count * 1.5)
+
+    name_only = domain.split(".")[0]
+    length_bonus = max(0.0, 15.0 - len(name_only))
+    base += length_bonus
+
+    return max(10.0, min(95.0, base))
+
 logger = get_logger(__name__)
 
 
@@ -190,20 +220,43 @@ class ScraplingSEOProvider(SEODataProvider):
         return await SimulatedSEOProvider().get_keyword_metrics(keywords)
 
     async def get_domain_authority(self, domain: str) -> DomainAuthority:
+        from seo_platform.clients.openpagerank import OpenPageRankClient
+
+        try:
+            opr = OpenPageRankClient()
+            resp = await opr.get_domain_ranks([domain])
+            if resp.response and resp.response[0].status == "success":
+                val = resp.response[0].page_rank_decimal * 10.0
+                return DomainAuthority(
+                    domain=domain,
+                    authority=val,
+                    trust=val * 0.85,
+                    referring_domains=int(resp.response[0].rank) if resp.response[0].rank.isdigit() else 0,
+                    source="openpagerank_api",
+                )
+        except Exception as e:
+            logger.debug("openpagerank_lookup_failed_using_local_heuristics", error=str(e))
+
         try:
             res = await self.client.fetch(f"https://{domain}")
             ext_links = [l for l in res.outbound_links if domain not in l]
-            authority = min(90.0, max(10.0, 15.0 + len(ext_links) * 1.5))
+            local_da = calculate_local_authority(domain, len(ext_links))
             return DomainAuthority(
                 domain=domain,
-                authority=authority,
-                trust=authority * 0.8,
+                authority=local_da,
+                trust=local_da * 0.8,
                 referring_domains=len(ext_links),
                 backlinks=len(res.outbound_links),
-                source="scrapling_crawled",
+                source="local_heuristics_crawled",
             )
         except Exception:
-            return await SimulatedSEOProvider().get_domain_authority(domain)
+            local_da = calculate_local_authority(domain, 0)
+            return DomainAuthority(
+                domain=domain,
+                authority=local_da,
+                trust=local_da * 0.8,
+                source="local_heuristics_static",
+            )
 
     async def discover_backlink_prospects(self, domain: str, limit: int = 20) -> list[BacklinkProspect]:
         """
@@ -297,7 +350,30 @@ class SearXNGSEOProvider(SEODataProvider):
         return await SimulatedSEOProvider().get_keyword_metrics(keywords)
 
     async def get_domain_authority(self, domain: str) -> DomainAuthority:
-        return await SimulatedSEOProvider().get_domain_authority(domain)
+        from seo_platform.clients.openpagerank import OpenPageRankClient
+
+        try:
+            opr = OpenPageRankClient()
+            resp = await opr.get_domain_ranks([domain])
+            if resp.response and resp.response[0].status == "success":
+                val = resp.response[0].page_rank_decimal * 10.0
+                return DomainAuthority(
+                    domain=domain,
+                    authority=val,
+                    trust=val * 0.85,
+                    referring_domains=int(resp.response[0].rank) if resp.response[0].rank.isdigit() else 0,
+                    source="openpagerank_api",
+                )
+        except Exception as e:
+            logger.debug("openpagerank_lookup_failed_using_local_heuristics", error=str(e))
+
+        local_da = calculate_local_authority(domain, 0)
+        return DomainAuthority(
+            domain=domain,
+            authority=local_da,
+            trust=local_da * 0.8,
+            source="local_heuristics_static",
+        )
 
     async def discover_backlink_prospects(self, domain: str, limit: int = 20) -> list[BacklinkProspect]:
         """
