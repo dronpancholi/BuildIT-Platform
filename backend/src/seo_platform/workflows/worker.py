@@ -99,15 +99,9 @@ async def run_worker(task_queue: str | None = None) -> None:
 
     workflows, activities = get_workflows_and_activities(queue)
 
-    # Configure sandbox to allow structlog (uses threading.Lock but is safe for logging)
-    base_restrictions = SandboxRestrictions.default
-    custom_restrictions = SandboxRestrictions(
-        passthrough_modules=base_restrictions.passthrough_modules | {"structlog"},
-        invalid_modules=base_restrictions.invalid_modules,
-        invalid_module_members=base_restrictions.invalid_module_members,
-    )
-
-    workflow_runner = SandboxedWorkflowRunner(restrictions=custom_restrictions)
+    # Sandbox runner is disabled (UnsandboxedWorkflowRunner) for enterprise reliability and compatibility with Python 3.14+
+    from temporalio.worker import UnsandboxedWorkflowRunner
+    workflow_runner = UnsandboxedWorkflowRunner()
 
     worker = Worker(
         client,

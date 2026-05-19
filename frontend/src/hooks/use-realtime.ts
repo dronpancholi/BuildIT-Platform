@@ -398,23 +398,27 @@ function dispatchEvent(store: RealtimeStore, msg: SSEMessage): void {
       store.setConnected(true);
       const summary = parseSummary(payload);
       if (summary) {
-        store.setWorkflows(
-          Array.from({ length: summary.workflow_count }, (_, i) => ({
-            workflow_id: `placeholder-${i}`,
-            type: "",
-            status: "",
-            started_at: "",
-            task_queue: "",
-          })),
-        );
-        store.setWorkers(
-          Array.from({ length: summary.worker_count }, (_, i) => ({
-            worker_id: `placeholder-${i}`,
-            task_queue: "",
-            last_heartbeat: "",
-            status: "",
-          })),
-        );
+        if (store.workflows.length === 0 || store.workflows[0]?.workflow_id.startsWith("placeholder-")) {
+          store.setWorkflows(
+            Array.from({ length: summary.workflow_count }, (_, i) => ({
+              workflow_id: `placeholder-${i}`,
+              type: "",
+              status: "running",
+              started_at: "",
+              task_queue: "",
+            })),
+          );
+        }
+        if (store.workers.length === 0 || store.workers[0]?.worker_id.startsWith("placeholder-")) {
+          store.setWorkers(
+            Array.from({ length: summary.worker_count }, (_, i) => ({
+              worker_id: `placeholder-${i}`,
+              task_queue: "",
+              last_heartbeat: "",
+              status: "active",
+            })),
+          );
+        }
         store.setInfrastructure(summary.infra_health);
         store.setQueues(summary.queue_depths);
       }

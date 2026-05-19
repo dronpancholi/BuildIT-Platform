@@ -300,15 +300,22 @@ class OperationalStateService:
             self._infra_health["kafka"] = f"unhealthy: {str(e)[:50]}"
 
     async def refresh_from_temporal(self) -> None:
-        """Full refresh: poll Temporal for active workflow state."""
+        """Full refresh: poll Temporal for active workflow state and workers."""
         from seo_platform.core.temporal_client import get_temporal_client
-        from temporalio.client import WorkflowExecutionStatus as WfStatus
+        from seo_platform.config import get_settings
+        from seo_platform.workflows import TaskQueue
+        from temporalio.api.workflowservice.v1 import DescribeTaskQueueRequest
+        from temporalio.api.taskqueue.v1 import TaskQueue as TempTaskQueue
+        from temporalio.api.enums.v1 import TaskQueueType
 
         try:
             client = await get_temporal_client()
+            settings = get_settings()
 
             new_workflows: dict[str, WorkflowStateEntry] = {}
+            new_workers: dict[str, WorkerStateEntry] = {}
 
+            # 1. Fetch running workflows
             async for wf in client.list_workflows(
                 query='ExecutionStatus IN ("Running")',
             ):
@@ -323,9 +330,40 @@ class OperationalStateService:
                     task_queue=task_queue,
                 )
 
+            # 2. Fetch active workers per task queue
+            queues = [
+                TaskQueue.ONBOARDING,
+                TaskQueue.AI_ORCHESTRATION,
+                TaskQueue.SEO_INTELLIGENCE,
+                TaskQueue.BACKLINK_ENGINE,
+                TaskQueue.COMMUNICATION,
+                TaskQueue.REPORTING,
+            ]
+            for q in queues:
+                try:
+                    desc = await client.workflow_service.describe_task_queue(
+                        DescribeTaskQueueRequest(
+                            namespace=settings.temporal.namespace,
+                            task_queue=TempTaskQueue(name=q),
+                            task_queue_type=TaskQueueType.TASK_QUEUE_TYPE_WORKFLOW,
+                        )
+                    )
+                    for poller in desc.pollers:
+                        worker_id = poller.identity
+                        new_workers[worker_id] = WorkerStateEntry(
+                            worker_id=worker_id,
+                            task_queue=q,
+                            last_heartbeat=datetime.now(UTC),
+                            status="active",
+                        )
+                except Exception as q_err:
+                    logger.warning("describe_queue_failed", queue=q, error=str(q_err))
+
             async with self._lock:
                 self._workflows.clear()
                 self._workflows.update(new_workflows)
+                self._workers.clear()
+                self._workers.update(new_workers)
         except Exception as e:
             logger.warning("temporal_refresh_failed", error=str(e))
 

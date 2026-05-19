@@ -442,9 +442,30 @@ class DistributedHardeningService:
             engine = get_engine()
             pool = engine.pool
 
-            active = getattr(pool, "size", 0) or 0
-            idle = getattr(pool, "checkedin", 0) or 0
-            max_conn = getattr(pool, "_max_overflow", 10) + (getattr(pool, "size", 20) or 20)
+            pool_size = getattr(pool, "size", 20)
+            if callable(pool_size):
+                pool_size = pool_size()
+            if not isinstance(pool_size, int):
+                pool_size = 20
+
+            checkedin = getattr(pool, "checkedin", 0)
+            if callable(checkedin):
+                checkedin = checkedin()
+            if not isinstance(checkedin, int):
+                checkedin = 0
+
+            checkedout = getattr(pool, "checkedout", 0)
+            if callable(checkedout):
+                checkedout = checkedout()
+            if not isinstance(checkedout, int):
+                checkedout = 0
+
+            active = checkedout
+            idle = checkedin
+            max_overflow = getattr(pool, "_max_overflow", 10)
+            if not isinstance(max_overflow, int):
+                max_overflow = 10
+            max_conn = max_overflow + pool_size
             dead = 0
 
             async with engine.connect() as conn:

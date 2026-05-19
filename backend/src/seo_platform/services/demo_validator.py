@@ -56,17 +56,24 @@ class DemoReadinessValidator:
 
     async def _check_temporal(self) -> dict[str, Any]:
         try:
+            import asyncio
             from seo_platform.config import get_settings
+            from temporalio.client import Client
 
             settings = get_settings()
-            temporal_host = getattr(settings, "temporal_host", None) or getattr(
-                settings, "TEMPORAL_HOST", None
-            )
-            if not temporal_host:
-                return {"healthy": True, "message": "Temporal not configured — skipping"}
-            return {"healthy": True, "message": f"Temporal host configured: {temporal_host}"}
+            target = settings.temporal.target
+
+            try:
+                # Attempt to connect to Temporal with a short timeout to see if it is running
+                client = await asyncio.wait_for(
+                    Client.connect(target, namespace=settings.temporal.namespace),
+                    timeout=2.0
+                )
+                return {"healthy": True, "message": f"Temporal connection OK at {target}"}
+            except Exception as conn_err:
+                return {"healthy": False, "message": f"Temporal server unreachable at {target}: {conn_err}"}
         except Exception as e:
-            return {"healthy": False, "message": f"Temporal error: {e}"}
+            return {"healthy": False, "message": f"Temporal config error: {e}"}
 
     async def _check_demo_data(self) -> dict[str, Any]:
         try:
