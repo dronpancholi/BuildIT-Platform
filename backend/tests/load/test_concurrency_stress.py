@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import asyncio
 import time
+from datetime import timedelta
 from uuid import UUID
 
 import pytest
@@ -36,7 +37,7 @@ async def _simulate_workflow_burst(
                 id=f"stress-report-{tenant_id.hex[:8]}-{i:05d}",
                 task_queue="seo-platform-reporting",
             )
-            await handle.result(timeout=60)
+            await handle.result(rpc_timeout=timedelta(seconds=60))
         except Exception as exc:
             errors.append((i, str(exc)))
 
@@ -208,7 +209,7 @@ async def test_sustained_concurrency(
                         id=f"sustained-{load_tenant_id.hex[:8]}-{i:06d}",
                         task_queue="seo-platform-reporting",
                     )
-                    await handle.result(timeout=30)
+                    await handle.result(rpc_timeout=timedelta(seconds=30))
                 except Exception as exc:
                     errors.append((i, str(exc)))
 
