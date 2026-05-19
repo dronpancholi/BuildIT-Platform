@@ -274,7 +274,7 @@ class Settings(BaseSettings):
 
     # --- Application ---
     app_env: Environment = Environment.DEVELOPMENT
-    app_debug: bool = True
+    app_debug: bool = False
     app_log_level: LogLevel = LogLevel.DEBUG
     app_secret_key: str = "change-me-to-a-secure-random-string"
     app_name: str = "SEO Operations Platform"
@@ -314,7 +314,7 @@ class Settings(BaseSettings):
     email_webhook_signing_key: str = Field(default="", description="HMAC key for email webhook signature verification")
 
     # --- Operational Modes (Zero-Cost / Production Toggles) ---
-    use_mock_providers: bool = Field(default=True, description="Toggle between local scrapers and paid APIs")
+    use_mock_providers: bool = Field(default=False, description="Toggle between local scrapers and paid APIs")
     dev_auth_bypass: bool = Field(default=True, description="Bypass auth enforcement for local development")
     test_mode: bool = Field(default=False, description="Enable deterministic test behaviors")
 

@@ -28,20 +28,15 @@ async def _get_temporal_workflows() -> dict[str, Any]:
 
     from seo_platform.config import get_settings
 
-    print("DEBUG: Starting _get_temporal_workflows", flush=True)
     settings = get_settings()
-    print(f"DEBUG: Settings loaded, target={settings.temporal.target}", flush=True)
     try:
-        print("DEBUG: Connecting to Temporal...", flush=True)
         client = await Client.connect(settings.temporal.target, namespace=settings.temporal.namespace)
-        print("DEBUG: Connected to Temporal", flush=True)
 
         workflow_types: dict[str, int] = {}
         status_counts: dict[str, int] = {}
         queue_workflows: dict[str, int] = {}
         count = 0
 
-        print("DEBUG: Listing workflows...", flush=True)
         async for wf in client.list_workflows():
             count += 1
             if count > 100:
@@ -52,8 +47,6 @@ async def _get_temporal_workflows() -> dict[str, Any]:
                 workflow_types[wf.workflow_type] = workflow_types.get(wf.workflow_type, 0) + 1
                 if wf.task_queue:
                     queue_workflows[wf.task_queue] = queue_workflows.get(wf.task_queue, 0) + 1
-
-        print(f"DEBUG: Listed {count} workflows, {status_counts.get('RUNNING', 0)} running", flush=True)
 
         return {
             "success": True,
@@ -66,11 +59,7 @@ async def _get_temporal_workflows() -> dict[str, Any]:
                 "timestamp": time.time(),
             },
         }
-    except Exception as e:
-        import traceback
-        tb = traceback.format_exc()
-        print(f"DEBUG: WORKFLOW LIST FAILED: {e}", flush=True)
-        print(f"DEBUG: TRACEBACK: {tb}", flush=True)
+    except Exception:
         return {
             "success": False,
             "error": str(e)[:200],
