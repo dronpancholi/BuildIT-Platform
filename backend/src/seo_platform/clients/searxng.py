@@ -12,7 +12,11 @@ from typing import Any
 import httpx
 from pydantic import BaseModel, Field
 
+from seo_platform.core.reliability import CircuitBreaker
+
 logger = logging.getLogger(__name__)
+
+_searxng_circuit_breaker = CircuitBreaker("searxng_client", failure_threshold=3, recovery_timeout=30)
 
 
 class SearXNGResultItem(BaseModel):
@@ -43,18 +47,21 @@ class SearXNGClient:
     async def search(self, query: str, engines: list[str] | None = None) -> SearXNGResponse:
         """
         Executes search queries against SearXNG and returns parsed results.
+        Wrapped in circuit breaker for resilience.
         """
-        params: dict[str, Any] = {
-            "q": query,
-            "format": "json",
-        }
-        if engines:
-            params["engines"] = ",".join(engines)
+        from seo_platform.api.endpoints.realtime.sse import emit_telemetry_event
 
-        url = f"{self.base_url}/search"
-        logger.info("searxng_query_initiated", url=url, query=query)
+        async def _do_search() -> SearXNGResponse:
+            params: dict[str, Any] = {
+                "q": query,
+                "format": "json",
+            }
+            if engines:
+                params["engines"] = ",".join(engines)
 
-        try:
+            url = f"{self.base_url}/search"
+            logger.info("searxng_query_initiated", url=url, query=query)
+
             async with httpx.AsyncClient(timeout=self.timeout) as client:
                 response = await client.get(url, params=params)
                 if response.status_code != 200:
@@ -80,6 +87,14 @@ class SearXNGClient:
                     results=parsed_items,
                     unresponsive_engines=data.get("unresponsive_engines", []),
                 )
+
+        from uuid import UUID
+        try:
+            await emit_telemetry_event(UUID(int=0), "searxng_search", {"query": query, "status": "started"})
+            result = await _searxng_circuit_breaker.call(_do_search)
+            await emit_telemetry_event(UUID(int=0), "searxng_search", {"query": query, "status": "completed"})
+            return result
         except Exception as e:
+            await emit_telemetry_event(UUID(int=0), "searxng_search", {"query": query, "status": "failed", "error": str(e)})
             logger.error("searxng_request_failed", query=query, error=str(e))
             raise RuntimeError(f"SearXNG search request failed: {e}")

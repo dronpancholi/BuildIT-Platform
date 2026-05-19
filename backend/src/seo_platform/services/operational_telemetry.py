@@ -129,7 +129,9 @@ class OperationalTelemetry:
         try:
             redis = await get_redis()
 
-            keys = await redis.keys("scraping:*")
+            scrapling_keys = await redis.keys("scrapling:*")
+            scraping_keys = await redis.keys("scraping:*")
+            keys = list(set(scrapling_keys + scraping_keys))
             metrics = {
                 "total_scrapes": 0,
                 "successful_scrapes": 0,
@@ -137,7 +139,7 @@ class OperationalTelemetry:
                 "cache_hits": 0,
             }
 
-            for key in keys[:100]:
+            for key in keys[:200]:
                 value = await redis.get(key)
                 if value:
                     try:

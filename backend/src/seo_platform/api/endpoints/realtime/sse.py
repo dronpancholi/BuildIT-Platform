@@ -357,6 +357,23 @@ async def emit_infra_event(status: str, component: str, message: str = ""):
     )
 
 
+async def emit_telemetry_event(tenant_id: UUID, telemetry_type: str, data: dict):
+    """Publish crawling, scraping, or processing metrics to subscribers."""
+    await sse_manager.broadcast(
+        {
+            "event_type": EVENT_TELEMETRY_UPDATE,
+            "channel": "telemetry",
+            "tenant_id": str(tenant_id),
+            "timestamp": datetime.now(UTC).isoformat(),
+            "payload": {
+                "telemetry_type": telemetry_type,
+                "data": data,
+            },
+        },
+        "telemetry",
+    )
+
+
 async def emit_event_lineage_update(
     tenant_id: str,
     event_type: str,

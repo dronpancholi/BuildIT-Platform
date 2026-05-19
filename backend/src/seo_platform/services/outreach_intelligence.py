@@ -780,6 +780,33 @@ class OutreachIntelligenceService:
     # ------------------------------------------------------------------
     # Entity & Social Graph Ingestion & Bespoke Pitching (Phase 7)
     # ------------------------------------------------------------------
+
+    BANNED_PITCH_WORDS: set[str] = {
+        "i noticed", "i stumbled", "i came across", "excellent article", "great post",
+        "wonderful content", "i recently read", "i just read", "i saw your",
+        "outstanding work", "impressive piece", "love your", "love the",
+    }
+
+    @staticmethod
+    def _enforce_pitch_quality(body: str) -> str:
+        """Post-generation sanitisation: banned words + sentence token clamp."""
+        for phrase in OutreachIntelligenceService.BANNED_PITCH_WORDS:
+            idx = body.lower().find(phrase)
+            if idx != -1:
+                body = body[:idx] + body[idx + len(phrase):]
+
+        sentences = body.replace("\n", " ").split(". ")
+        clamped = []
+        for sent in sentences:
+            tokens = sent.split()
+            if len(tokens) > 25:
+                sent = " ".join(tokens[:25])
+            clamped.append(sent)
+        return ". ".join(clamped).replace(" .", ".").replace("..", ".")
+
+    # ------------------------------------------------------------------
+    # Entity & Social Graph Ingestion & Bespoke Pitching (Phase 7)
+    # ------------------------------------------------------------------
     async def generate_humanized_bespoke_pitch(
         self, tenant_id: UUID, prospect_data: dict, client_context: dict,
     ) -> dict[str, Any]:
@@ -880,7 +907,7 @@ class OutreachIntelligenceService:
             content = llm_result.content
             return {
                 "subject_line": content.subject_line,
-                "body_content": content.body_content,
+                "body_content": self._enforce_pitch_quality(content.body_content),
                 "value_add_type": content.value_add_type,
                 "personalization_angle": content.personalization_angle,
                 "generation_source": "social_graph_bespoke_ai",
@@ -908,7 +935,7 @@ class OutreachIntelligenceService:
             )
             return {
                 "subject_line": fallback_subj,
-                "body_content": fallback_body,
+                "body_content": self._enforce_pitch_quality(fallback_body),
                 "value_add_type": "proprietary_data_charts",
                 "personalization_angle": "social_commentary_alignment",
                 "generation_source": "elite_deterministic_fallback",

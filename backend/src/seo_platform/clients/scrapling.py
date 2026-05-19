@@ -16,8 +16,11 @@ from pydantic import BaseModel, Field
 
 from seo_platform.clients.scrapling_cache import ScraplingCache
 from seo_platform.clients.trafilatura import TrafilaturaClient
+from seo_platform.core.reliability import CircuitBreaker
 
 logger = logging.getLogger(__name__)
+
+_scrapling_circuit_breaker = CircuitBreaker("scrapling_client", failure_threshold=3, recovery_timeout=30)
 
 
 class ScraplingResult(BaseModel):
@@ -60,47 +63,64 @@ class ScraplingClient:
         return result
 
     async def _fetch_live(self, url: str) -> ScraplingResult:
-        """Live page fetch without caching."""
-        try:
-            from scrapling import Fetcher
+        """Live page fetch without caching. Wrapped in circuit breaker."""
+        from seo_platform.api.endpoints.realtime.sse import emit_telemetry_event
 
-            fetcher = Fetcher(
-                url=url,
-                timeout=self.timeout,
-                auto_match=True,
-            )
-
-            title = fetcher.get_title()
-            html = fetcher.text
-
+        async def _do_fetch() -> ScraplingResult:
             try:
-                tra_res = await TrafilaturaClient.extract(html, url=url)
-                text_content = tra_res.markdown_content
-            except Exception:
-                paragraphs = fetcher.css("p::text").all()
-                text_content = "\n".join(p.strip() for p in paragraphs if p.strip())
+                from scrapling import Fetcher
 
-            links = fetcher.css("a::attr(href)").all()
-            outbound_links = list(set(l for l in links if isinstance(l, str) and l.startswith("http")))
+                fetcher = Fetcher(
+                    url=url,
+                    timeout=self.timeout,
+                    auto_match=True,
+                )
 
-            return ScraplingResult(
-                url=url,
-                status_code=fetcher.status_code,
-                title=title,
-                text_content=text_content,
-                html_content=html,
-                outbound_links=outbound_links,
-                metadata={
-                    "load_time": getattr(fetcher, "load_time", 0),
-                    "headers": dict(fetcher.headers) if hasattr(fetcher, "headers") else {},
-                },
-            )
-        except ImportError:
-            logger.warning("scrapling_not_installed_falling_back", url=url)
-            raise RuntimeError(f"Scrapling library not installed. Install with: pip install scrapling")
+                title = fetcher.get_title()
+                html = fetcher.text
+
+                try:
+                    tra_res = await TrafilaturaClient.extract(html, url=url)
+                    text_content = tra_res.markdown_content
+                except Exception:
+                    paragraphs = fetcher.css("p::text").all()
+                    text_content = "\n".join(p.strip() for p in paragraphs if p.strip())
+
+                content_quality_warning = len(text_content) < 100
+
+                links = fetcher.css("a::attr(href)").all()
+                outbound_links = list(set(l for l in links if isinstance(l, str) and l.startswith("http")))
+
+                return ScraplingResult(
+                    url=url,
+                    status_code=fetcher.status_code,
+                    title=title,
+                    text_content=text_content,
+                    html_content=html,
+                    outbound_links=outbound_links,
+                    metadata={
+                        "load_time": getattr(fetcher, "load_time", 0),
+                        "headers": dict(fetcher.headers) if hasattr(fetcher, "headers") else {},
+                        "content_quality_warning": content_quality_warning,
+                        "low_quality": content_quality_warning,
+                    },
+                )
+            except ImportError:
+                logger.warning("scrapling_not_installed_falling_back", url=url)
+                raise RuntimeError(f"Scrapling library not installed. Install with: pip install scrapling")
+            except Exception as e:
+                logger.error("scrapling_fetch_failed", url=url, error=str(e))
+                raise RuntimeError(f"Scrapling failed for {url}: {e}")
+
+        from uuid import UUID
+        try:
+            await emit_telemetry_event(UUID(int=0), "scrapling_fetch", {"url": url, "status": "started"})
+            result = await _scrapling_circuit_breaker.call(_do_fetch)
+            await emit_telemetry_event(UUID(int=0), "scrapling_fetch", {"url": url, "status": "completed"})
+            return result
         except Exception as e:
-            logger.error("scrapling_fetch_failed", url=url, error=str(e))
-            raise RuntimeError(f"Scrapling failed for {url}: {e}")
+            await emit_telemetry_event(UUID(int=0), "scrapling_fetch", {"url": url, "status": "failed", "error": str(e)})
+            raise
 
     async def extract_ddg_serp(self, query: str, limit: int = 20) -> list[SERPItem]:
         """

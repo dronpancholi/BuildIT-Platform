@@ -34,6 +34,12 @@ class BacklinkScraperEngine(BaseScraper):
         "h3 a",
     ]
 
+    BACKLINK_SELECTORS = [
+        "div.g a",
+        "a.link",
+        "div.result a",
+    ]
+
     def __init__(self):
         super().__init__(service_name="backlink_scraper")
 

@@ -123,6 +123,46 @@ class ScrapingResilienceService:
         except Exception:
             pass
 
+    async def _analyze_all_selector_degradation(self) -> list[SelectorDegradationReport]:
+        """Aggregate degradation reports for all known selectors."""
+        try:
+            redis = await get_redis()
+            keys = await redis.keys("selector_telemetry:*")
+            selectors: set[str] = set()
+            for key in keys:
+                parts = key.split(":", 2)
+                if len(parts) >= 2:
+                    selectors.add(parts[1])
+            reports = []
+            for sel in sorted(selectors):
+                report = await self.analyze_selector_degradation(sel)
+                if isinstance(report, SelectorDegradationReport):
+                    reports.append(report)
+            return reports or [SelectorDegradationReport()]
+        except Exception as e:
+            logger.error("all_selector_degradation_failed", error=str(e))
+            return [SelectorDegradationReport()]
+
+    async def _analyze_all_selector_evolution(self) -> list[SelectorEvolutionReport]:
+        """Aggregate evolution reports for all known selectors."""
+        try:
+            redis = await get_redis()
+            keys = await redis.keys("selector_evolution:*")
+            selectors: set[str] = set()
+            for key in keys:
+                parts = key.split(":", 2)
+                if len(parts) >= 2:
+                    selectors.add(parts[1])
+            reports = []
+            for sel in sorted(selectors):
+                report = await self.track_selector_evolution(sel)
+                if isinstance(report, SelectorEvolutionReport):
+                    reports.append(report)
+            return reports or [SelectorEvolutionReport()]
+        except Exception as e:
+            logger.error("all_selector_evolution_failed", error=str(e))
+            return [SelectorEvolutionReport()]
+
     async def assess_anti_bot_protection(self, tenant_id: UUID) -> AntiBotAssessment:
         try:
             cached = await self._get_from_redis(f"anti_bot:{tenant_id}")
@@ -272,7 +312,9 @@ class ScrapingResilienceService:
             logger.error("ip_ban_monitoring_failed", error=str(e))
             return IpBanStatus()
 
-    async def analyze_selector_degradation(self, selector_name: str) -> SelectorDegradationReport:
+    async def analyze_selector_degradation(self, selector_name: str | None = None) -> SelectorDegradationReport | list[SelectorDegradationReport]:
+        if not selector_name:
+            return await self._analyze_all_selector_degradation()
         try:
             cached = await self._get_from_redis(f"selector_degradation:{selector_name}")
             if cached:
@@ -520,7 +562,9 @@ class ScrapingResilienceService:
             logger.error("adaptive_strategies_failed", error=str(e))
             return []
 
-    async def track_selector_evolution(self, selector_name: str) -> SelectorEvolutionReport:
+    async def track_selector_evolution(self, selector_name: str | None = None) -> SelectorEvolutionReport | list[SelectorEvolutionReport]:
+        if not selector_name:
+            return await self._analyze_all_selector_evolution()
         try:
             cached = await self._get_from_redis(f"selector_evolution:{selector_name}")
             if cached:

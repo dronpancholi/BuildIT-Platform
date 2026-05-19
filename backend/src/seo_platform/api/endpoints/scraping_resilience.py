@@ -42,11 +42,11 @@ async def get_ip_ban_status():
 
 @router.get("/scraping-resilience/selector-degradation")
 async def get_selector_degradation(
-    selector_name: str = Query(..., description="CSS/XPath selector name"),
+    selector_name: str | None = Query(None, description="CSS/XPath selector name (omit for all)"),
 ):
     """Analyze selector performance degradation over time."""
     report = await scraping_resilience.analyze_selector_degradation(selector_name)
-    return {"success": True, "data": report.model_dump()}
+    return {"success": True, "data": report if isinstance(report, list) else report.model_dump()}
 
 
 @router.get("/scraping-resilience/serp-layout-changes")
@@ -81,11 +81,11 @@ async def get_adaptive_strategies():
 
 @router.get("/scraping-resilience/selector-evolution")
 async def get_selector_evolution(
-    selector_name: str = Query(..., description="CSS/XPath selector name"),
+    selector_name: str | None = Query(None, description="CSS/XPath selector name (omit for all)"),
 ):
     """Track selector evolution over time."""
     report = await scraping_resilience.track_selector_evolution(selector_name)
-    return {"success": True, "data": report.model_dump()}
+    return {"success": True, "data": report if isinstance(report, list) else report.model_dump()}
 
 
 @router.get("/scraping-resilience/predict-anomaly")
