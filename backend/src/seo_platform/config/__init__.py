@@ -18,7 +18,10 @@ from typing import Any
 
 from pydantic import Field, PostgresDsn, RedisDsn, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
+from dotenv import load_dotenv
 
+# Load .env into os.environ so all nested BaseSettings classes can read it
+load_dotenv(Path(__file__).parent.parent.parent.parent.parent / ".env")
 
 class Environment(str, enum.Enum):
     """Application deployment environment."""

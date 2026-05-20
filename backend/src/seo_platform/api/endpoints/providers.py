@@ -13,7 +13,7 @@ from seo_platform.schemas import APIResponse
 router = APIRouter()
 
 
-@router.get("/providers")
+@router.get("/")
 async def list_providers() -> APIResponse:
     """List all available providers and current active provider."""
     from seo_platform.providers.seo import seo_provider_registry
@@ -26,7 +26,7 @@ async def list_providers() -> APIResponse:
     })
 
 
-@router.get("/providers/status")
+@router.get("/status")
 async def get_providers_status() -> APIResponse:
     """Return health status + fallback chain for all providers."""
     from seo_platform.services.provider_health import provider_health_center
@@ -43,7 +43,7 @@ async def get_providers_status() -> APIResponse:
     })
 
 
-@router.post("/providers/seo/{provider_name}")
+@router.post("/seo/{provider_name}")
 async def set_seo_provider(provider_name: str) -> APIResponse:
     """Switch SEO data provider at runtime."""
     from seo_platform.providers.seo import configure_seo_provider

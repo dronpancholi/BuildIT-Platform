@@ -174,5 +174,5 @@ api_router.include_router(business_intelligence_router, prefix="/business-intell
 api_router.include_router(provider_health_router, tags=["provider-health"])
 api_router.include_router(demo_scenarios_router, tags=["demo-scenarios"])
 api_router.include_router(campaign_timeline_router, tags=["campaign-timeline"])
-api_router.include_router(providers_router)
+api_router.include_router(providers_router, prefix="/providers")
 api_router.include_router(webhooks_router)
