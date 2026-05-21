@@ -61,6 +61,11 @@ class OnboardingStatus(str, enum.Enum):
 
 
 class BusinessType(str, enum.Enum):
+    B2B = "B2B"
+    B2C = "B2C"
+    B2B_B2C = "B2B + B2C"
+    MARKETPLACE = "Marketplace"
+    AGENCY = "Agency"
     LOCAL = "local"
     NATIONAL = "national"
     ECOMMERCE = "ecommerce"
