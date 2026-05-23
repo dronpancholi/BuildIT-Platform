@@ -9,6 +9,7 @@ import { ErrorState, LoadingState } from "@/components/ui/error-state";
 import { CampaignManagementTab } from "./campaigns-tab";
 import { CommunicationsTab } from "./communications-tab";
 import { OpportunitiesTab } from "./opportunities-tab";
+import { ActivityTimelineTab } from "./activity-timeline-tab";
 import { 
   TrendingUp, Activity, GitBranch, Mail, Users, 
   Search, Plus, ArrowLeft, FileText, Lightbulb,
@@ -147,6 +148,7 @@ export default function CustomerWorkspace() {
     { id: "campaigns", label: "Campaigns", icon: GitBranch },
     { id: "communications", label: "Communications", icon: Mail },
     { id: "opportunities", label: "Opportunities", icon: Lightbulb },
+    { id: "activity", label: "Activity", icon: TrendingUp },
   ];
 
   return (
@@ -324,6 +326,10 @@ export default function CustomerWorkspace() {
 
           {activeTab === "opportunities" && (
             <OpportunitiesTab customerId={customerId} />
+          )}
+
+          {activeTab === "activity" && (
+            <ActivityTimelineTab customerId={customerId} />
           )}
         </div>
       </div>
