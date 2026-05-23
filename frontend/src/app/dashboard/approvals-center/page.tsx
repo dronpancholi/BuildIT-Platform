@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { fetchApi, MOCK_TENANT_ID } from "@/lib/api";
-import { Filter, CheckCircle2, XCircle, Clock, AlertTriangle, FileEdit, History } from "lucide-react";
+import { Filter, CheckCircle2, XCircle, Clock, AlertTriangle, FileEdit, History, CheckSquare } from "lucide-react";
 
 interface ApprovalRequest {
   id: string;
@@ -37,6 +37,7 @@ export default function ApprovalCenter() {
   const [selectedApproval, setSelectedApproval] = useState<ApprovalRequest | null>(null);
   const [showAuditHistory, setShowAuditHistory] = useState(false);
   const [editData, setEditData] = useState<any>(null);
+  const [selectedApprovals, setSelectedApprovals] = useState<Set<string>>(new Set());
 
   const { data: approvals = [], isLoading } = useQuery<ApprovalRequest[]>({
     queryKey: ["approvals", "pending"],
@@ -85,6 +86,31 @@ export default function ApprovalCenter() {
     },
   });
 
+  const bulkDecisionMutation = useMutation({
+    mutationFn: async ({ ids, decision, reason }: { 
+      ids: string[]; 
+      decision: "approved" | "rejected";
+      reason?: string;
+    }) => {
+      const promises = ids.map(id => 
+        fetchApi(`/approvals/${id}/decide?tenant_id=${MOCK_TENANT_ID}`, {
+          method: "POST",
+          body: JSON.stringify({
+            decision,
+            decided_by: MOCK_TENANT_ID,
+            reason: reason || "",
+            modifications: {},
+          }),
+        })
+      );
+      return Promise.all(promises);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["approvals"] });
+      setSelectedApprovals(new Set());
+    },
+  });
+
   const handleDecision = (decision: "approved" | "rejected" | "modification_requested") => {
     if (!selectedApproval) return;
     decideMutation.mutate({
@@ -93,6 +119,31 @@ export default function ApprovalCenter() {
       reason: editData?.reason || "",
       modifications: editData?.modifications || {},
     });
+  };
+
+  const handleBulkDecision = (decision: "approved" | "rejected") => {
+    if (selectedApprovals.size === 0) return;
+    bulkDecisionMutation.mutate({
+      ids: Array.from(selectedApprovals),
+      decision,
+    });
+  };
+
+  const toggleSelectApproval = (id: string) => {
+    setSelectedApprovals(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  const toggleSelectAll = () => {
+    if (selectedApprovals.size === filteredApprovals.length) {
+      setSelectedApprovals(new Set());
+    } else {
+      setSelectedApprovals(new Set(filteredApprovals.map(a => a.id)));
+    }
   };
 
   const getRiskBadge = (riskLevel: string) => {
@@ -174,9 +225,32 @@ export default function ApprovalCenter() {
 
       {/* Filters */}
       <div className="glass-panel overflow-hidden">
-        <div className="px-4 py-2 border-b border-surface-border bg-surface-darker/50 flex items-center gap-2">
-          <Filter className="w-4 h-4 text-slate-400" />
-          <span className="text-xs font-mono text-slate-400 uppercase">Filter by Category</span>
+        <div className="px-4 py-2 border-b border-surface-border bg-surface-darker/50 flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <Filter className="w-4 h-4 text-slate-400" />
+            <span className="text-xs font-mono text-slate-400 uppercase">Filter by Category</span>
+          </div>
+          {selectedApprovals.size > 0 && (
+            <div className="flex items-center gap-2">
+              <span className="text-xs font-mono text-slate-500">
+                {selectedApprovals.size} selected
+              </span>
+              <button
+                onClick={() => handleBulkDecision("approved")}
+                disabled={bulkDecisionMutation.isPending}
+                className="px-3 py-1.5 text-xs font-mono rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 hover:bg-emerald-500/20 transition-colors disabled:opacity-50"
+              >
+                Approve All
+              </button>
+              <button
+                onClick={() => handleBulkDecision("rejected")}
+                disabled={bulkDecisionMutation.isPending}
+                className="px-3 py-1.5 text-xs font-mono rounded bg-red-500/10 text-red-400 border border-red-500/20 hover:bg-red-500/20 transition-colors disabled:opacity-50"
+              >
+                Reject All
+              </button>
+            </div>
+          )}
         </div>
         <div className="p-2 flex flex-wrap gap-2">
           {categories.map((category) => (
@@ -212,18 +286,48 @@ export default function ApprovalCenter() {
         </div>
       ) : (
         <div className="space-y-3">
+          {/* Select All Header */}
+          <div className="glass-panel p-3 flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <input
+                type="checkbox"
+                checked={selectedApprovals.size === filteredApprovals.length && filteredApprovals.length > 0}
+                onChange={toggleSelectAll}
+                className="w-4 h-4 rounded border-slate-600 bg-slate-800 text-platform-600 focus:ring-platform-500"
+              />
+              <span className="text-xs font-mono text-slate-400">
+                {selectedApprovals.size === filteredApprovals.length ? "Deselect All" : "Select All"}
+              </span>
+            </div>
+            {selectedApprovals.size > 0 && (
+              <span className="text-xs font-mono text-platform-400">
+                {selectedApprovals.size} of {filteredApprovals.length} selected
+              </span>
+            )}
+          </div>
+
           {filteredApprovals.map((approval) => (
             <div
               key={approval.id}
-              className="glass-panel p-4 border-l-4 hover:bg-surface-border/20 transition-all cursor-pointer"
+              className={`glass-panel p-4 border-l-4 transition-all cursor-pointer ${
+                selectedApprovals.has(approval.id) ? "bg-platform-500/5 border-platform-500" : "hover:bg-surface-border/20"
+              }`}
               style={{ borderLeftColor: 
+                selectedApprovals.has(approval.id) ? "#6366f1" :
                 approval.risk_level === "critical" ? "#ef4444" :
                 approval.risk_level === "high" ? "#f97316" : "#6366f1"
               }}
-              onClick={() => setSelectedApproval(approval)}
+              onClick={() => selectedApprovals.has(approval.id) || setSelectedApproval(approval)}
             >
               <div className="flex items-start justify-between mb-2">
                 <div className="flex items-center gap-2">
+                  <input
+                    type="checkbox"
+                    checked={selectedApprovals.has(approval.id)}
+                    onChange={(e) => { e.stopPropagation(); toggleSelectApproval(approval.id); }}
+                    onClick={(e) => e.stopPropagation()}
+                    className="w-4 h-4 rounded border-slate-600 bg-slate-800 text-platform-600 focus:ring-platform-500"
+                  />
                   {getCategoryBadge(approval.category)}
                   {getRiskBadge(approval.risk_level)}
                   {approval.escalation_count > 0 && (
