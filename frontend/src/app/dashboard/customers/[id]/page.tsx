@@ -44,7 +44,7 @@ export default function CustomerWorkspace() {
   const router = useRouter();
   const customerId = params.id as string;
   
-  const [activeTab, setActiveTab] = useState<"overview" | "campaigns" | "communications" | "opportunities">("overview");
+  const [activeTab, setActiveTab] = useState<"overview" | "campaigns" | "communications" | "opportunities" | "activity" | "approvals">("overview");
 
   // Fetch customer data
   const { data: customer, isLoading: loadingCustomer, error: customerError } = useQuery<CustomerHealthData>({
