@@ -6,7 +6,7 @@ import { fetchApi, MOCK_TENANT_ID } from "@/lib/api";
 import { 
   Mail, FileText, Clock, CheckCircle2, AlertTriangle, 
   Send, Edit2, Trash2, Filter, Search, Plus,
-  ChevronDown, ChevronUp, Paperclip, Smile, Calendar
+  ChevronDown, ChevronUp, Paperclip, Smile, Calendar, CheckSquare
 } from "lucide-react";
 
 interface EmailThread {
@@ -43,6 +43,7 @@ export default function CommunicationHub() {
   const [selectedThread, setSelectedThread] = useState<EmailThread | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [filterStatus, setFilterStatus] = useState<string>("all");
+  const [selectedThreads, setSelectedThreads] = useState<Set<string>>(new Set());
 
   const tenantId = process.env.NEXT_PUBLIC_TENANT_ID || "00000000-0000-0000-0000-000000000001";
 
@@ -91,6 +92,45 @@ export default function CommunicationHub() {
     },
   });
 
+  const bulkSendMutation = useMutation({
+    mutationFn: async (threadIds: string[]) => {
+      const promises = threadIds.map(id => 
+        fetchApi(`/campaigns/threads/${id}/send?tenant_id=${tenantId}`, {
+          method: "POST",
+          body: JSON.stringify({}),
+        })
+      );
+      return Promise.all(promises);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["communications", "threads"] });
+      setSelectedThreads(new Set());
+    },
+  });
+
+  const handleBulkSend = () => {
+    if (selectedThreads.size === 0) return;
+    bulkSendMutation.mutate(Array.from(selectedThreads));
+  };
+
+  const toggleSelectThread = (id: string) => {
+    setSelectedThreads(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  const toggleSelectAll = () => {
+    const draftThreads = filteredThreads.filter(t => t.status === "draft");
+    if (selectedThreads.size === draftThreads.length && draftThreads.length > 0) {
+      setSelectedThreads(new Set());
+    } else {
+      setSelectedThreads(new Set(draftThreads.map(t => t.id)));
+    }
+  };
+
   const getStatusBadge = (status: string) => {
     const config: Record<string, { color: string; label: string; icon: any }> = {
       draft: { color: "bg-slate-500/10 text-slate-400 border-slate-500/20", label: "DRAFT", icon: FileText },
@@ -120,6 +160,20 @@ export default function CommunicationHub() {
           <p className="text-slate-400 mt-1">Unified email management for all outreach activities</p>
         </div>
         <div className="flex items-center gap-3">
+          {selectedThreads.size > 0 && (
+            <div className="flex items-center gap-2">
+              <span className="text-sm font-mono text-slate-500">
+                {selectedThreads.size} selected
+              </span>
+              <button
+                onClick={handleBulkSend}
+                disabled={bulkSendMutation.isPending}
+                className="px-4 py-2 bg-emerald-600/80 hover:bg-emerald-600 text-white rounded-lg text-xs font-bold font-mono transition-colors disabled:opacity-50 flex items-center gap-2"
+              >
+                <Send className="w-4 h-4" /> Send All ({selectedThreads.size})
+              </button>
+            </div>
+          )}
           <div className="px-4 py-2 bg-platform-600/20 border border-platform-500/30 rounded-lg flex items-center gap-2">
             <Mail className="w-4 h-4 text-platform-400" />
             <span className="text-sm font-mono text-platform-300">{stats.total} Threads</span>
@@ -192,28 +246,37 @@ export default function CommunicationHub() {
         </div>
 
         {/* Filters */}
-        <div className="p-4 flex items-center gap-3 border-b border-surface-border">
-          <div className="relative flex-1 max-w-md">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
-            <input
-              type="text"
-              placeholder="Search threads..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-10 pr-4 py-2 bg-surface-darker border border-surface-border rounded-lg text-sm text-slate-200 placeholder-slate-600 focus:outline-none focus:border-platform-500"
-            />
+        <div className="p-4 flex items-center justify-between gap-3 border-b border-surface-border">
+          <div className="flex items-center gap-3 flex-1">
+            <div className="relative max-w-md flex-1">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
+              <input
+                type="text"
+                placeholder="Search threads..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="w-full pl-10 pr-4 py-2 bg-surface-darker border border-surface-border rounded-lg text-sm text-slate-200 placeholder-slate-600 focus:outline-none focus:border-platform-500"
+              />
+            </div>
+            <select
+              value={filterStatus}
+              onChange={(e) => setFilterStatus(e.target.value)}
+              className="px-3 py-2 bg-surface-darker border border-surface-border rounded-lg text-sm text-slate-300 focus:outline-none focus:border-platform-500"
+            >
+              <option value="all">All Status</option>
+              <option value="draft">Draft</option>
+              <option value="sent">Sent</option>
+              <option value="replied">Replied</option>
+              <option value="link_acquired">Link Acquired</option>
+            </select>
           </div>
-          <select
-            value={filterStatus}
-            onChange={(e) => setFilterStatus(e.target.value)}
-            className="px-3 py-2 bg-surface-darker border border-surface-border rounded-lg text-sm text-slate-300 focus:outline-none focus:border-platform-500"
-          >
-            <option value="all">All Status</option>
-            <option value="draft">Draft</option>
-            <option value="sent">Sent</option>
-            <option value="replied">Replied</option>
-            <option value="link_acquired">Link Acquired</option>
-          </select>
+          {selectedThreads.size > 0 && (
+            <div className="flex items-center gap-2">
+              <span className="text-xs font-mono text-slate-500">
+                {selectedThreads.size} draft{selectedThreads.size > 1 ? "s" : ""} selected
+              </span>
+            </div>
+          )}
         </div>
 
         {/* Content */}
@@ -232,48 +295,89 @@ export default function CommunicationHub() {
                   <p className="text-xs text-slate-500">Email threads will appear here once campaigns are launched</p>
                 </div>
               ) : (
-                filteredThreads.map((thread) => (
-                  <div
-                    key={thread.id}
-                    onClick={() => setSelectedThread(thread)}
-                    className="glass-panel p-4 hover:bg-surface-border/20 transition-all cursor-pointer"
-                  >
-                    <div className="flex items-start justify-between mb-2">
-                      <div className="flex-1">
-                        <div className="flex items-center gap-2 mb-1">
-                          <h3 className="text-sm font-bold font-mono text-slate-200">{thread.subject}</h3>
-                          {getStatusBadge(thread.status)}
+                <>
+                  {/* Select All Header for Drafts */}
+                  {activeTab === "inbox" && stats.draft > 0 && (
+                    <div className="glass-panel p-3 flex items-center justify-between mb-3">
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="checkbox"
+                          checked={selectedThreads.size === stats.draft && stats.draft > 0}
+                          onChange={toggleSelectAll}
+                          className="w-4 h-4 rounded border-slate-600 bg-slate-800 text-platform-600 focus:ring-platform-500"
+                        />
+                        <span className="text-xs font-mono text-slate-400">
+                          {selectedThreads.size === stats.draft ? "Deselect All Drafts" : "Select All Drafts"}
+                        </span>
+                      </div>
+                      {selectedThreads.size > 0 && (
+                        <button
+                          onClick={handleBulkSend}
+                          disabled={bulkSendMutation.isPending}
+                          className="px-3 py-1.5 text-xs font-mono rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 hover:bg-emerald-500/20 transition-colors disabled:opacity-50"
+                        >
+                          Send All ({selectedThreads.size})
+                        </button>
+                      )}
+                    </div>
+                  )}
+
+                  {filteredThreads.map((thread) => (
+                    <div
+                      key={thread.id}
+                      className={`glass-panel p-4 hover:bg-surface-border/20 transition-all cursor-pointer ${
+                        selectedThreads.has(thread.id) ? "bg-platform-500/5 border-2 border-platform-500" : "border border-transparent"
+                      }`}
+                      onClick={() => selectedThreads.has(thread.id) || setSelectedThread(thread)}
+                    >
+                      <div className="flex items-start justify-between mb-2">
+                        <div className="flex items-center gap-2 flex-1">
+                          {thread.status === "draft" && (
+                            <input
+                              type="checkbox"
+                              checked={selectedThreads.has(thread.id)}
+                              onChange={(e) => { e.stopPropagation(); toggleSelectThread(thread.id); }}
+                              onClick={(e) => e.stopPropagation()}
+                              className="w-4 h-4 rounded border-slate-600 bg-slate-800 text-platform-600 focus:ring-platform-500"
+                            />
+                          )}
+                          <div className="flex-1">
+                            <div className="flex items-center gap-2 mb-1">
+                              <h3 className="text-sm font-bold font-mono text-slate-200">{thread.subject}</h3>
+                              {getStatusBadge(thread.status)}
+                            </div>
+                            <p className="text-[10px] font-mono text-slate-500">
+                              To: {thread.prospect_name || "Contact"}@{thread.prospect_domain}
+                            </p>
+                          </div>
                         </div>
-                        <p className="text-[10px] font-mono text-slate-500">
-                          To: {thread.prospect_name || "Contact"}@{thread.prospect_domain}
-                        </p>
+                        <div className="text-right ml-4 flex-shrink-0">
+                          <span className="text-[10px] font-mono text-slate-600">
+                            {new Date(thread.created_at).toLocaleDateString()}
+                          </span>
+                        </div>
                       </div>
-                      <div className="text-right ml-4 flex-shrink-0">
-                        <span className="text-[10px] font-mono text-slate-600">
-                          {new Date(thread.created_at).toLocaleDateString()}
+                      <div className="flex items-center gap-4 text-[10px] font-mono text-slate-600">
+                        {thread.campaign_name && (
+                          <span className="flex items-center gap-1">
+                            <FileText className="w-3 h-3 text-platform-500" />
+                            {thread.campaign_name}
+                          </span>
+                        )}
+                        {thread.follow_up_count > 0 && (
+                          <span className="flex items-center gap-1">
+                            <Clock className="w-3 h-3 text-amber-500" />
+                            {thread.follow_up_count} follow-up{thread.follow_up_count > 1 ? "s" : ""}
+                          </span>
+                        )}
+                        <span className="flex items-center gap-1">
+                          <Mail className="w-3 h-3 text-slate-500" />
+                          {thread.prospect_domain}
                         </span>
                       </div>
                     </div>
-                    <div className="flex items-center gap-4 text-[10px] font-mono text-slate-600">
-                      {thread.campaign_name && (
-                        <span className="flex items-center gap-1">
-                          <FileText className="w-3 h-3 text-platform-500" />
-                          {thread.campaign_name}
-                        </span>
-                      )}
-                      {thread.follow_up_count > 0 && (
-                        <span className="flex items-center gap-1">
-                          <Clock className="w-3 h-3 text-amber-500" />
-                          {thread.follow_up_count} follow-up{thread.follow_up_count > 1 ? "s" : ""}
-                        </span>
-                      )}
-                      <span className="flex items-center gap-1">
-                        <Mail className="w-3 h-3 text-slate-500" />
-                        {thread.prospect_domain}
-                      </span>
-                    </div>
-                  </div>
-                ))
+                  ))}
+                </>
               )}
             </div>
           )}
