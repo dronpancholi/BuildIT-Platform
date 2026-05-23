@@ -224,13 +224,13 @@ export function WorkQueue() {
               <div className="flex items-center gap-2">
                 <button 
                   className="px-2 py-1 text-[9px] font-mono rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 flex items-center gap-1 hover:bg-emerald-500/20 transition-colors"
-                  onClick={() => openCommand("approve_item")}
+                  onClick={() => {}}
                 >
                   <CheckSquare className="w-3 h-3" /> Approve
                 </button>
                 <button 
                   className="px-2 py-1 text-[9px] font-mono rounded bg-red-500/10 text-red-400 border border-red-500/20 flex items-center gap-1 hover:bg-red-500/20 transition-colors"
-                  onClick={() => openCommand("reject_item")}
+                  onClick={() => {}}
                 >
                   <XCircle className="w-3 h-3" /> Reject
                 </button>
@@ -444,13 +444,13 @@ function QueueItemRow({
             </div>
             <div className="mt-2 flex items-center gap-2">
               <button 
-                onClick={(e) => { e.stopPropagation(); openCommand("approve_item"); }}
+                onClick={(e) => { e.stopPropagation(); }}
                 className="px-2 py-1 text-[9px] font-mono rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 hover:bg-emerald-500/20 transition-colors"
               >
                 Approve
               </button>
               <button 
-                onClick={(e) => { e.stopPropagation(); openCommand("reject_item"); }}
+                onClick={(e) => { e.stopPropagation(); }}
                 className="px-2 py-1 text-[9px] font-mono rounded bg-red-500/10 text-red-400 border border-red-500/20 hover:bg-red-500/20 transition-colors"
               >
                 Reject
