@@ -10,6 +10,7 @@ import { CampaignManagementTab } from "./campaigns-tab";
 import { CommunicationsTab } from "./communications-tab";
 import { OpportunitiesTab } from "./opportunities-tab";
 import { ActivityTimelineTab } from "./activity-timeline-tab";
+import { ApprovalsTab } from "./approvals-tab";
 import { 
   TrendingUp, Activity, GitBranch, Mail, Users, 
   Search, Plus, ArrowLeft, FileText, Lightbulb,
@@ -149,6 +150,7 @@ export default function CustomerWorkspace() {
     { id: "communications", label: "Communications", icon: Mail },
     { id: "opportunities", label: "Opportunities", icon: Lightbulb },
     { id: "activity", label: "Activity", icon: TrendingUp },
+    { id: "approvals", label: "Approvals", icon: CheckCircle2 },
   ];
 
   return (
@@ -330,6 +332,10 @@ export default function CustomerWorkspace() {
 
           {activeTab === "activity" && (
             <ActivityTimelineTab customerId={customerId} />
+          )}
+
+          {activeTab === "approvals" && (
+            <ApprovalsTab customerId={customerId} />
           )}
         </div>
       </div>
