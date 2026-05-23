@@ -206,7 +206,7 @@ export default function WarRoomPage() {
 
   const { data: providerHealth } = useQuery<{ providers: Record<string, { provider: string; circuit_breaker_state: string; healthy: boolean; uptime_pct: number; avg_latency_ms: number }> }>({
     queryKey: ["provider-health", "war-room"],
-    queryFn: () => fetchApi("/providers/status").then((d: any) => ({
+    queryFn: () => fetchApi("/provider-health").then((d: any) => ({
       providers: d?.data?.providers ?? d?.providers ?? {},
     })),
     refetchInterval: 10000,

@@ -7,6 +7,7 @@ import {
   LayoutDashboard, Link2, Search, Lightbulb, Activity,
   GitBranch, Radio, Settings, ChevronDown, ChevronRight,
   Bot, Users, Globe, Check, Shield, Sparkles, Server, Mail,
+  FileText,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useClientStore, type ClientInfo } from "@/hooks/use-client";
@@ -23,9 +24,10 @@ const BUSINESS_NAV = [
   { href: "/dashboard/keywords", icon: <Search size={17} />, label: "Keywords" },
   { href: "/dashboard/seo-intelligence", icon: <Globe size={17} />, label: "SEO Intelligence" },
   { href: "/dashboard/backlink-intelligence", icon: <Link2 size={17} />, label: "Backlinks" },
+  { href: "/dashboard/reports", icon: <FileText size={17} />, label: "Reports" },
   { href: "/dashboard/recommendations", icon: <Lightbulb size={17} />, label: "Recommendations" },
   { href: "/dashboard/local-seo", icon: <Users size={17} />, label: "Local SEO" },
-  { href: "/dashboard/prospect-graph", icon: <Radio size={17} />, label: "Prospect Graph" },
+  { href: "/dashboard/prospect-graph", icon: <Radio size={17} />, label: "Domain Network" },
   { href: "/dashboard/assistant", icon: <Bot size={17} />, label: "Assistant" },
 ];
 

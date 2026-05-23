@@ -9,7 +9,7 @@ from seo_platform.services.ai_resilience import ai_resilience
 router = APIRouter()
 
 
-@router.get("/ai-resilience/fallback-route")
+@router.get("/fallback-route")
 async def get_fallback_route(
     task_type: str = Query(..., description="Task type"),
     tenant_id: UUID = Query(..., description="Tenant UUID"),
@@ -18,7 +18,7 @@ async def get_fallback_route(
     return {"success": True, "data": route.model_dump()}
 
 
-@router.get("/ai-resilience/inference-health")
+@router.get("/inference-health")
 async def get_inference_health(
     model_id: str = Query(..., description="Model ID"),
     time_window_hours: int = Query(1, description="Time window in hours"),
@@ -27,7 +27,7 @@ async def get_inference_health(
     return {"success": True, "data": score.model_dump()}
 
 
-@router.get("/ai-resilience/failure-analytics")
+@router.get("/failure-analytics")
 async def get_failure_analytics(
     time_window_hours: int = Query(24, description="Time window in hours"),
 ) -> dict:
@@ -35,7 +35,7 @@ async def get_failure_analytics(
     return {"success": True, "data": analytics.model_dump()}
 
 
-@router.get("/ai-resilience/drift-detection")
+@router.get("/drift-detection")
 async def get_drift_detection(
     time_window_hours: int = Query(48, description="Time window in hours"),
 ) -> dict:
@@ -47,7 +47,7 @@ async def get_drift_detection(
     }
 
 
-@router.get("/ai-resilience/throttle-status")
+@router.get("/throttle-status")
 async def get_throttle_status(
     tenant_id: UUID = Query(..., description="Tenant UUID"),
     task_type: str = Query(..., description="Task type"),

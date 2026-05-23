@@ -12,6 +12,7 @@ import { fetchApi } from "@/lib/api";
 import { HealthResponse } from "@/types/api";
 import { useRealtimeStore } from "@/hooks/use-realtime";
 import { WorkflowVisualization } from "@/components/operational/workflow-visualization";
+import { PageGuide } from "@/components/ui/page-guide";
 
 const INFRA_ICONS: Record<string, React.ReactNode> = {
   postgresql: <Database className="w-5 h-5 text-blue-400" />,
@@ -68,9 +69,10 @@ export default function SystemPage() {
     { name: "Playwright", key: "playwright" },
   ];
 
+  const noData = !healthData && !isLoading;
   const getStatus = (key: string) => {
     const comp = healthData?.components.find((c) => c.name === key);
-    return comp?.status || infrastructure[key] || "unknown";
+    return comp?.status || infrastructure[key] || (noData ? "no data" : "unknown");
   };
 
   const getLatency = (key: string) => {
@@ -111,6 +113,11 @@ export default function SystemPage() {
         </div>
       </div>
 
+      <PageGuide title="About Platform Health">
+        <p>This page shows the health of all infrastructure components powering the platform. <strong>Healthy</strong> = operational, <strong>Degraded</strong> = partially available, <strong>Unhealthy</strong> = down.</p>
+        <p>The overall status is <strong>degraded</strong> when external API keys are not configured (DataForSEO, Ahrefs, Hunter) — this is expected in development. PostgreSQL and Redis are the only hard requirements; everything else is optional.</p>
+      </PageGuide>
+
       {/* Status Summary Bar */}
       <motion.div
         initial={{ opacity: 0, y: -5 }}
@@ -139,6 +146,15 @@ export default function SystemPage() {
         </div>
         <div className="w-px h-8 bg-surface-border" />
         <div className="flex items-center gap-3 text-[10px] font-mono">
+          {healthData && (
+            <span className="text-slate-500 flex items-center gap-1">
+              <Activity className="w-3 h-3" />
+              System: <span className={`${
+                healthData.status === "healthy" ? "text-emerald-400" :
+                healthData.status === "degraded" ? "text-amber-400" : "text-red-400"
+              }`}>{healthData.status}</span>
+            </span>
+          )}
           <span className="text-slate-500 flex items-center gap-1">
             <Users className="w-3 h-3" />
             Workers: <span className="text-emerald-400">{activeWorkers.length}</span>
@@ -177,6 +193,12 @@ export default function SystemPage() {
             <div className="flex items-center justify-center py-20">
               <Loader2 className="w-8 h-8 text-platform-500 animate-spin" />
             </div>
+          ) : noData ? (
+            <div className="glass-panel p-12 text-center">
+              <Server className="w-12 h-12 text-slate-600 mx-auto mb-3" />
+              <h3 className="text-lg font-medium text-slate-300 mb-2">No Health Data</h3>
+              <p className="text-sm text-slate-500 max-w-md mx-auto">The backend health endpoint is not responding. This usually means the backend is unreachable or still starting up.</p>
+            </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
               {infraServices.map((svc, i) => {
@@ -184,6 +206,7 @@ export default function SystemPage() {
                 const latency = getLatency(svc.key);
                 const isHealthy = status === "healthy";
                 const isDegraded = status === "degraded";
+                const isUnknown = status === "unknown" || status === "no data";
                 return (
                   <motion.div
                     key={svc.key}
@@ -201,15 +224,16 @@ export default function SystemPage() {
                       <span className={`px-2 py-0.5 text-[9px] font-mono font-bold rounded border flex items-center gap-1 ${
                         isHealthy ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/20" :
                         isDegraded ? "bg-amber-500/10 text-amber-400 border-amber-500/20" :
-                        status === "unhealthy" ? "bg-red-500/10 text-red-400 border-red-500/20" :
-                        "bg-slate-500/10 text-slate-400 border-slate-500/20"
+                        isUnknown ? "bg-slate-500/10 text-slate-400 border-slate-500/20" :
+                        "bg-red-500/10 text-red-400 border-red-500/20"
                       }`}>
                         <span className={`w-1.5 h-1.5 rounded-full ${
                           isHealthy ? "bg-emerald-500" :
                           isDegraded ? "bg-amber-500" :
+                          isUnknown ? "bg-slate-500" :
                           "bg-red-500"
-                        } ${!isHealthy ? "animate-pulse" : ""}`} />
-                        {status}
+                        } ${!(isHealthy || isUnknown) ? "animate-pulse" : ""}`} />
+                        {status === "no data" ? "no data" : status}
                       </span>
                     </div>
                     <h3 className="text-sm font-semibold text-slate-200">{svc.name}</h3>

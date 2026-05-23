@@ -366,6 +366,13 @@ async def _check_external_apis() -> ComponentHealth:
     from seo_platform.config import get_settings
 
     s = get_settings()
+
+    if s.use_mock_providers:
+        return ComponentHealth(
+            name="external_apis", status=HealthStatus.HEALTHY,
+            latency_ms=0, message="Simulated Mode — use_mock_providers=True",
+        )
+
     configured = []
     missing = []
 

@@ -16,7 +16,7 @@ from seo_platform.services.observability_service import observability_service
 router = APIRouter()
 
 
-@router.get("/observability/traces")
+@router.get("/traces")
 async def get_traces(
     tenant_id: UUID = Query(..., description="Tenant UUID"),
     workflow_type: str | None = Query(None, description="Filter by workflow type"),
@@ -37,7 +37,7 @@ async def get_traces(
     }
 
 
-@router.get("/observability/workflow-analytics")
+@router.get("/workflow-analytics")
 async def get_workflow_analytics(
     time_window_hours: int = Query(24, description="Time window in hours"),
 ) -> dict:
@@ -46,7 +46,7 @@ async def get_workflow_analytics(
     return {"success": True, "data": analytics.model_dump()}
 
 
-@router.get("/observability/retry-analytics")
+@router.get("/retry-analytics")
 async def get_retry_analytics(
     time_window_hours: int = Query(24, description="Time window in hours"),
 ) -> dict:
@@ -55,7 +55,7 @@ async def get_retry_analytics(
     return {"success": True, "data": analytics.model_dump()}
 
 
-@router.get("/observability/inference-analytics")
+@router.get("/inference-analytics")
 async def get_inference_analytics(
     time_window_hours: int = Query(24, description="Time window in hours"),
 ) -> dict:
@@ -64,7 +64,7 @@ async def get_inference_analytics(
     return {"success": True, "data": analytics.model_dump()}
 
 
-@router.get("/observability/scraping-telemetry")
+@router.get("/scraping-telemetry")
 async def get_scraping_telemetry(
     time_window_hours: int = Query(24, description="Time window in hours"),
 ) -> dict:
@@ -73,7 +73,7 @@ async def get_scraping_telemetry(
     return {"success": True, "data": telemetry.model_dump()}
 
 
-@router.get("/observability/communication-telemetry")
+@router.get("/communication-telemetry")
 async def get_communication_telemetry(
     tenant_id: UUID = Query(..., description="Tenant UUID"),
     time_window_hours: int = Query(24, description="Time window in hours"),

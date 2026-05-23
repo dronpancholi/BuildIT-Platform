@@ -1,8 +1,9 @@
 "use client";
 
-import { MapPin, Star, Gauge, FileText, Globe, GitCompare, Loader2, TrendingUp, CheckCircle2, AlertTriangle } from "lucide-react";
+import { MapPin, Star, Gauge, FileText, Globe, GitCompare, Loader2, TrendingUp, CheckCircle2, AlertTriangle, Building2 } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { fetchApi, MOCK_TENANT_ID } from "@/lib/api";
+import { PageGuide } from "@/components/ui/page-guide";
 
 interface DirectoryQuality {
   directory: string;
@@ -114,6 +115,11 @@ export default function LocalSEOPage() {
         </div>
       </div>
 
+      <PageGuide title="About Local SEO">
+        <p>This page tracks <strong>local citation health</strong>, <strong>directory quality</strong>, <strong>NAP consistency</strong>, and <strong>competitor comparisons</strong> for local search optimization.</p>
+        <p>Add your business citations to start seeing data. Each citation improves local authority and consistency tracking.</p>
+      </PageGuide>
+
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Directory Quality Scores */}
         <div className="glass-panel p-6">
@@ -126,7 +132,10 @@ export default function LocalSEOPage() {
               <Loader2 className="w-6 h-6 text-platform-500 animate-spin" />
             </div>
           ) : dirList.length === 0 ? (
-            <div className="text-center py-8 text-slate-500 font-mono">NO_DIRECTORY_DATA</div>
+            <div className="text-center py-8">
+              <Star className="w-6 h-6 text-slate-600 mx-auto mb-2" />
+              <p className="text-xs font-mono text-slate-500">No directory data yet. Add citations to start tracking directory quality.</p>
+            </div>
           ) : (
             <div className="space-y-3">
               {dirList.map((d, i) => (
@@ -157,7 +166,10 @@ export default function LocalSEOPage() {
             LOCAL_AUTHORITY
           </h3>
           {!gauge ? (
-            <div className="text-center py-8 text-slate-500 font-mono">NO_AUTHORITY_DATA</div>
+            <div className="text-center py-8">
+              <Gauge className="w-6 h-6 text-slate-600 mx-auto mb-2" />
+              <p className="text-xs font-mono text-slate-500">No authority data yet. Authority metrics require active citations.</p>
+            </div>
           ) : (
             <div className="space-y-4">
               <div className="text-center">
@@ -194,7 +206,10 @@ export default function LocalSEOPage() {
             NAP_CONSISTENCY
           </h3>
           {!nap ? (
-            <div className="text-center py-8 text-slate-500 font-mono">NO_NAP_DATA</div>
+            <div className="text-center py-8">
+              <FileText className="w-6 h-6 text-slate-600 mx-auto mb-2" />
+              <p className="text-xs font-mono text-slate-500">No NAP data yet. Add your business information to check citation consistency.</p>
+            </div>
           ) : (
             <div className="space-y-4">
               <div className="text-center">
@@ -243,7 +258,10 @@ export default function LocalSEOPage() {
               <Loader2 className="w-6 h-6 text-platform-500 animate-spin" />
             </div>
           ) : geoList.length === 0 ? (
-            <div className="text-center py-8 text-slate-500 font-mono">NO_GEO_DATA</div>
+            <div className="text-center py-8">
+              <Globe className="w-6 h-6 text-slate-600 mx-auto mb-2" />
+              <p className="text-xs font-mono text-slate-500">No geographic data yet. Geographic citations populate as local directories are tracked.</p>
+            </div>
           ) : (
             <div className="space-y-3">
               {geoList.map((g, i) => (
@@ -275,7 +293,10 @@ export default function LocalSEOPage() {
               <Loader2 className="w-6 h-6 text-platform-500 animate-spin" />
             </div>
           ) : oppList.length === 0 ? (
-            <div className="text-center py-8 text-slate-500 font-mono">NO_OPPORTUNITY_DATA</div>
+            <div className="text-center py-8">
+              <TrendingUp className="w-6 h-6 text-slate-600 mx-auto mb-2" />
+              <p className="text-xs font-mono text-slate-500">No citation opportunities yet. Add more directories to discover opportunities.</p>
+            </div>
           ) : (
             <div className="space-y-2">
               {oppList.map((o, i) => (
@@ -309,7 +330,10 @@ export default function LocalSEOPage() {
               <Loader2 className="w-6 h-6 text-platform-500 animate-spin" />
             </div>
           ) : compList.length === 0 ? (
-            <div className="text-center py-8 text-slate-500 font-mono">NO_COMPETITOR_DATA</div>
+            <div className="text-center py-8">
+              <GitCompare className="w-6 h-6 text-slate-600 mx-auto mb-2" />
+              <p className="text-xs font-mono text-slate-500">No competitor data yet. Competitor comparisons require citation data from multiple sources.</p>
+            </div>
           ) : (
             <div className="space-y-3">
               {compList.map((c, i) => (

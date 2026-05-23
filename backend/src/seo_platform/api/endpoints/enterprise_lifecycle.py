@@ -13,7 +13,7 @@ from seo_platform.services.enterprise_lifecycle import enterprise_lifecycle
 router = APIRouter()
 
 
-@router.post("/enterprise-lifecycle/onboarding")
+@router.post("/onboarding")
 async def onboard_enterprise(
     org_id: str = Body(..., description="Organization ID"),
 ) -> dict:
@@ -22,7 +22,7 @@ async def onboard_enterprise(
     return {"success": True, "data": onboarding.model_dump()}
 
 
-@router.get("/enterprise-lifecycle/organization-lifecycle")
+@router.get("/organization-lifecycle")
 async def get_organization_lifecycle(
     org_id: str = Query(..., description="Organization ID"),
 ) -> dict:
@@ -31,7 +31,7 @@ async def get_organization_lifecycle(
     return {"success": True, "data": lifecycle.model_dump()}
 
 
-@router.post("/enterprise-lifecycle/migration-plan")
+@router.post("/migration-plan")
 async def plan_migration(
     source_system: str = Body(..., description="Source system name"),
     target_system: str = Body(..., description="Target system name"),
@@ -41,7 +41,7 @@ async def plan_migration(
     return {"success": True, "data": migration.model_dump()}
 
 
-@router.get("/enterprise-lifecycle/audit-export")
+@router.get("/audit-export")
 async def export_audit(
     time_range: str = Query("last_30_days", description="Time range for audit (last_24_hours, last_7_days, last_30_days, last_90_days)"),
     export_format: str = Query("json", description="Export format (json, csv)"),
@@ -51,7 +51,7 @@ async def export_audit(
     return {"success": True, "data": audit.model_dump()}
 
 
-@router.post("/enterprise-lifecycle/compliance-orchestration")
+@router.post("/compliance-orchestration")
 async def orchestrate_compliance(
     standards: list[str] = Body(None, description="Compliance standards to assess"),
 ) -> dict:
@@ -60,7 +60,7 @@ async def orchestrate_compliance(
     return {"success": True, "data": compliance.model_dump()}
 
 
-@router.get("/enterprise-lifecycle/governance-assessment")
+@router.get("/governance-assessment")
 async def get_governance_assessment(
     governance_domain: str = Query(..., description="Governance domain (data_governance, access_control, security, operations, compliance)"),
 ) -> dict:

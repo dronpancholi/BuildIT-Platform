@@ -299,6 +299,18 @@ class LLMGateway:
         if ks.blocked:
             raise KillSwitchActiveError(f"LLM Calls blocked by kill switch: {ks.reason}")
 
+        settings = get_settings()
+        if settings.test_mode or settings.is_testing:
+            mock_content = self._generate_mock_content(output_schema)
+            return LLMResult(
+                content=mock_content,
+                model_used="mock-model",
+                input_tokens=10,
+                output_tokens=10,
+                latency_ms=1.0,
+                confidence_score=1.0,
+            )
+
         # 2. Rate Limiter Check
         try:
             rate_result = await rate_limiter.consume(
@@ -485,6 +497,7 @@ class LLMGateway:
 
     async def _call_nim_api(self, model_id: str, prompt: RenderedPrompt,
                             temperature: float, max_tokens: int) -> dict:
+        settings = get_settings()
         client = await self._get_client()
         messages = []
         if prompt.system_prompt:
@@ -540,5 +553,63 @@ class LLMGateway:
         if self._client:
             await self._client.aclose()
             self._client = None
+
+    def _generate_mock_content(self, schema: Any) -> Any:
+        import datetime
+        from pydantic import BaseModel
+        from typing import get_origin, get_args, Union
+
+        # Resolve Union/Optional types
+        origin = get_origin(schema)
+        args = get_args(schema)
+        
+        if origin is not None and (str(origin) == "typing.Union" or "UnionType" in str(origin)):
+            # Pick the first non-None type
+            for arg in args:
+                if arg is not type(None):
+                    schema = arg
+                    origin = get_origin(schema)
+                    args = get_args(schema)
+                    break
+
+        if schema in (dict, Any) or origin is dict:
+            return {
+                "metric_name": "Mock SEO Budget Growth",
+                "metric_value": "340%",
+                "percentage_change": 340.0,
+                "statistical_significance": "highly_significant"
+            }
+        elif schema is list or origin is list:
+            item_type = args[0] if args else Any
+            return [self._generate_mock_content(item_type) for _ in range(3)]
+        
+        # If it is a Pydantic model
+        if isinstance(schema, type) and issubclass(schema, BaseModel):
+            mock_data = {}
+            for name, field in schema.model_fields.items():
+                field_type = field.annotation
+                mock_data[name] = self._generate_mock_content(field_type)
+                # Handle string overrides for better mock realism
+                if field_type is str or get_origin(field_type) is str:
+                    if "headline" in name:
+                        mock_data[name] = "Mock Headline: AI Search Triples Enterprise SEO Spend"
+                    elif "hook" in name:
+                        mock_data[name] = "While programmatic ad spend declined 73%, data-driven organic partnerships rose 340% for early adopters."
+                    elif "beat" in name:
+                        mock_data[name] = "technology"
+            return schema(**mock_data)
+            
+        if schema is str:
+            return "mock_string"
+        if schema is int:
+            return 42
+        if schema is float:
+            return 3.14
+        if schema is bool:
+            return True
+        if schema is datetime.datetime:
+            return datetime.datetime.now()
+            
+        return None
 
 llm_gateway = LLMGateway()

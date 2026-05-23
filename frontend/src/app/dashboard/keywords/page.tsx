@@ -11,6 +11,7 @@ import { useRouter } from "next/navigation";
 import { fetchApi, MOCK_TENANT_ID } from "@/lib/api";
 import { useCommandCenter } from "@/hooks/use-command-center";
 import { KeywordIntelligencePanel } from "@/components/operational/keyword-intelligence-panel";
+import { PageGuide } from "@/components/ui/page-guide";
 import type { KeywordOpportunity } from "@/types/business-intelligence";
 
 export default function KeywordsPage() {
@@ -78,6 +79,11 @@ export default function KeywordsPage() {
         </div>
       </div>
 
+      <PageGuide title="About Keywords">
+        <p>The <strong>Intelligence</strong> view shows live keyword opportunities ranked by opportunity score, search volume, and difficulty. The <strong>History</strong> view shows past keyword research sessions.</p>
+        <p>Use the <strong>Discovery</strong> button to run new keyword research from a seed term.</p>
+      </PageGuide>
+
       {viewMode === "intelligence" ? (
         <>
           {loadingOpps ? (
@@ -105,7 +111,7 @@ export default function KeywordsPage() {
                   {topOpportunities.length === 0 ? (
                     <div className="p-12 text-center">
                       <Search className="w-8 h-8 text-slate-700 mx-auto mb-2" />
-                      <p className="text-xs font-mono text-slate-600">No opportunity data yet</p>
+                      <p className="text-xs font-mono text-slate-500">No opportunity data yet. Run keyword discovery to find opportunities.</p>
                     </div>
                   ) : (
                     topOpportunities.map((opp, i) => {

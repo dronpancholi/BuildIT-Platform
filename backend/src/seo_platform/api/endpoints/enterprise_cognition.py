@@ -9,7 +9,7 @@ from seo_platform.services.enterprise_cognition import enterprise_cognition
 router = APIRouter()
 
 
-@router.get("/enterprise-cognition/history")
+@router.get("/history")
 async def get_operational_history(
     tenant_id: UUID = Query(...),
     days: int = Query(7, ge=1, le=365),
@@ -18,7 +18,7 @@ async def get_operational_history(
     return {"success": True, "data": history.model_dump()}
 
 
-@router.get("/enterprise-cognition/campaign-memory")
+@router.get("/campaign-memory")
 async def get_campaign_memory(
     tenant_id: UUID = Query(...),
     campaign_id: UUID = Query(...),
@@ -27,7 +27,7 @@ async def get_campaign_memory(
     return {"success": True, "data": graph.model_dump()}
 
 
-@router.post("/enterprise-cognition/workflow-reasoning")
+@router.post("/workflow-reasoning")
 async def get_workflow_reasoning(
     workflow_type: str = Body(...),
     time_window_hours: int = Body(168, ge=1),
@@ -38,7 +38,7 @@ async def get_workflow_reasoning(
     return {"success": True, "data": reasoning.model_dump()}
 
 
-@router.get("/enterprise-cognition/organization-intelligence")
+@router.get("/organization-intelligence")
 async def get_organization_intelligence(
     tenant_id: UUID = Query(...),
     days: int = Query(30, ge=1, le=365),
@@ -47,7 +47,7 @@ async def get_organization_intelligence(
     return {"success": True, "data": report.model_dump()}
 
 
-@router.get("/enterprise-cognition/summary")
+@router.get("/summary")
 async def get_operational_summary(
     tenant_id: UUID = Query(...),
     time_window_hours: int = Query(24, ge=1, le=720),
@@ -56,7 +56,7 @@ async def get_operational_summary(
     return {"success": True, "data": summary.model_dump()}
 
 
-@router.get("/enterprise-cognition/strategic-context")
+@router.get("/strategic-context")
 async def get_strategic_context(
     tenant_id: UUID = Query(...),
 ) -> dict:

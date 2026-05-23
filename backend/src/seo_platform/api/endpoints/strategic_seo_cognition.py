@@ -9,7 +9,7 @@ from seo_platform.services.strategic_seo_cognition import strategic_seo_cognitio
 router = APIRouter()
 
 
-@router.get("/strategic-seo/authority-forecast")
+@router.get("/authority-forecast")
 async def get_authority_forecast(
     domain: str = Query(..., description="Domain to forecast"),
     months: int = Query(12, ge=1, le=60, description="Forecast period in months"),
@@ -18,7 +18,7 @@ async def get_authority_forecast(
     return {"success": True, "data": forecast.model_dump()}
 
 
-@router.get("/strategic-seo/backlink-ecosystem")
+@router.get("/backlink-ecosystem")
 async def get_backlink_ecosystem(
     domain: str = Query(..., description="Domain to analyze"),
 ) -> dict:
@@ -26,7 +26,7 @@ async def get_backlink_ecosystem(
     return {"success": True, "data": intelligence.model_dump()}
 
 
-@router.get("/strategic-seo/serp-trend-forecast")
+@router.get("/serp-trend-forecast")
 async def get_serp_trend_forecast(
     keyword: str = Query(..., description="Keyword to forecast"),
 ) -> dict:
@@ -34,7 +34,7 @@ async def get_serp_trend_forecast(
     return {"success": True, "data": forecast.model_dump()}
 
 
-@router.post("/strategic-seo/semantic-market-intelligence")
+@router.post("/semantic-market-intelligence")
 async def get_semantic_market_intelligence(
     market_segment: str = Body(..., description="Market segment to analyze"),
 ) -> dict:
@@ -42,7 +42,7 @@ async def get_semantic_market_intelligence(
     return {"success": True, "data": intelligence.model_dump()}
 
 
-@router.post("/strategic-seo/ranking-prediction")
+@router.post("/ranking-prediction")
 async def get_ranking_prediction(
     keyword: str = Body(..., description="Target keyword"),
     campaign_id: str = Body(..., description="Campaign identifier"),
@@ -51,7 +51,7 @@ async def get_ranking_prediction(
     return {"success": True, "data": prediction.model_dump()}
 
 
-@router.get("/strategic-seo/operational-seo-strategy")
+@router.get("/operational-seo-strategy")
 async def get_operational_seo_strategy(
     tenant_id: UUID = Query(..., description="Tenant ID"),
 ) -> dict:
@@ -59,7 +59,7 @@ async def get_operational_seo_strategy(
     return {"success": True, "data": strategy.model_dump()}
 
 
-@router.post("/strategic-seo/authority-propagation-simulation")
+@router.post("/authority-propagation-simulation")
 async def get_authority_propagation_simulation(
     source_domain: str = Body(..., description="Source domain"),
     target_domain: str = Body(..., description="Target domain"),
@@ -68,7 +68,7 @@ async def get_authority_propagation_simulation(
     return {"success": True, "data": simulation.model_dump()}
 
 
-@router.get("/strategic-seo/semantic-competitive-intelligence")
+@router.get("/semantic-competitive-intelligence")
 async def get_semantic_competitive_intelligence(
     competitor_domain: str = Query(..., description="Competitor domain"),
 ) -> dict:
@@ -76,7 +76,7 @@ async def get_semantic_competitive_intelligence(
     return {"success": True, "data": intelligence.model_dump()}
 
 
-@router.post("/strategic-seo/strategic-backlink-map")
+@router.post("/strategic-backlink-map")
 async def get_strategic_backlink_map(
     target_domain: str = Body(..., description="Target domain for backlink map"),
 ) -> dict:

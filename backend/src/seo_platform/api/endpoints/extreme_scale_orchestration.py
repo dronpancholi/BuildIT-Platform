@@ -7,7 +7,7 @@ from seo_platform.services.extreme_scale_orchestration import extreme_scale_orch
 router = APIRouter()
 
 
-@router.get("/extreme-scale-orchestration/queue-partitioning")
+@router.get("/queue-partitioning")
 async def get_queue_partitioning(
     queue_name: str = Query(..., description="Queue name"),
 ):
@@ -15,7 +15,7 @@ async def get_queue_partitioning(
     return {"success": True, "data": result.model_dump()}
 
 
-@router.get("/extreme-scale-orchestration/orchestration-federation")
+@router.get("/orchestration-federation")
 async def get_orchestration_federation(
     region: str = Query("us-east-1", description="Region to federate"),
 ):
@@ -23,7 +23,7 @@ async def get_orchestration_federation(
     return {"success": True, "data": result.model_dump()}
 
 
-@router.get("/extreme-scale-orchestration/infrastructure-segmentation")
+@router.get("/infrastructure-segmentation")
 async def get_infrastructure_segmentation(
     tenant_id: str = Query(..., description="Tenant ID"),
 ):
@@ -31,7 +31,7 @@ async def get_infrastructure_segmentation(
     return {"success": True, "data": result.model_dump()}
 
 
-@router.get("/extreme-scale-orchestration/workflow-sharding")
+@router.get("/workflow-sharding")
 async def get_workflow_sharding(
     workflow_type: str = Query(..., description="Workflow type"),
 ):
@@ -39,7 +39,7 @@ async def get_workflow_sharding(
     return {"success": True, "data": result.model_dump()}
 
 
-@router.get("/extreme-scale-orchestration/load-balance-plan")
+@router.get("/load-balance-plan")
 async def get_load_balance_plan(
     cluster: str = Query("default", description="Cluster name"),
 ):
@@ -47,7 +47,7 @@ async def get_load_balance_plan(
     return {"success": True, "data": result.model_dump()}
 
 
-@router.get("/extreme-scale-orchestration/capacity-forecast")
+@router.get("/capacity-forecast")
 async def get_capacity_forecast(
     horizon_days: int = Query(90, ge=7, le=365),
 ):
@@ -55,7 +55,7 @@ async def get_capacity_forecast(
     return {"success": True, "data": result.model_dump()}
 
 
-@router.get("/extreme-scale-orchestration/distributed-execution-analysis")
+@router.get("/distributed-execution-analysis")
 async def get_distributed_execution_analysis(
     workflow_id: str = Query(..., description="Workflow ID"),
 ):

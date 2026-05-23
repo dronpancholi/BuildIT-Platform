@@ -4,6 +4,7 @@ import { useState } from "react";
 import { Network, Search, GitBranch, Target, Loader2, Activity, Users, Link2, ArrowRight } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { fetchApi, MOCK_TENANT_ID } from "@/lib/api";
+import { PageGuide } from "@/components/ui/page-guide";
 
 interface GraphNode {
   id: string;
@@ -70,8 +71,8 @@ export default function ProspectGraphPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-slate-100 tracking-tight font-mono">PROSPECT_GRAPH</h1>
-          <p className="text-slate-400 mt-1 font-mono text-sm uppercase tracking-wider">Domain relationship visualization</p>
+          <h1 className="text-3xl font-bold text-slate-100 tracking-tight font-mono">DOMAIN_NETWORK</h1>
+          <p className="text-slate-400 mt-1 font-mono text-sm uppercase tracking-wider">Domain relationship & authority bridge visualization</p>
         </div>
         <div className="flex items-center gap-3">
           <button
@@ -91,6 +92,11 @@ export default function ProspectGraphPage() {
           </div>
         </div>
       </div>
+
+      <PageGuide title="About Prospect Graph">
+        <p>The <strong>Prospect Graph</strong> visualizes domain relationships and authority bridges between websites. It helps identify link-building opportunities through shared connections.</p>
+        <p>Nodes represent domains, edges represent relationships. Use the search to find specific domains in the graph. Enable <strong>Bridges</strong> to highlight authority propagation paths.</p>
+      </PageGuide>
 
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
         {/* Graph Statistics */}

@@ -9,7 +9,7 @@ from seo_platform.services.advanced_analytics import advanced_analytics
 router = APIRouter()
 
 
-@router.get("/analytics/backlink-roi")
+@router.get("/backlink-roi")
 async def get_backlink_roi(
     tenant_id: UUID = Query(..., description="Tenant UUID"),
     campaign_id: UUID = Query(..., description="Campaign UUID"),
@@ -18,7 +18,7 @@ async def get_backlink_roi(
     return {"success": True, "data": result.model_dump()}
 
 
-@router.get("/analytics/campaign-efficiency")
+@router.get("/campaign-efficiency")
 async def get_campaign_efficiency(
     tenant_id: UUID = Query(..., description="Tenant UUID"),
 ) -> dict:
@@ -26,7 +26,7 @@ async def get_campaign_efficiency(
     return {"success": True, "data": [r.model_dump() for r in results]}
 
 
-@router.get("/analytics/workflow-latency")
+@router.get("/workflow-latency")
 async def get_workflow_latency(
     tenant_id: UUID = Query(..., description="Tenant UUID"),
     time_window_hours: int = Query(24, description="Time window in hours"),
@@ -35,7 +35,7 @@ async def get_workflow_latency(
     return {"success": True, "data": [r.model_dump() for r in results]}
 
 
-@router.get("/analytics/scraping-quality")
+@router.get("/scraping-quality")
 async def get_scraping_quality(
     time_window_hours: int = Query(24, description="Time window in hours"),
 ) -> dict:
@@ -43,7 +43,7 @@ async def get_scraping_quality(
     return {"success": True, "data": [r.model_dump() for r in results]}
 
 
-@router.get("/analytics/outreach-performance")
+@router.get("/outreach-performance")
 async def get_outreach_performance(
     tenant_id: UUID = Query(..., description="Tenant UUID"),
     time_window_hours: int = Query(168, description="Time window in hours"),
@@ -52,7 +52,7 @@ async def get_outreach_performance(
     return {"success": True, "data": [r.model_dump() for r in results]}
 
 
-@router.get("/analytics/local-seo-effectiveness")
+@router.get("/local-seo-effectiveness")
 async def get_local_seo_effectiveness(
     tenant_id: UUID = Query(..., description="Tenant UUID"),
     time_window_days: int = Query(30, description="Time window in days"),

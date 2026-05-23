@@ -14,14 +14,14 @@ from seo_platform.services.infrastructure_intelligence import infrastructure_int
 router = APIRouter()
 
 
-@router.get("/infrastructure/topology")
+@router.get("/topology")
 async def get_topology() -> dict:
     """Return infrastructure topology dependency graph."""
     topology = await infrastructure_intelligence.analyze_topology()
     return {"success": True, "data": topology.model_dump()}
 
 
-@router.get("/infrastructure/queue-saturation")
+@router.get("/queue-saturation")
 async def get_queue_saturation() -> dict:
     """Return queue saturation analysis with z-score anomaly detection."""
     saturation = await infrastructure_intelligence.detect_queue_saturation()
@@ -31,14 +31,14 @@ async def get_queue_saturation() -> dict:
     }
 
 
-@router.get("/infrastructure/worker-utilization")
+@router.get("/worker-utilization")
 async def get_worker_utilization() -> dict:
     """Return worker utilization analysis."""
     utilization = await infrastructure_intelligence.analyze_worker_utilization()
     return {"success": True, "data": utilization.model_dump()}
 
 
-@router.get("/infrastructure/bottlenecks")
+@router.get("/bottlenecks")
 async def get_bottlenecks(
     time_window_hours: int = Query(24, description="Time window in hours"),
 ) -> dict:
@@ -49,7 +49,7 @@ async def get_bottlenecks(
     return {"success": True, "data": bottlenecks.model_dump()}
 
 
-@router.get("/infrastructure/insights")
+@router.get("/insights")
 async def get_infrastructure_insights() -> dict:
     """Return LLM-generated infrastructure health insights (advisory only)."""
     insights = await infrastructure_intelligence.generate_infrastructure_insights()

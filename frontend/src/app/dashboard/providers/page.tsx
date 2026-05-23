@@ -43,7 +43,7 @@ function getProviderIcon(name: string): React.ReactNode {
 export default function ProvidersPage() {
   const { data, isLoading, refetch } = useQuery<ProviderHealthData>({
     queryKey: ["provider-health"],
-    queryFn: () => fetchApi("/providers/status"),
+    queryFn: () => fetchApi("/provider-health"),
     refetchInterval: 5000,
   });
 

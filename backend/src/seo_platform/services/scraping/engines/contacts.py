@@ -87,7 +87,8 @@ class ContactExtractionEngine(BaseScraper):
                                 contact_links.append(f"{url.rstrip('/')}{href}")
                             elif href.startswith("http"):
                                 contact_links.append(href)
-                except:
+                except Exception as e:
+                    logger.debug("contact_link_selector_failed", pattern=pattern, error=str(e))
                     continue
 
             for contact_url in contact_links[:3]:

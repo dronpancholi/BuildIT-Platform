@@ -555,10 +555,10 @@ class EnterpriseCognitionService:
                     active_campaigns.append({
                         "id": str(camp.id),
                         "name": camp.name or "",
-                        "status": getattr(camp, "status", "active") or "active",
+                        "status": getattr(camp.status, "value", str(camp.status)) if camp.status else "active",
                         "acquired_links": camp.acquired_link_count or 0,
                         "target_links": camp.target_link_count or 0,
-                        "total_spent": float(camp.total_spent or 0),
+                        "health_score": float(camp.health_score or 0),
                     })
 
             from seo_platform.services.operational_state import operational_state

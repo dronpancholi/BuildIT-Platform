@@ -9,7 +9,7 @@ from seo_platform.services.communication_reliability import communication_reliab
 router = APIRouter()
 
 
-@router.post("/communication-reliability/retry")
+@router.post("/retry")
 async def orchestrate_retry(
     tenant_id: UUID = Body(..., embed=True),
     communication_id: str = Body(..., embed=True),
@@ -21,7 +21,7 @@ async def orchestrate_retry(
     return {"success": True, "data": result.model_dump()}
 
 
-@router.get("/communication-reliability/delivery-analytics")
+@router.get("/delivery-analytics")
 async def get_delivery_analytics(
     tenant_id: UUID = Query(..., description="Tenant UUID"),
     time_window_hours: int = Query(168, description="Time window in hours"),
@@ -30,7 +30,7 @@ async def get_delivery_analytics(
     return {"success": True, "data": analytics.model_dump()}
 
 
-@router.post("/communication-reliability/sync-responses")
+@router.post("/sync-responses")
 async def sync_responses(
     tenant_id: UUID = Body(..., embed=True),
     campaign_id: UUID = Body(..., embed=True),
@@ -39,7 +39,7 @@ async def sync_responses(
     return {"success": True, "data": result.model_dump()}
 
 
-@router.get("/communication-reliability/replay-safety")
+@router.get("/replay-safety")
 async def get_replay_safety(
     tenant_id: UUID = Query(..., description="Tenant UUID"),
     campaign_id: UUID = Query(..., description="Campaign UUID"),
@@ -48,7 +48,7 @@ async def get_replay_safety(
     return {"success": True, "data": report.model_dump()}
 
 
-@router.get("/communication-reliability/provider-health")
+@router.get("/provider-health")
 async def get_provider_health(
     provider_name: str = Query(..., description="Provider name"),
 ) -> dict:
@@ -56,7 +56,7 @@ async def get_provider_health(
     return {"success": True, "data": health.model_dump()}
 
 
-@router.post("/communication-reliability/failover")
+@router.post("/failover")
 async def failover_provider(
     tenant_id: UUID = Body(..., embed=True),
     campaign_id: UUID = Body(..., embed=True),
@@ -66,7 +66,7 @@ async def failover_provider(
     return {"success": True, "data": result.model_dump()}
 
 
-@router.get("/communication-reliability/bounce-intelligence")
+@router.get("/bounce-intelligence")
 async def get_bounce_intelligence(
     tenant_id: UUID = Query(..., description="Tenant UUID"),
     time_window_hours: int = Query(168, description="Time window in hours"),
@@ -75,13 +75,13 @@ async def get_bounce_intelligence(
     return {"success": True, "data": intelligence.model_dump()}
 
 
-@router.post("/communication-reliability/suppress-bounces")
+@router.post("/suppress-bounces")
 async def suppress_bounces() -> dict:
     count = await communication_reliability.suppress_bounced_addresses()
     return {"success": True, "data": {"suppress_count": count}}
 
 
-@router.get("/communication-reliability/workflow-consistency")
+@router.get("/workflow-consistency")
 async def get_workflow_consistency(
     workflow_run_id: str = Query(..., description="Workflow run ID"),
 ) -> dict:

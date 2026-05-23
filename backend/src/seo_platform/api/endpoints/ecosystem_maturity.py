@@ -7,7 +7,7 @@ from seo_platform.services.ecosystem_maturity import ecosystem_maturity
 router = APIRouter()
 
 
-@router.get("/ecosystem-maturity/integration-lifecycle")
+@router.get("/integration-lifecycle")
 async def get_integration_lifecycle(
     integration_id: str = Query(..., description="Integration ID"),
 ):
@@ -15,7 +15,7 @@ async def get_integration_lifecycle(
     return {"success": True, "data": result.model_dump()}
 
 
-@router.get("/ecosystem-maturity/ecosystem-intelligence")
+@router.get("/ecosystem-intelligence")
 async def get_ecosystem_intelligence(
     scope: str = Query("platform", description="Ecosystem scope"),
 ):
@@ -23,7 +23,7 @@ async def get_ecosystem_intelligence(
     return {"success": True, "data": report.model_dump()}
 
 
-@router.get("/ecosystem-maturity/organization-governance")
+@router.get("/organization-governance")
 async def get_organization_governance(
     org_id: str = Query(..., description="Organization ID"),
 ):
@@ -31,7 +31,7 @@ async def get_organization_governance(
     return {"success": True, "data": report.model_dump()}
 
 
-@router.get("/ecosystem-maturity/cross-system-trace")
+@router.get("/cross-system-trace")
 async def get_cross_system_trace(
     workflow_id: str = Query(..., description="Workflow ID"),
 ):
@@ -39,7 +39,7 @@ async def get_cross_system_trace(
     return {"success": True, "data": trace.model_dump()}
 
 
-@router.get("/ecosystem-maturity/compliance-evolution")
+@router.get("/compliance-evolution")
 async def get_compliance_evolution(
     org_id: str = Query(..., description="Organization ID"),
 ):

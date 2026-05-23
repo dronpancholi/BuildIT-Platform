@@ -132,6 +132,9 @@ class BacklinkCampaign(Base, UUIDPrimaryKeyMixin, TenantMixin, TimestampMixin):
     prospects: Mapped[list[BacklinkProspect]] = relationship(
         "BacklinkProspect", back_populates="campaign", lazy="dynamic",
     )
+    threads: Mapped[list[OutreachThread]] = relationship(
+        "OutreachThread", back_populates="campaign", lazy="selectin",
+    )
 
 
 class BacklinkProspect(Base, UUIDPrimaryKeyMixin, TenantMixin, TimestampMixin):
@@ -212,6 +215,7 @@ class OutreachThread(Base, UUIDPrimaryKeyMixin, TenantMixin, TimestampMixin):
     )
 
     # Relationships
+    campaign: Mapped[BacklinkCampaign] = relationship("BacklinkCampaign", lazy="selectin")
     prospect: Mapped[BacklinkProspect] = relationship("BacklinkProspect", back_populates="threads")
 
 

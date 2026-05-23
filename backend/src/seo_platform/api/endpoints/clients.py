@@ -11,6 +11,7 @@ from uuid import UUID
 
 from fastapi import APIRouter, Query
 from pydantic import BaseModel, Field
+from typing import Any
 
 from seo_platform.schemas import APIResponse, ResponseMeta
 
@@ -35,7 +36,12 @@ class ClientResponse(BaseModel):
     domain: str
     niche: str | None
     business_type: str | None
+    geo_focus: list[str]
+    competitors: list[str]
+    profile_data: dict[str, Any]
     onboarding_status: str
+    keyword_count: int = 0
+    campaign_count: int = 0
     created_at: datetime
 
 
@@ -100,7 +106,12 @@ async def create_client(request: CreateClientRequest) -> APIResponse[ClientRespo
                 domain=client.domain,
                 niche=client.niche,
                 business_type=client.business_type.value if client.business_type else None,
+                geo_focus=client.geo_focus or [],
+                competitors=client.competitors or [],
+                profile_data=client.profile_data or {},
                 onboarding_status=client.onboarding_status.value,
+                keyword_count=0,
+                campaign_count=0,
                 created_at=client.created_at,
             )
         )
@@ -144,7 +155,12 @@ async def list_clients(
                     domain=c.domain,
                     niche=c.niche,
                     business_type=c.business_type.value if c.business_type else None,
+                    geo_focus=c.geo_focus or [],
+                    competitors=c.competitors or [],
+                    profile_data=c.profile_data or {},
                     onboarding_status=c.onboarding_status.value,
+                    keyword_count=0,
+                    campaign_count=0,
                     created_at=c.created_at,
                 )
                 for c in clients

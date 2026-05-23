@@ -10,9 +10,11 @@ import {
 import { useQuery } from "@tanstack/react-query";
 import { fetchApi } from "@/lib/api";
 import { useCommandCenter } from "@/hooks/use-command-center";
+import { useRouter } from "next/navigation";
 import { CampaignEvolutionPanel } from "@/components/operational/campaign-evolution-panel";
 import { CampaignWorkflowStepper } from "@/components/operational/campaign-workflow-stepper";
 import { EmailThreadViewer } from "@/components/operational/email-thread-viewer";
+import { PageGuide } from "@/components/ui/page-guide";
 import type { CampaignIntelligence } from "@/types/business-intelligence";
 
 function getHealthColor(score: number): string {
@@ -45,6 +47,7 @@ function getMomentumLabel(momentum: number): string {
 
 export default function CampaignsPage() {
   const { openCommand } = useCommandCenter();
+  const router = useRouter();
   const [searchQuery, setSearchQuery] = useState("");
   const [viewMode, setViewMode] = useState<"table" | "evolution">("evolution");
   const [expandedEmails, setExpandedEmails] = useState<Set<string>>(new Set());
@@ -129,6 +132,11 @@ export default function CampaignsPage() {
         </div>
       </div>
 
+      <PageGuide title="About Campaigns">
+        <p>Campaigns track your link-building and outreach efforts. Each campaign has a <strong>health score</strong>, <strong>momentum</strong>, and <strong>progress</strong> toward its target link count.</p>
+        <p>Switch between <strong>Evolution</strong> view (health trends over time) and <strong>Table</strong> view (detailed metrics per campaign). Create a campaign to get started.</p>
+      </PageGuide>
+
       <div className="flex flex-col sm:flex-row gap-4">
         <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
@@ -197,7 +205,9 @@ export default function CampaignsPage() {
                         className="hover:bg-surface-border/30 transition-colors group"
                       >
                         <td className="px-5 py-3.5">
-                          <div className="font-medium text-slate-200 text-sm">{c.name}</div>
+                          <button onClick={() => router.push(`/dashboard/campaigns/${c.id}`)} className="font-medium text-slate-200 text-sm hover:text-platform-400 transition-colors text-left">
+                            {c.name}
+                          </button>
                           <div className="text-[10px] text-slate-500 font-mono mt-0.5 capitalize">
                             {c.campaign_type.replace("_", " ")}
                           </div>

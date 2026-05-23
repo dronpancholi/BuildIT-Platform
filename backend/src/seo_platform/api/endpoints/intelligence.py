@@ -16,28 +16,28 @@ from seo_platform.services.operational_intelligence import operational_intellige
 router = APIRouter()
 
 
-@router.get("/intelligence/anomalies")
+@router.get("/anomalies")
 async def get_anomalies(tenant_id: UUID = Query(..., description="Tenant UUID")) -> dict:
     """Return current anomalies across all monitored components."""
     anomalies = await operational_intelligence.detect_anomalies(tenant_id)
     return {"success": True, "data": [a.model_dump() for a in anomalies]}
 
 
-@router.get("/intelligence/congestion")
+@router.get("/congestion")
 async def get_congestion() -> dict:
     """Return queue congestion analysis."""
     congestion = await operational_intelligence.analyze_queue_congestion()
     return {"success": True, "data": [c.model_dump() for c in congestion]}
 
 
-@router.get("/intelligence/recommendations")
+@router.get("/recommendations")
 async def get_recommendations(tenant_id: UUID = Query(..., description="Tenant UUID")) -> dict:
     """Return AI-generated optimization recommendations."""
     recommendations = await operational_intelligence.generate_recommendations(tenant_id)
     return {"success": True, "data": [r.model_dump() for r in recommendations]}
 
 
-@router.get("/intelligence/bottlenecks")
+@router.get("/bottlenecks")
 async def get_bottlenecks(tenant_id: UUID = Query(..., description="Tenant UUID")) -> dict:
     """Return workflow bottleneck analysis."""
     bottlenecks = await operational_intelligence.analyze_workflow_bottlenecks(tenant_id)

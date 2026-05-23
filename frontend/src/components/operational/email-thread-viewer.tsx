@@ -12,6 +12,8 @@ import { fetchApi, MOCK_TENANT_ID } from "@/lib/api";
 
 export interface ThreadData {
   id: string;
+  campaign_id: string;
+  campaign_name: string | null;
   prospect_domain: string;
   prospect_name: string | null;
   to_email: string | null;
@@ -21,6 +23,8 @@ export interface ThreadData {
   follow_up_count: number;
   sent_at: string | null;
   replied_at: string | null;
+  created_at: string | null;
+  updated_at: string | null;
   confidence_score: number;
   ai_personalization: Record<string, unknown>;
 }

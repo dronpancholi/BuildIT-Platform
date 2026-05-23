@@ -7,6 +7,7 @@ import {
   Target, Link2, Mail, Users, Loader2,
 } from "lucide-react";
 import { fetchApi } from "@/lib/api";
+import { useRouter } from "next/navigation";
 import type { CampaignIntelligence } from "@/types/business-intelligence";
 
 function getHealthColor(score: number): string {
@@ -89,6 +90,7 @@ function SignalBar({ label, value, color }: { label: string; value: number; colo
 }
 
 export function CampaignEvolutionPanel() {
+  const router = useRouter();
   const [campaigns, setCampaigns] = useState<CampaignIntelligence[]>([]);
   const [loading, setLoading] = useState(true);
   const [expanded, setExpanded] = useState<string | null>(null);
@@ -168,9 +170,9 @@ export function CampaignEvolutionPanel() {
                 <div className="flex items-center gap-4">
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 mb-1.5">
-                      <span className="text-sm font-mono text-slate-200 font-medium truncate">
+                      <button onClick={(e) => { e.stopPropagation(); router.push(`/dashboard/campaigns/${campaign.id}`); }} className="text-sm font-mono text-slate-200 font-medium truncate hover:text-platform-400 transition-colors text-left">
                         {campaign.name}
-                      </span>
+                      </button>
                       <span className="text-[9px] font-mono text-slate-500 uppercase">
                         {campaign.campaign_type.replace("_", " ")}
                       </span>

@@ -1,8 +1,10 @@
 "use client";
 
-import { Search, BarChart3, GitBranch, PieChart, MapPin, Loader2, TrendingUp, Activity, Grid3X3, Layers } from "lucide-react";
+import { Search, BarChart3, GitBranch, PieChart, MapPin, Loader2, TrendingUp, Activity, Grid3X3, Layers, Sparkles } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { fetchApi, MOCK_TENANT_ID } from "@/lib/api";
+import { PageGuide } from "@/components/ui/page-guide";
+import { useCommandCenter } from "@/hooks/use-command-center";
 
 interface OpportunityScore {
   keyword: string;
@@ -80,13 +82,13 @@ export default function SEOIntelligencePage() {
 
   const { data: serpFeatures, isLoading: loadingSERP } = useQuery<SERPFeature[]>({
     queryKey: ["seo-intelligence", "serp"],
-    queryFn: () => fetchApi("/serp-intelligence/features"),
+    queryFn: () => fetchApi("/intelligence-queries/serp-intelligence/features"),
     refetchInterval: 300000,
   });
 
   const { data: difficulty, isLoading: loadingDiff } = useQuery<RankingDifficulty>({
     queryKey: ["seo-intelligence", "difficulty"],
-    queryFn: () => fetchApi("/serp-intelligence/ranking-difficulty"),
+    queryFn: () => fetchApi("/intelligence-queries/serp-intelligence/ranking-difficulty"),
     refetchInterval: 300000,
   });
 
@@ -114,6 +116,11 @@ export default function SEOIntelligencePage() {
         </div>
       </div>
 
+      <PageGuide title="About SEO Intelligence">
+        <p>This page provides <strong>keyword opportunity analysis</strong>, <strong>SERP feature tracking</strong>, <strong>topical authority mapping</strong>, and <strong>ranking difficulty</strong> metrics.</p>
+        <p>Run keyword discovery to populate this data. Use the Discover Keywords button to start researching opportunities.</p>
+      </PageGuide>
+
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Keyword Opportunity Heatmap */}
         <div className="lg:col-span-2 glass-panel overflow-hidden">
@@ -128,7 +135,10 @@ export default function SEOIntelligencePage() {
                 <Loader2 className="w-8 h-8 text-platform-500 animate-spin" />
               </div>
             ) : opps.length === 0 ? (
-              <div className="text-center py-16 text-slate-500 font-mono">NO_KEYWORD_DATA</div>
+              <div className="text-center py-16">
+                <Search className="w-8 h-8 text-slate-600 mx-auto mb-2" />
+                <p className="text-xs font-mono text-slate-500">No keyword data yet. Run keyword discovery to identify opportunities.</p>
+              </div>
             ) : (
               <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-2">
                 {opps.slice(0, 30).map((kw, i) => (
@@ -164,7 +174,10 @@ export default function SEOIntelligencePage() {
                 <Loader2 className="w-8 h-8 text-platform-500 animate-spin" />
               </div>
             ) : serp.length === 0 ? (
-              <div className="text-center py-12 text-slate-500 font-mono">NO_SERP_DATA</div>
+              <div className="text-center py-12">
+                <BarChart3 className="w-6 h-6 text-slate-600 mx-auto mb-2" />
+                <p className="text-xs font-mono text-slate-500">No SERP data yet. SERP features populate after keyword research is completed.</p>
+              </div>
             ) : (
               serp.map((f, i) => (
                 <div key={i} className="p-3 rounded-md bg-surface-darker/50 border border-surface-border/50">
@@ -199,7 +212,10 @@ export default function SEOIntelligencePage() {
                 <Loader2 className="w-8 h-8 text-platform-500 animate-spin" />
               </div>
             ) : tree.length === 0 ? (
-              <div className="text-center py-16 text-slate-500 font-mono">NO_TOPICAL_DATA</div>
+              <div className="text-center py-16">
+                <GitBranch className="w-8 h-8 text-slate-600 mx-auto mb-2" />
+                <p className="text-xs font-mono text-slate-500">No topical data yet. The topical authority tree builds as keywords are researched and clustered.</p>
+              </div>
             ) : (
               <div className="space-y-2">
                 {tree.map((node, i) => (
@@ -248,7 +264,10 @@ export default function SEOIntelligencePage() {
                 </div>
               </div>
             ) : (
-              <div className="text-center py-8 text-slate-500 font-mono">NO_DIFFICULTY_DATA</div>
+              <div className="text-center py-8">
+                <Activity className="w-6 h-6 text-slate-600 mx-auto mb-2" />
+                <p className="text-xs font-mono text-slate-500">No difficulty data yet. Ranking difficulty requires SERP analysis from tracked keywords.</p>
+              </div>
             )}
           </div>
 
@@ -263,7 +282,10 @@ export default function SEOIntelligencePage() {
                 <Loader2 className="w-6 h-6 text-platform-500 animate-spin" />
               </div>
             ) : local.length === 0 ? (
-              <div className="text-center py-8 text-slate-500 font-mono">NO_LOCAL_INTENT_DATA</div>
+              <div className="text-center py-8">
+                <MapPin className="w-6 h-6 text-slate-600 mx-auto mb-2" />
+                <p className="text-xs font-mono text-slate-500">No local intent data yet. Local intent analysis requires geo-targeted keyword data.</p>
+              </div>
             ) : (
               <div className="space-y-2 max-h-[200px] overflow-auto">
                 {local.map((li, i) => (
