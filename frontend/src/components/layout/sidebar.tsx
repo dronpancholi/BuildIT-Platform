@@ -21,6 +21,7 @@ const CLIENTS: ClientInfo[] = [
 const BUSINESS_NAV = [
   { href: "/dashboard", icon: <LayoutDashboard size={17} />, label: "Command Center" },
   { href: "/dashboard/campaigns", icon: <GitBranch size={17} />, label: "Campaigns" },
+  { href: "/dashboard/templates", icon: <FileText size={17} />, label: "Templates" },
   { href: "/dashboard/outbox", icon: <Mail size={17} />, label: "Outbox" },
   { href: "/dashboard/keywords", icon: <Search size={17} />, label: "Keywords" },
   { href: "/dashboard/seo-intelligence", icon: <Globe size={17} />, label: "SEO Intelligence" },
