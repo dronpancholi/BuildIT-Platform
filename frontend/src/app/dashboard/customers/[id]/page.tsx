@@ -7,6 +7,7 @@ import { fetchApi } from "@/lib/api";
 import { PageGuide } from "@/components/ui/page-guide";
 import { ErrorState, LoadingState } from "@/components/ui/error-state";
 import { CampaignManagementTab } from "./campaigns-tab";
+import { CommunicationsTab } from "./communications-tab";
 import { 
   TrendingUp, Activity, GitBranch, Mail, Users, 
   Search, Plus, ArrowLeft, FileText, Lightbulb,
@@ -317,14 +318,7 @@ export default function CustomerWorkspace() {
           )}
 
           {activeTab === "communications" && (
-            <div className="text-center p-8">
-              <Mail className="w-12 h-12 text-slate-700 mx-auto mb-3" />
-              <h3 className="text-sm font-bold font-mono text-slate-300 mb-2">Communications</h3>
-              <p className="text-xs text-slate-500 mb-4">Communications tab - Wave 2C</p>
-              <button className="px-4 py-2 bg-platform-600 hover:bg-platform-500 text-white rounded-md text-xs font-bold font-mono transition-colors">
-                Launch Wave 2C
-              </button>
-            </div>
+            <CommunicationsTab customerId={customerId} />
           )}
 
           {activeTab === "opportunities" && (
