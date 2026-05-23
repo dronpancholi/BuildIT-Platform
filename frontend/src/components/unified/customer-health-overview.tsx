@@ -9,6 +9,7 @@ import {
 import { useQuery } from "@tanstack/react-query";
 import { fetchApi, MOCK_TENANT_ID } from "@/lib/api";
 import { useRouter } from "next/navigation";
+import { ErrorState, LoadingState } from "@/components/ui/error-state";
 import type { ClientInfo } from "@/hooks/use-client";
 
 interface CustomerHealthData {
@@ -57,7 +58,7 @@ function getStatusBadge(status: "healthy" | "at_risk" | "critical") {
 export function CustomerHealthOverview() {
   const router = useRouter();
   
-  const { data: customers = [], isLoading } = useQuery<CustomerHealthData[]>({
+  const { data: customers = [], isLoading, error } = useQuery<CustomerHealthData[]>({
     queryKey: ["customers", "health"],
     queryFn: async () => {
       // Fetch clients
@@ -106,10 +107,34 @@ export function CustomerHealthOverview() {
     return { total, healthy, atRisk, critical, avgHealth };
   }, [customers]);
 
+  if (error) {
+    return (
+      <div className="glass-panel p-4">
+        <div className="flex items-center gap-2 mb-4">
+          <Activity className="w-4 h-4 text-platform-400" />
+          <h3 className="text-xs font-bold font-mono text-slate-200 uppercase tracking-wider">
+            Customer Health
+          </h3>
+        </div>
+        <ErrorState 
+          error={error} 
+          message="Failed to load customer health data"
+          onRetry={() => window.location.reload()}
+        />
+      </div>
+    );
+  }
+
   if (isLoading) {
     return (
-      <div className="glass-panel p-4 flex items-center justify-center min-h-[200px]">
-        <Activity className="w-6 h-6 text-platform-500 animate-spin" />
+      <div className="glass-panel p-4">
+        <div className="flex items-center gap-2 mb-4">
+          <Activity className="w-4 h-4 text-platform-400" />
+          <h3 className="text-xs font-bold font-mono text-slate-200 uppercase tracking-wider">
+            Customer Health
+          </h3>
+        </div>
+        <LoadingState message="Loading customer health..." />
       </div>
     );
   }

@@ -10,6 +10,7 @@ import {
 import { useQuery } from "@tanstack/react-query";
 import { fetchApi, MOCK_TENANT_ID } from "@/lib/api";
 import { useCommandCenter } from "@/hooks/use-command-center";
+import { ErrorState, LoadingState } from "@/components/ui/error-state";
 import type { ApprovalRequest, OutreachThread, BacklinkCampaign } from "@/types/business-intelligence";
 
 type QueueItemType = "approval" | "follow_up" | "reply" | "campaign_alert";
@@ -64,18 +65,21 @@ export function WorkQueue() {
   const [expandedItems, setExpandedItems] = useState<Set<string>>(new Set());
 
   // Fetch approvals
-  const { data: approvals = [] } = useQuery<ApprovalRequest[]>({
+  const { data: approvals = [], isLoading: loadingApprovals, error: approvalsError } = useQuery<ApprovalRequest[]>({
     queryKey: ["approvals", "pending"],
     queryFn: () => fetchApi(`/approvals?tenant_id=${MOCK_TENANT_ID}&status=pending`),
     refetchInterval: 30000,
   });
 
   // Fetch campaigns needing attention
-  const { data: campaigns = [] } = useQuery<BacklinkCampaign[]>({
+  const { data: campaigns = [], isLoading: loadingCampaigns, error: campaignsError } = useQuery<BacklinkCampaign[]>({
     queryKey: ["campaigns", "attention"],
     queryFn: () => fetchApi(`/campaigns?tenant_id=${MOCK_TENANT_ID}`),
     refetchInterval: 60000,
   });
+
+  const isLoading = loadingApprovals || loadingCampaigns;
+  const error = approvalsError || campaignsError;
 
   // Build unified queue
   const queueItems = useMemo(() => {
@@ -166,6 +170,42 @@ export function WorkQueue() {
   const criticalCount = groupedItems.critical.length;
   const highCount = groupedItems.high.length;
 
+  if (error) {
+    return (
+      <div className="glass-panel overflow-hidden">
+        <div className="px-4 py-3 border-b border-surface-border bg-surface-darker/50">
+          <div className="flex items-center gap-2">
+            <Clock className="w-4 h-4 text-platform-400" />
+            <h3 className="text-xs font-bold font-mono text-slate-200 uppercase tracking-wider">
+              Work Queue
+            </h3>
+          </div>
+        </div>
+        <ErrorState 
+          error={error} 
+          message="Failed to load work queue"
+          onRetry={() => window.location.reload()}
+        />
+      </div>
+    );
+  }
+
+  if (isLoading) {
+    return (
+      <div className="glass-panel overflow-hidden">
+        <div className="px-4 py-3 border-b border-surface-border bg-surface-darker/50">
+          <div className="flex items-center gap-2">
+            <Clock className="w-4 h-4 text-platform-400" />
+            <h3 className="text-xs font-bold font-mono text-slate-200 uppercase tracking-wider">
+              Work Queue
+            </h3>
+          </div>
+        </div>
+        <LoadingState message="Loading work queue..." />
+      </div>
+    );
+  }
+
   return (
     <div className="glass-panel overflow-hidden">
       {/* Header */}
@@ -180,12 +220,25 @@ export function WorkQueue() {
           </span>
         </div>
         <div className="flex items-center gap-2">
-          {selectedItems.size > 0 && (
-            <button className="px-2 py-1 text-[9px] font-mono rounded bg-platform-500/10 text-platform-400 border border-platform-500/20 flex items-center gap-1">
-              <CheckSquare className="w-3 h-3" />
-              {selectedItems.size} selected
-            </button>
-          )}
+{selectedItems.size > 0 && (
+              <div className="flex items-center gap-2">
+                <button 
+                  className="px-2 py-1 text-[9px] font-mono rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 flex items-center gap-1 hover:bg-emerald-500/20 transition-colors"
+                  onClick={() => openCommand("approve_item")}
+                >
+                  <CheckSquare className="w-3 h-3" /> Approve
+                </button>
+                <button 
+                  className="px-2 py-1 text-[9px] font-mono rounded bg-red-500/10 text-red-400 border border-red-500/20 flex items-center gap-1 hover:bg-red-500/20 transition-colors"
+                  onClick={() => openCommand("reject_item")}
+                >
+                  <XCircle className="w-3 h-3" /> Reject
+                </button>
+                <span className="text-[9px] font-mono text-slate-600">
+                  {selectedItems.size} selected
+                </span>
+              </div>
+            )}
         </div>
       </div>
 
