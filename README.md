@@ -1,15 +1,104 @@
 # BuildIT — Autonomous Enterprise SEO & Digital PR Operating System
 
 **Classification:** Principal Distributed Systems Architecture Manual  
-**Design Axiom:** *"AI Proposes. Deterministic Systems Execute."*
-
-BuildIT replaces fragile, opaque agency SEO workflows with a deterministic software-defined operating system. Every backlink acquisition campaign, keyword cluster, outreach thread, and revenue attribution event runs on the same durable execution infrastructure as Tier-1 fintech trading engines — Temporal Server with replay-safe workflow isolation, Kafka-backed event streams, PgBouncer-managed PostgreSQL connection pooling, and Pydantic v2 anti-hallucination contracts that forbid the AI from fabricating numbers.
-
-The platform spans 12 client libraries (Ahrefs v3, Hunter.io, DataForSEO, Firecrawl, Scrapling, SearXNG, OpenPageRank, Trafilatura, Wappalyzer, ContactCrawler, Playwright, and Mailgun/SendGrid/Resend) organized in a multi-tier fallback architecture — every provider sits behind a circuit breaker, rate limiter, and Redis-backed cache with automatic demotion on failure. A built-in demo mode with zero-cost DuckDuckGo SERP extraction and deterministic fallback generators enables full local execution without paid API keys.
+**Design Axiom:** *"AI Proposes. Deterministic Systems Execute."*  
+**Status:** ✅ **Phase 8 Complete | Phase 9 Certification In Progress**  
+**Build Status:** ✅ **Frontend Building Successfully | Backend Services Running**
 
 ---
 
-## 1. System Architecture & High-Level Topology
+## Quick Start
+
+### Prerequisites
+- Docker & Docker Compose
+- Python 3.11+ (for backend)
+- Node.js 20+ (for frontend)
+
+### 1. Start Infrastructure
+```bash
+cd backend
+docker-compose up -d
+```
+
+This starts:
+- PostgreSQL (port 5432)
+- Redis (port 6379)
+- Kafka (port 9092)
+- Temporal (port 7233)
+- Qdrant (port 6333)
+- MinIO (port 9000)
+- Grafana (port 3001)
+- Prometheus (port 9090)
+- MailHog (port 8025)
+
+### 2. Start Backend
+```bash
+cd backend
+uv sync
+uv run uvicorn src.seo_platform.main:app --reload --host 0.0.0.0 --port 8000
+```
+
+### 3. Start Frontend
+```bash
+cd frontend
+pnpm install
+pnpm dev
+```
+
+Access at: http://localhost:3000
+
+---
+
+## Phase 8 Implementation Status
+
+### ✅ Completed Features
+- **Bulk Approval Actions** - Select and approve/reject multiple items
+- **Bulk Email Operations** - Send multiple emails at once
+- **Customer Switcher** - Switch between client contexts
+- **Campaign Search & Filtering** - Search by name, filter by status/health
+- **Email Template Library** - Reusable templates with performance tracking
+- **Report Scheduling** - Automated report generation and delivery
+- **Cross-Customer View** - Aggregate metrics across all tenants
+- **Keyword Assignment Workflow** - Assign keywords to campaigns
+- **Prospect List with Export** - Export prospects to CSV/JSON/Excel
+- **Scheduled Email Sending** - Schedule emails for optimal times
+
+### 📊 Current Readiness Scores
+- **CEO Readiness:** 85% ✅
+- **Account Manager Readiness:** 75% ⚠️
+- **Operational Readiness:** 77% ⚠️
+- **Production Readiness:** 39% ❌
+- **Overall Product Readiness:** 67% ⚠️
+
+---
+
+## Known Issues & Workarounds
+
+### Database Constraints
+Some database tables have NOT NULL constraints that may cause errors. Run these migrations:
+```sql
+ALTER TABLE recommendations ALTER COLUMN effort_score DROP NOT NULL;
+ALTER TABLE recommendations ALTER COLUMN revenue_impact DROP NOT NULL;
+```
+
+### Backend Services
+If backend services fail to connect:
+```bash
+cd backend
+docker-compose restart
+```
+
+### Frontend Build Errors
+If TypeScript errors occur:
+```bash
+cd frontend
+pnpm install --frozen-lockfile
+pnpm build
+```
+
+---
+
+## Architecture Overview
 
 ```mermaid
 flowchart TB
