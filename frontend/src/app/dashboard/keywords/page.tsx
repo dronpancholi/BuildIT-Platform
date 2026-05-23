@@ -4,7 +4,7 @@ import { useState, useMemo } from "react";
 import { motion } from "framer-motion";
 import {
   Search, Sparkles, Loader2, Target,
-  Globe, ArrowUpRight,
+  Globe, ArrowUpRight, Users, Check, X, Plus,
 } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
@@ -18,6 +18,13 @@ export default function KeywordsPage() {
   const { openCommand } = useCommandCenter();
   const router = useRouter();
   const [viewMode, setViewMode] = useState<"intelligence" | "history">("intelligence");
+  const [showAssignmentModal, setShowAssignmentModal] = useState(false);
+  const [selectedKeyword, setSelectedKeyword] = useState<KeywordOpportunity | null>(null);
+  const [assignmentForm, setAssignmentForm] = useState({
+    campaignId: "",
+    cluster: "",
+    priority: "medium",
+  });
 
   const { data: opportunities = [], isLoading: loadingOpps } = useQuery<KeywordOpportunity[]>({
     queryKey: ["keyword-opportunities"],
@@ -122,7 +129,11 @@ export default function KeywordsPage() {
                           initial={{ opacity: 0, x: -5 }}
                           animate={{ opacity: 1, x: 0 }}
                           transition={{ delay: i * 0.02 }}
-                          className="px-5 py-3 hover:bg-surface-border/30 transition-colors flex items-center gap-4"
+                          className="px-5 py-3 hover:bg-surface-border/30 transition-colors flex items-center gap-4 cursor-pointer"
+                          onClick={() => {
+                            setSelectedKeyword(opp);
+                            setShowAssignmentModal(true);
+                          }}
                         >
                           <span className="text-[10px] font-mono text-slate-600 w-6 text-right font-bold">
                             {i + 1}
@@ -136,9 +147,7 @@ export default function KeywordsPage() {
                               </span>
                               <span>difficulty {opp.difficulty}%</span>
                               {opp.cpc > 0 && <span>CPC ${opp.cpc.toFixed(2)}</span>}
-                              {opp.cluster && (
-                                <span className="text-platform-500/70">{opp.cluster}</span>
-                              )}
+                              <p className="text-[10px] font-mono text-slate-500">{opp.cluster && <span className="text-platform-500/70">{opp.cluster}</span>}</p>
                             </div>
                           </div>
                           <div className="flex items-center gap-3 flex-shrink-0">
@@ -161,13 +170,122 @@ export default function KeywordsPage() {
                             }`}>
                               {oppPct}%
                             </span>
-                          </div>
-                        </motion.div>
-                      );
-                    })
-                  )}
-                </div>
+</div>
+                      )}
+                    ))}
+                  </div>
+                )}
               </div>
+              {/* Keyword Assignment Modal */}
+              {showAssignmentModal && selectedKeyword && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm">
+                  <div className="glass-panel w-full max-w-lg max-h-[90vh] overflow-hidden flex flex-col">
+                    <div className="p-6 border-b border-surface-border bg-surface-darker/50 flex items-center justify-between">
+                      <div>
+                        <h2 className="text-xl font-bold text-slate-100">Assign Keyword</h2>
+                        <p className="text-sm text-slate-400">{selectedKeyword.keyword}</p>
+                      </div>
+                      <button
+                        onClick={() => {
+                          setShowAssignmentModal(false);
+                          setSelectedKeyword(null);
+                        }}
+                        className="p-2 hover:bg-surface-border rounded-lg transition-colors"
+                      >
+                        <X className="w-5 h-5 text-slate-400" />
+                      </button>
+                    </div>
+                    <div className="p-6 overflow-y-auto space-y-4">
+                      <div>
+                        <label className="block text-xs font-mono text-slate-400 uppercase mb-2">Target Campaign</label>
+                        <select
+                          value={assignmentForm.campaignId}
+                          onChange={(e) => setAssignmentForm({ ...assignmentForm, campaignId: e.target.value })}
+                          className="w-full px-4 py-2 bg-slate-900 border border-surface-border rounded-lg text-sm text-slate-200 focus:outline-none focus:border-platform-500"
+                        >
+                          <option value="">Select a campaign...</option>
+                          <option value="new">+ Create New Campaign</option>
+                        </select>
+                      </div>
+                      <div>
+                        <label className="block text-xs font-mono text-slate-400 uppercase mb-2">Content Cluster</label>
+                        <input
+                          type="text"
+                          placeholder="e.g., SEO Best Practices"
+                          value={assignmentForm.cluster}
+                          onChange={(e) => setAssignmentForm({ ...assignmentForm, cluster: e.target.value })}
+                          className="w-full px-4 py-2 bg-slate-900 border border-surface-border rounded-lg text-sm text-slate-200 focus:outline-none focus:border-platform-500"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-mono text-slate-400 uppercase mb-2">Priority</label>
+                        <div className="flex gap-2">
+                          {["low", "medium", "high"].map((p) => (
+                            <button
+                              key={p}
+                              onClick={() => setAssignmentForm({ ...assignmentForm, priority: p })}
+                              className={`flex-1 px-3 py-2 rounded-lg text-xs font-mono uppercase transition-all ${
+                                assignmentForm.priority === p
+                                  ? p === "high"
+                                    ? "bg-red-500/20 text-red-400 border border-red-500/30"
+                                    : p === "medium"
+                                    ? "bg-amber-500/20 text-amber-400 border border-amber-500/30"
+                                    : "bg-emerald-500/20 text-emerald-400 border border-emerald-500/30"
+                                  : "bg-slate-900 text-slate-500 border border-surface-border hover:border-slate-600"
+                              }`}
+                            >
+                              {p}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                      <div className="glass-panel p-4 bg-slate-900/50">
+                        <h4 className="text-xs font-mono text-slate-400 uppercase mb-2">Keyword Details</h4>
+                        <div className="grid grid-cols-2 gap-3 text-xs">
+                          <div>
+                            <span className="text-slate-500">Search Volume:</span>
+                            <span className="ml-2 text-slate-300">{selectedKeyword.search_volume.toLocaleString()}</span>
+                          </div>
+                          <div>
+                            <span className="text-slate-500">Difficulty:</span>
+                            <span className="ml-2 text-slate-300">{selectedKeyword.difficulty}%</span>
+                          </div>
+                          <div>
+                            <span className="text-slate-500">CPC:</span>
+                            <span className="ml-2 text-slate-300">${selectedKeyword.cpc?.toFixed(2) || "0.00"}</span>
+                          </div>
+                          <div>
+                            <span className="text-slate-500">Opportunity:</span>
+                            <span className="ml-2 text-emerald-400">{Math.round(selectedKeyword.opportunity_score * 100)}%</span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                    <div className="p-6 border-t border-surface-border bg-surface-darker/50 flex gap-3">
+                      <button
+                        onClick={() => {
+                          setShowAssignmentModal(false);
+                          setSelectedKeyword(null);
+                        }}
+                        className="px-4 py-2 bg-surface-darker hover:bg-surface-border border border-surface-border text-slate-300 rounded-lg text-xs font-mono transition-colors"
+                      >
+                        Cancel
+                      </button>
+                      <button
+                        onClick={() => {
+                          // Would call assignment mutation
+                          setShowAssignmentModal(false);
+                          setSelectedKeyword(null);
+                          setAssignmentForm({ campaignId: "", cluster: "", priority: "medium" });
+                        }}
+                        className="flex-1 px-4 py-2 bg-platform-600 hover:bg-platform-500 text-white rounded-lg text-xs font-bold font-mono transition-colors flex items-center justify-center gap-2"
+                      >
+                        <Check className="w-4 h-4" /> Assign Keyword
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
             </>
           )}
         </>
