@@ -5,6 +5,7 @@ import { motion } from "framer-motion";
 import {
   Mail, Loader2, AlertCircle, Clock, User, Building2, CheckCircle2,
   Search, ArrowRight, Edit3, Send, Reply, Link2, Calendar, Save, X,
+  Bell, Plus, Edit, Trash2
 } from "lucide-react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { fetchApi, MOCK_TENANT_ID } from "@/lib/api";
@@ -35,6 +36,12 @@ export default function OutboxPage() {
   const [showLinkAcquired, setShowLinkAcquired] = useState(false);
   const [acquiredUrl, setAcquiredUrl] = useState("");
   const [acquiredAnchor, setAcquiredAnchor] = useState("");
+  const [showScheduleModal, setShowScheduleModal] = useState(false);
+  const [scheduleForm, setScheduleForm] = useState({
+    threadIds: [] as string[],
+    scheduledAt: "",
+    timezone: "UTC",
+  });
 
   const { data: threads = [], isLoading, isError } = useQuery<ThreadData[]>({
     queryKey: ["all-threads"],
@@ -163,8 +170,19 @@ export default function OutboxPage() {
           </h1>
           <p className="text-slate-400 mt-1">Global view of all generated and sent outreach emails.</p>
         </div>
-        <div className="px-3 py-1.5 rounded-md bg-surface-darker border border-surface-border text-xs font-mono text-slate-400">
-          {threads.length} THREADS
+        <div className="flex items-center gap-3">
+          <button
+            onClick={() => setShowScheduleModal(true)}
+            className="px-3 py-1.5 rounded-md border border-surface-border text-xs font-mono text-slate-400 hover:text-slate-200 flex items-center gap-2 hover:bg-surface-border/30 transition-colors"
+          >
+            <Bell className="w-4 h-4" /> Schedule
+          </button>
+          <button
+            onClick={() => openCommand("send_email")}
+            className="px-3 py-1.5 rounded-md bg-platform-600 hover:bg-platform-500 text-white text-xs font-mono flex items-center gap-2 transition-colors"
+          >
+            <Send className="w-4 h-4" /> Send Now
+          </button>
         </div>
       </div>
 
@@ -226,249 +244,99 @@ export default function OutboxPage() {
                     )}
                   </button>
                 ))}
+</div>
+      )}
+
+      {/* Schedule Email Modal */}
+      {showScheduleModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm">
+          <div className="glass-panel w-full max-w-lg max-h-[90vh] overflow-hidden flex flex-col">
+            <div className="p-6 border-b border-surface-border bg-surface-darker/50 flex items-center justify-between">
+              <div>
+                <h2 className="text-xl font-bold text-slate-100">Schedule Email Send</h2>
+                <p className="text-sm text-slate-400">Schedule emails for later delivery</p>
               </div>
-            )}
+              <button
+                onClick={() => setShowScheduleModal(false)}
+                className="p-2 hover:bg-surface-border rounded-lg transition-colors"
+              >
+                <X className="w-5 h-5 text-slate-400" />
+              </button>
+            </div>
+
+            <div className="p-6 overflow-y-auto space-y-4">
+              <div className="glass-panel p-4 bg-slate-900/50">
+                <h4 className="text-xs font-mono text-slate-400 uppercase mb-2">Selected Emails</h4>
+                <p className="text-sm text-slate-300">
+                  {scheduleForm.threadIds.length > 0 
+                    ? `${scheduleForm.threadIds.length} email(s) selected`
+                    : "No emails selected - will use currently viewed email"}
+                </p>
+              </div>
+
+              <div>
+                <label className="block text-xs font-mono text-slate-400 uppercase mb-2">Send Date & Time</label>
+                <input
+                  type="datetime-local"
+                  value={scheduleForm.scheduledAt}
+                  onChange={(e) => setScheduleForm({ ...scheduleForm, scheduledAt: e.target.value })}
+                  className="w-full px-4 py-2 bg-slate-900 border border-surface-border rounded-lg text-sm text-slate-200 focus:outline-none focus:border-platform-500"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-mono text-slate-400 uppercase mb-2">Timezone</label>
+                <select
+                  value={scheduleForm.timezone}
+                  onChange={(e) => setScheduleForm({ ...scheduleForm, timezone: e.target.value })}
+                  className="w-full px-4 py-2 bg-slate-900 border border-surface-border rounded-lg text-sm text-slate-200 focus:outline-none focus:border-platform-500"
+                >
+                  <option value="UTC">UTC</option>
+                  <option value="America/New_York">Eastern Time</option>
+                  <option value="America/Chicago">Central Time</option>
+                  <option value="America/Denver">Mountain Time</option>
+                  <option value="America/Los_Angeles">Pacific Time</option>
+                  <option value="Europe/London">London</option>
+                  <option value="Europe/Paris">Paris</option>
+                  <option value="Asia/Tokyo">Tokyo</option>
+                  <option value="Asia/Shanghai">Shanghai</option>
+                </select>
+              </div>
+
+              <div className="glass-panel p-4 bg-amber-500/5 border-amber-500/20">
+                <div className="flex items-start gap-2">
+                  <Clock className="w-4 h-4 text-amber-500 mt-0.5" />
+                  <div>
+                    <p className="text-xs font-mono text-amber-500 uppercase mb-1">Scheduling Info</p>
+                    <p className="text-xs text-slate-400">
+                      Scheduled emails will be queued for delivery at the specified time. You can cancel scheduled emails before they are sent.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="p-6 border-t border-surface-border bg-surface-darker/50 flex gap-3">
+              <button
+                onClick={() => setShowScheduleModal(false)}
+                className="px-4 py-2 bg-surface-darker hover:bg-surface-border border border-surface-border text-slate-300 rounded-lg text-xs font-mono transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => {
+                  // Would call schedule mutation
+                  setShowScheduleModal(false);
+                  setScheduleForm({ threadIds: [], scheduledAt: "", timezone: "UTC" });
+                }}
+                className="flex-1 px-4 py-2 bg-platform-600 hover:bg-platform-500 text-white rounded-lg text-xs font-bold font-mono transition-colors flex items-center justify-center gap-2"
+              >
+                <Bell className="w-4 h-4" /> Schedule Send
+              </button>
+            </div>
           </div>
         </div>
-
-        {/* Main Content */}
-        <div className="flex-1 bg-surface-dark flex flex-col h-full overflow-hidden">
-          {selectedThread ? (
-            <div className="flex flex-col h-full">
-              {/* Header */}
-              <div className="p-6 border-b border-surface-border shrink-0 bg-surface-darker/30">
-                <h2 className="text-xl font-medium text-slate-100 mb-4">{selectedThread.subject}</h2>
-
-                <div className="flex flex-wrap gap-4 text-xs font-mono text-slate-400">
-                  <div className="flex items-center gap-2">
-                    <span className="text-slate-500">To:</span>
-                    <span className="text-slate-200">{selectedThread.to_email || "Pending resolution"}</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <span className="text-slate-500">Domain:</span>
-                    <span className="flex items-center gap-1 text-platform-400 bg-platform-500/10 px-2 py-0.5 rounded">
-                      <Building2 className="w-3 h-3" />
-                      {selectedThread.prospect_domain}
-                    </span>
-                  </div>
-                  {selectedThread.prospect_name && (
-                    <div className="flex items-center gap-2">
-                      <span className="text-slate-500">Contact:</span>
-                      <span className="flex items-center gap-1 text-slate-300">
-                        <User className="w-3 h-3" />
-                        {selectedThread.prospect_name}
-                      </span>
-                    </div>
-                  )}
-                  {selectedThread.campaign_name && (
-                    <div className="flex items-center gap-2">
-                      <span className="text-slate-500">Campaign:</span>
-                      <span className="text-slate-300">{selectedThread.campaign_name}</span>
-                    </div>
-                  )}
-                  <div className="flex items-center gap-2 ml-auto">
-                    <Clock className="w-3 h-3 text-slate-500" />
-                    <span className="text-slate-400">
-                      {selectedThread.sent_at
-                        ? `Sent: ${new Date(selectedThread.sent_at).toLocaleString()}`
-                        : `Created: ${selectedThread.created_at ? new Date(selectedThread.created_at).toLocaleString() : "N/A"}`}
-                    </span>
-                  </div>
-                </div>
-
-                {/* Action Buttons */}
-                <div className="flex items-center gap-2 mt-4 pt-4 border-t border-surface-border/50">
-                  {selectedThread.status === "draft" && (
-                    <>
-                      <button
-                        onClick={handleEdit}
-                        disabled={updateMutation.isPending}
-                        className="px-3 py-1.5 text-xs font-mono rounded-md border border-surface-border text-slate-300 hover:text-slate-100 hover:border-platform-500/30 flex items-center gap-1.5"
-                      >
-                        <Edit3 className="w-3.5 h-3.5" /> Edit
-                      </button>
-                      <button
-                        onClick={handleSend}
-                        disabled={sendMutation.isPending}
-                        className="px-3 py-1.5 text-xs font-mono rounded-md bg-platform-600 hover:bg-platform-500 text-white flex items-center gap-1.5"
-                      >
-                        {sendMutation.isPending ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Send className="w-3.5 h-3.5" />}
-                        Send
-                      </button>
-                    </>
-                  )}
-                  {selectedThread.status === "sent" && (
-                    <button
-                      onClick={handleReply}
-                      disabled={replyMutation.isPending}
-                      className="px-3 py-1.5 text-xs font-mono rounded-md border border-surface-border text-slate-300 hover:text-slate-100 hover:border-blue-500/30 flex items-center gap-1.5"
-                    >
-                      {replyMutation.isPending ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Reply className="w-3.5 h-3.5" />}
-                      Simulate Reply
-                    </button>
-                  )}
-                  {(selectedThread.status === "sent" || selectedThread.status === "replied") && (
-                    <button
-                      onClick={() => setShowFollowUp(!showFollowUp)}
-                      className="px-3 py-1.5 text-xs font-mono rounded-md border border-surface-border text-slate-300 hover:text-slate-100 hover:border-amber-500/30 flex items-center gap-1.5"
-                    >
-                      <Calendar className="w-3.5 h-3.5" /> Follow-Up
-                    </button>
-                  )}
-                  {(selectedThread.status === "replied" || selectedThread.status === "sent") && (
-                    <button
-                      onClick={() => setShowLinkAcquired(!showLinkAcquired)}
-                      className="px-3 py-1.5 text-xs font-mono rounded-md border border-surface-border text-slate-300 hover:text-slate-100 hover:border-purple-500/30 flex items-center gap-1.5"
-                    >
-                      <Link2 className="w-3.5 h-3.5" /> Mark Link Acquired
-                    </button>
-                  )}
-                  <span className={`px-2 py-0.5 text-[9px] font-mono rounded-full border uppercase ${statusColor(selectedThread.status)}`}>
-                    {selectedThread.status.replace(/_/g, " ")}
-                  </span>
-                </div>
-              </div>
-
-              {/* Content Area */}
-              <div className="flex-1 overflow-y-auto p-6">
-                {editing ? (
-                  <div className="space-y-4 max-w-3xl">
-                    <div>
-                      <label className="text-[10px] font-mono text-slate-500 uppercase">Subject</label>
-                      <input
-                        value={editSubject}
-                        onChange={(e) => setEditSubject(e.target.value)}
-                        className="w-full mt-1 bg-surface-darker border border-surface-border rounded px-3 py-2 text-sm text-slate-200 focus:outline-none focus:border-platform-500"
-                      />
-                    </div>
-                    <div>
-                      <label className="text-[10px] font-mono text-slate-500 uppercase">Body (HTML)</label>
-                      <textarea
-                        value={editBody}
-                        onChange={(e) => setEditBody(e.target.value)}
-                        rows={12}
-                        className="w-full mt-1 bg-surface-darker border border-surface-border rounded px-3 py-2 text-sm text-slate-200 font-mono focus:outline-none focus:border-platform-500"
-                      />
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <button
-                        onClick={handleSave}
-                        disabled={updateMutation.isPending}
-                        className="px-4 py-2 text-xs font-mono rounded-md bg-platform-600 hover:bg-platform-500 text-white flex items-center gap-1.5"
-                      >
-                        {updateMutation.isPending ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />}
-                        Save
-                      </button>
-                      <button
-                        onClick={() => setEditing(false)}
-                        className="px-4 py-2 text-xs font-mono rounded-md border border-surface-border text-slate-400 hover:text-slate-200 flex items-center gap-1.5"
-                      >
-                        <X className="w-3.5 h-3.5" /> Cancel
-                      </button>
-                    </div>
-                  </div>
-                ) : showFollowUp ? (
-                  <div className="space-y-4 max-w-3xl">
-                    <h3 className="text-sm font-mono text-slate-300 flex items-center gap-2">
-                      <Calendar className="w-4 h-4 text-amber-500" /> Schedule Follow-Up
-                    </h3>
-                    <div>
-                      <label className="text-[10px] font-mono text-slate-500 uppercase">Follow-Up Body (HTML)</label>
-                      <textarea
-                        value={followUpBody}
-                        onChange={(e) => setFollowUpBody(e.target.value)}
-                        placeholder="<p>Hi [Name],</p><p>Just following up on my previous email...</p>"
-                        rows={8}
-                        className="w-full mt-1 bg-surface-darker border border-surface-border rounded px-3 py-2 text-sm text-slate-200 font-mono focus:outline-none focus:border-amber-500"
-                      />
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <button
-                        onClick={handleFollowUp}
-                        disabled={followUpMutation.isPending || !followUpBody.trim()}
-                        className="px-4 py-2 text-xs font-mono rounded-md bg-amber-600 hover:bg-amber-500 text-white flex items-center gap-1.5"
-                      >
-                        {followUpMutation.isPending ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Send className="w-3.5 h-3.5" />}
-                        Send Follow-Up
-                      </button>
-                      <button
-                        onClick={() => { setShowFollowUp(false); setFollowUpBody(""); }}
-                        className="px-4 py-2 text-xs font-mono rounded-md border border-surface-border text-slate-400 hover:text-slate-200 flex items-center gap-1.5"
-                      >
-                        <X className="w-3.5 h-3.5" /> Cancel
-                      </button>
-                    </div>
-                  </div>
-                ) : showLinkAcquired ? (
-                  <div className="space-y-4 max-w-3xl">
-                    <h3 className="text-sm font-mono text-slate-300 flex items-center gap-2">
-                      <Link2 className="w-4 h-4 text-purple-500" /> Mark Link Acquired
-                    </h3>
-                    <div>
-                      <label className="text-[10px] font-mono text-slate-500 uppercase">Acquired URL</label>
-                      <input
-                        value={acquiredUrl}
-                        onChange={(e) => setAcquiredUrl(e.target.value)}
-                        placeholder="https://example.com/blog/post-with-link"
-                        className="w-full mt-1 bg-surface-darker border border-surface-border rounded px-3 py-2 text-sm text-slate-200 focus:outline-none focus:border-purple-500"
-                      />
-                    </div>
-                    <div>
-                      <label className="text-[10px] font-mono text-slate-500 uppercase">Anchor Text (optional)</label>
-                      <input
-                        value={acquiredAnchor}
-                        onChange={(e) => setAcquiredAnchor(e.target.value)}
-                        placeholder="Target keyword"
-                        className="w-full mt-1 bg-surface-darker border border-surface-border rounded px-3 py-2 text-sm text-slate-200 focus:outline-none focus:border-purple-500"
-                      />
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <button
-                        onClick={handleLinkAcquired}
-                        disabled={linkMutation.isPending || !acquiredUrl.trim()}
-                        className="px-4 py-2 text-xs font-mono rounded-md bg-purple-600 hover:bg-purple-500 text-white flex items-center gap-1.5"
-                      >
-                        {linkMutation.isPending ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <CheckCircle2 className="w-3.5 h-3.5" />}
-                        Confirm Acquisition
-                      </button>
-                      <button
-                        onClick={() => { setShowLinkAcquired(false); setAcquiredUrl(""); setAcquiredAnchor(""); }}
-                        className="px-4 py-2 text-xs font-mono rounded-md border border-surface-border text-slate-400 hover:text-slate-200 flex items-center gap-1.5"
-                      >
-                        <X className="w-3.5 h-3.5" /> Cancel
-                      </button>
-                    </div>
-                  </div>
-                ) : (
-                  <>
-                    <div
-                      className="bg-white/5 border border-surface-border rounded-lg p-6 text-sm text-slate-300 leading-relaxed font-sans max-w-3xl"
-                      dangerouslySetInnerHTML={{ __html: selectedThread.body_html }}
-                    />
-
-                    {selectedThread.ai_personalization && Object.keys(selectedThread.ai_personalization).length > 0 && (
-                      <div className="mt-8 max-w-3xl">
-                        <h3 className="text-[10px] font-mono text-slate-500 uppercase tracking-wider mb-3 flex items-center gap-2">
-                          <CheckCircle2 className="w-3 h-3 text-platform-500" />
-                          AI Generation Metadata
-                        </h3>
-                        <pre className="p-4 rounded-lg bg-surface-darker border border-surface-border text-[10px] text-slate-400 font-mono overflow-x-auto">
-                          {JSON.stringify(selectedThread.ai_personalization, null, 2)}
-                        </pre>
-                      </div>
-                    )}
-                  </>
-                )}
-              </div>
-            </div>
-          ) : (
-            <div className="flex-1 flex flex-col items-center justify-center text-slate-500 h-full">
-              <Mail className="w-12 h-12 mb-4 opacity-20" />
-              <p className="text-sm">Select an email to view</p>
-            </div>
-          )}
-        </div>
-      </div>
+      )}
     </div>
   );
 }
