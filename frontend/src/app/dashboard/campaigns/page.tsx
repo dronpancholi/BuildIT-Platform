@@ -49,6 +49,8 @@ export default function CampaignsPage() {
   const { openCommand } = useCommandCenter();
   const router = useRouter();
   const [searchQuery, setSearchQuery] = useState("");
+  const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [healthFilter, setHealthFilter] = useState<string>("all");
   const [viewMode, setViewMode] = useState<"table" | "evolution">("evolution");
   const [expandedEmails, setExpandedEmails] = useState<Set<string>>(new Set());
 
@@ -70,9 +72,20 @@ export default function CampaignsPage() {
     refetchInterval: 10000,
   });
 
-  const filtered = campaigns.filter((c) =>
-    !searchQuery || c.name.toLowerCase().includes(searchQuery.toLowerCase()),
-  );
+  const filtered = campaigns.filter((c) => {
+    const matchesSearch = !searchQuery || 
+      c.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (c.client_name || "").toLowerCase().includes(searchQuery.toLowerCase());
+    
+    const matchesStatus = statusFilter === "all" || c.status === statusFilter;
+    
+    const matchesHealth = healthFilter === "all" || 
+      (healthFilter === "healthy" && c.health_score >= 0.7) ||
+      (healthFilter === "at_risk" && c.health_score >= 0.4 && c.health_score < 0.7) ||
+      (healthFilter === "critical" && c.health_score < 0.4);
+    
+    return matchesSearch && matchesStatus && matchesHealth;
+  });
 
   const sorted = useMemo(() =>
     [...filtered].sort((a, b) => b.health_score - a.health_score),
@@ -91,7 +104,47 @@ export default function CampaignsPage() {
           <h1 className="text-3xl font-bold text-slate-100 tracking-tight">Campaigns</h1>
           <p className="text-slate-400 mt-1">Live campaign health evolution tracking.</p>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-3 flex-wrap">
+          {/* Search */}
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
+            <input
+              type="text"
+              placeholder="Search campaigns..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-9 pr-3 py-2 bg-surface-darker border border-surface-border rounded-lg text-xs font-mono text-slate-200 placeholder-slate-600 focus:outline-none focus:border-platform-500 w-48"
+            />
+          </div>
+
+          {/* Status Filter */}
+          <select
+            value={statusFilter}
+            onChange={(e) => setStatusFilter(e.target.value)}
+            className="px-3 py-2 bg-surface-darker border border-surface-border rounded-lg text-xs font-mono text-slate-300 focus:outline-none focus:border-platform-500"
+          >
+            <option value="all">All Status</option>
+            <option value="draft">Draft</option>
+            <option value="prospecting">Prospecting</option>
+            <option value="active">Active</option>
+            <option value="monitoring">Monitoring</option>
+            <option value="complete">Complete</option>
+            <option value="paused">Paused</option>
+          </select>
+
+          {/* Health Filter */}
+          <select
+            value={healthFilter}
+            onChange={(e) => setHealthFilter(e.target.value)}
+            className="px-3 py-2 bg-surface-darker border border-surface-border rounded-lg text-xs font-mono text-slate-300 focus:outline-none focus:border-platform-500"
+          >
+            <option value="all">All Health</option>
+            <option value="healthy">Healthy (≥70%)</option>
+            <option value="at_risk">At Risk (40-70%)</option>
+            <option value="critical">Critical (<40%)</option>
+          </select>
+
+          {/* View Mode */}
           <div className="flex items-center gap-1 bg-surface-darker rounded-lg border border-surface-border p-0.5">
             <button
               onClick={() => setViewMode("evolution")}
