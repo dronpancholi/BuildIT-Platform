@@ -11,6 +11,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useClientStore, type ClientInfo } from "@/hooks/use-client";
+import { CustomerSwitcher } from "./customer-switcher";
 
 const CLIENTS: ClientInfo[] = [
   { id: "00000000-0000-0000-0000-000000000001", name: "TechStart Inc.", domain: "techstart.io", niche: "B2B SaaS" },
@@ -64,45 +65,7 @@ export function Sidebar({ className }: { className?: string }) {
 
       {/* Client Switcher */}
       <div className="px-3 mb-3">
-        <button
-          onClick={() => setShowClients(!showClients)}
-          className="flex items-center justify-between w-full px-3 py-2 rounded-lg bg-surface-darker/50 border border-surface-border/50 hover:border-platform-500/30 transition-all"
-        >
-          <div className="flex items-center gap-2 min-w-0">
-            <div className="w-6 h-6 rounded bg-platform-600/20 flex items-center justify-center text-[10px] font-bold text-platform-400 flex-shrink-0">
-              {currentClient.name.split(" ").map((w: string) => w[0]).join("").slice(0, 2).toUpperCase()}
-            </div>
-            <div className="text-left min-w-0">
-              <div className="text-xs font-medium text-slate-200 truncate">{currentClient.name}</div>
-              <div className="text-[9px] font-mono text-slate-500 truncate">{currentClient.niche}</div>
-            </div>
-          </div>
-          {showClients ? <ChevronDown className="w-3 h-3 text-slate-500 flex-shrink-0" /> : <ChevronRight className="w-3 h-3 text-slate-500 flex-shrink-0" />}
-        </button>
-        {showClients && (
-          <div className="mt-1 space-y-0.5">
-            {CLIENTS.map((cl) => (
-              <button
-                key={cl.id}
-                onClick={() => { setClient(cl); setShowClients(false); }}
-                className={`flex items-center gap-2 w-full px-3 py-1.5 rounded-md text-xs transition-colors text-left ${
-                  cl.id === currentClient.id
-                    ? "bg-platform-900/30 text-platform-300"
-                    : "text-slate-400 hover:bg-surface-border hover:text-slate-200"
-                }`}
-              >
-                <div className="w-5 h-5 rounded bg-surface-darker flex items-center justify-center text-[8px] font-bold text-slate-400 flex-shrink-0">
-                  {cl.name.split(" ").map((w: string) => w[0]).join("").slice(0, 2).toUpperCase()}
-                </div>
-                <div className="min-w-0 flex-1">
-                  <div className="truncate">{cl.name}</div>
-                  <div className="text-[9px] text-slate-600 truncate">{cl.niche}</div>
-                </div>
-                {cl.id === currentClient.id && <Check className="w-3 h-3 text-platform-400 flex-shrink-0" />}
-              </button>
-            ))}
-          </div>
-        )}
+        <CustomerSwitcher />
       </div>
 
       <div className="flex-1 px-3 py-1 space-y-0.5 overflow-y-auto">
