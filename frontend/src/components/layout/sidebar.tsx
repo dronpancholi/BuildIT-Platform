@@ -30,6 +30,7 @@ const BUSINESS_NAV = [
   { href: "/dashboard/recommendations", icon: <Lightbulb size={17} />, label: "Recommendations" },
   { href: "/dashboard/local-seo", icon: <Users size={17} />, label: "Local SEO" },
   { href: "/dashboard/prospect-graph", icon: <Radio size={17} />, label: "Domain Network" },
+  { href: "/dashboard/prospect-list", icon: <Users size={17} />, label: "Prospect List" },
   { href: "/dashboard/cross-tenant", icon: <Layers size={17} />, label: "Cross-Customer View" },
   { href: "/dashboard/assistant", icon: <Bot size={17} />, label: "Assistant" },
 ];
