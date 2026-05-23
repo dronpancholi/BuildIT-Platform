@@ -5,6 +5,7 @@ import { motion } from "framer-motion";
 import {
   FileText, Loader2, Download, TrendingUp, Target, Mail,
   Reply, Link2, Search, Users, BarChart3, Calendar,
+  Bell, Clock, Plus, X, Edit2, Trash2
 } from "lucide-react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { fetchApi, MOCK_TENANT_ID } from "@/lib/api";
@@ -82,6 +83,15 @@ export default function ReportsPage() {
   const queryClient = useQueryClient();
   const [activeTab, setActiveTab] = useState<"overview" | "campaigns" | "prospects" | "emails" | "links" | "keywords">("overview");
   const [report, setReport] = useState<FullReport | null>(null);
+  const [showScheduleModal, setShowScheduleModal] = useState(false);
+  const [scheduleForm, setScheduleForm] = useState({
+    name: "",
+    reportType: "full",
+    frequency: "weekly",
+    dayOfWeek: "monday",
+    time: "09:00",
+    recipients: "",
+  });
 
   const { data: savedReports = [], isLoading: loadingSaved } = useQuery<any[]>({
     queryKey: ["reports-list"],
@@ -111,6 +121,12 @@ export default function ReportsPage() {
           <p className="text-slate-400 mt-1 font-mono text-xs uppercase tracking-wider">Campaign performance & outreach analytics</p>
         </div>
         <div className="flex items-center gap-3">
+          <button
+            onClick={() => setShowScheduleModal(true)}
+            className="px-4 py-2 bg-surface-darker hover:bg-surface-border border border-surface-border text-slate-300 rounded-md text-xs font-bold font-mono transition-colors flex items-center gap-2"
+          >
+            <Clock className="w-4 h-4" /> Schedule
+          </button>
           <button
             onClick={() => generateMutation.mutate()}
             disabled={generateMutation.isPending}
@@ -349,7 +365,16 @@ export default function ReportsPage() {
         {loadingSaved ? (
           <div className="flex justify-center py-8"><Loader2 className="w-6 h-6 text-platform-500 animate-spin" /></div>
         ) : savedReports.length === 0 ? (
-          <p className="text-xs text-slate-500 text-center py-4">No saved reports yet. Generate your first report above.</p>
+          <div className="text-center py-8">
+            <Calendar className="w-8 h-8 text-slate-700 mx-auto mb-2" />
+            <p className="text-xs text-slate-500">No saved reports yet. Generate your first report above.</p>
+            <button
+              onClick={() => setShowScheduleModal(true)}
+              className="mt-3 px-4 py-2 bg-platform-600/20 hover:bg-platform-600/30 text-platform-400 border border-platform-500/20 rounded-lg text-xs font-mono transition-colors"
+            >
+              Schedule First Report
+            </button>
+          </div>
         ) : (
           <div className="space-y-2">
             {savedReports.map((r: any) => (
@@ -358,14 +383,156 @@ export default function ReportsPage() {
                   <p className="text-sm font-mono text-slate-200 capitalize">{r.report_type} Report</p>
                   <p className="text-[10px] text-slate-500 font-mono">{new Date(r.generated_at).toLocaleString()}</p>
                 </div>
-                <span className="px-2 py-0.5 text-[9px] font-mono rounded-full border bg-emerald-500/10 text-emerald-400 border-emerald-500/20 uppercase">
-                  {r.status}
-                </span>
+                <div className="flex items-center gap-2">
+                  <span className={`px-2 py-0.5 text-[9px] font-mono rounded-full border uppercase ${
+                    r.status === "scheduled" 
+                      ? "bg-amber-500/10 text-amber-400 border-amber-500/20"
+                      : "bg-emerald-500/10 text-emerald-400 border-emerald-500/20"
+                  }`}>
+                    {r.status}
+                  </span>
+                  <button className="p-1 hover:bg-surface-border rounded transition-colors">
+                    <Download className="w-4 h-4 text-slate-400" />
+                  </button>
+                  <button className="p-1 hover:bg-surface-border rounded transition-colors">
+                    <Edit2 className="w-4 h-4 text-slate-400" />
+                  </button>
+                  <button className="p-1 hover:bg-red-500/10 rounded transition-colors">
+                    <Trash2 className="w-4 h-4 text-red-400" />
+                  </button>
+                </div>
               </div>
             ))}
           </div>
         )}
       </div>
+
+      {/* Schedule Report Modal */}
+      {showScheduleModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm">
+          <div className="glass-panel w-full max-w-lg max-h-[90vh] overflow-hidden flex flex-col">
+            <div className="p-6 border-b border-surface-border bg-surface-darker/50 flex items-center justify-between">
+              <div>
+                <h2 className="text-xl font-bold text-slate-100">Schedule Report</h2>
+                <p className="text-sm text-slate-400">Set up automated report delivery</p>
+              </div>
+              <button
+                onClick={() => setShowScheduleModal(false)}
+                className="p-2 hover:bg-surface-border rounded-lg transition-colors"
+              >
+                <X className="w-5 h-5 text-slate-400" />
+              </button>
+            </div>
+
+            <div className="p-6 overflow-y-auto space-y-4">
+              <div>
+                <label className="block text-xs font-mono text-slate-400 uppercase mb-2">Report Name</label>
+                <input
+                  type="text"
+                  placeholder="e.g., Weekly Campaign Summary"
+                  value={scheduleForm.name}
+                  onChange={(e) => setScheduleForm({ ...scheduleForm, name: e.target.value })}
+                  className="w-full px-4 py-2 bg-slate-900 border border-surface-border rounded-lg text-sm text-slate-200 focus:outline-none focus:border-platform-500"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-mono text-slate-400 uppercase mb-2">Report Type</label>
+                <select
+                  value={scheduleForm.reportType}
+                  onChange={(e) => setScheduleForm({ ...scheduleForm, reportType: e.target.value })}
+                  className="w-full px-4 py-2 bg-slate-900 border border-surface-border rounded-lg text-sm text-slate-200 focus:outline-none focus:border-platform-500"
+                >
+                  <option value="full">Full Report</option>
+                  <option value="campaigns">Campaigns Only</option>
+                  <option value="prospects">Prospects Only</option>
+                  <option value="emails">Email Performance</option>
+                  <option value="links">Links Acquired</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-xs font-mono text-slate-400 uppercase mb-2">Frequency</label>
+                <select
+                  value={scheduleForm.frequency}
+                  onChange={(e) => setScheduleForm({ ...scheduleForm, frequency: e.target.value })}
+                  className="w-full px-4 py-2 bg-slate-900 border border-surface-border rounded-lg text-sm text-slate-200 focus:outline-none focus:border-platform-500"
+                >
+                  <option value="daily">Daily</option>
+                  <option value="weekly">Weekly</option>
+                  <option value="monthly">Monthly</option>
+                </select>
+              </div>
+
+              {scheduleForm.frequency === "weekly" && (
+                <div>
+                  <label className="block text-xs font-mono text-slate-400 uppercase mb-2">Day of Week</label>
+                  <select
+                    value={scheduleForm.dayOfWeek}
+                    onChange={(e) => setScheduleForm({ ...scheduleForm, dayOfWeek: e.target.value })}
+                    className="w-full px-4 py-2 bg-slate-900 border border-surface-border rounded-lg text-sm text-slate-200 focus:outline-none focus:border-platform-500"
+                  >
+                    <option value="monday">Monday</option>
+                    <option value="tuesday">Tuesday</option>
+                    <option value="wednesday">Wednesday</option>
+                    <option value="thursday">Thursday</option>
+                    <option value="friday">Friday</option>
+                    <option value="saturday">Saturday</option>
+                    <option value="sunday">Sunday</option>
+                  </select>
+                </div>
+              )}
+
+              <div>
+                <label className="block text-xs font-mono text-slate-400 uppercase mb-2">Time</label>
+                <input
+                  type="time"
+                  value={scheduleForm.time}
+                  onChange={(e) => setScheduleForm({ ...scheduleForm, time: e.target.value })}
+                  className="w-full px-4 py-2 bg-slate-900 border border-surface-border rounded-lg text-sm text-slate-200 focus:outline-none focus:border-platform-500"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-mono text-slate-400 uppercase mb-2">Recipients (comma-separated emails)</label>
+                <input
+                  type="text"
+                  placeholder="team@company.com, manager@company.com"
+                  value={scheduleForm.recipients}
+                  onChange={(e) => setScheduleForm({ ...scheduleForm, recipients: e.target.value })}
+                  className="w-full px-4 py-2 bg-slate-900 border border-surface-border rounded-lg text-sm text-slate-200 focus:outline-none focus:border-platform-500"
+                />
+              </div>
+            </div>
+
+            <div className="p-6 border-t border-surface-border bg-surface-darker/50 flex gap-3">
+              <button
+                onClick={() => setShowScheduleModal(false)}
+                className="px-4 py-2 bg-surface-darker hover:bg-surface-border border border-surface-border text-slate-300 rounded-lg text-xs font-mono transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => {
+                  // Would call schedule mutation
+                  setShowScheduleModal(false);
+                  setScheduleForm({
+                    name: "",
+                    reportType: "full",
+                    frequency: "weekly",
+                    dayOfWeek: "monday",
+                    time: "09:00",
+                    recipients: "",
+                  });
+                }}
+                className="flex-1 px-4 py-2 bg-platform-600 hover:bg-platform-500 text-white rounded-lg text-xs font-bold font-mono transition-colors flex items-center justify-center gap-2"
+              >
+                <Bell className="w-4 h-4" /> Schedule Report
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
