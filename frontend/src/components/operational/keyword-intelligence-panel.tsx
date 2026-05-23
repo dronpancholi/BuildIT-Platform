@@ -102,7 +102,7 @@ export function KeywordIntelligencePanel() {
               sortedClusters.map((cluster, i) => {
                 const authorityPct = Math.round(cluster.authority * 100);
                 const opportunityPct = Math.round(cluster.opportunity * 100);
-                const uniqueKey = cluster.id || `${cluster.name}-${i}`;
+                const uniqueKey = cluster.name || `cluster-${i}`;
                 return (
                   <motion.div
                     key={uniqueKey}

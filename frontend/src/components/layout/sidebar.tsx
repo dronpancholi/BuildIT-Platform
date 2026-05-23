@@ -7,7 +7,7 @@ import {
   LayoutDashboard, Link2, Search, Lightbulb, Activity,
   GitBranch, Radio, Settings, ChevronDown, ChevronRight,
   Bot, Users, Globe, Check, Shield, Sparkles, Server, Mail,
-  FileText,
+  FileText, Layers,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useClientStore, type ClientInfo } from "@/hooks/use-client";

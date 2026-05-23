@@ -8,7 +8,7 @@ import { useClient } from "@/hooks/use-client";
 import { WorkQueue } from "@/components/unified/work-queue";
 import { CustomerHealthOverview } from "@/components/unified/customer-health-overview";
 import { PageGuide } from "@/components/ui/page-guide";
-import { Rocket, Plus, Sparkles, GitBranch, AlertTriangle, TrendingUp } from "lucide-react";
+import { Rocket, Plus, Sparkles, GitBranch, AlertTriangle, TrendingUp, Link2, Users } from "lucide-react";
 
 export default function UnifiedDashboard() {
   const { openCommand } = useCommandCenter();

@@ -11,7 +11,7 @@ import { useQuery } from "@tanstack/react-query";
 import { fetchApi, MOCK_TENANT_ID } from "@/lib/api";
 import { useCommandCenter } from "@/hooks/use-command-center";
 import { ErrorState, LoadingState } from "@/components/ui/error-state";
-import type { ApprovalRequest, OutreachThread, BacklinkCampaign } from "@/types/business-intelligence";
+// Types removed - using inline types below
 
 type QueueItemType = "approval" | "follow_up" | "reply" | "campaign_alert";
 type Priority = "critical" | "high" | "medium" | "low";
@@ -65,14 +65,14 @@ export function WorkQueue() {
   const [expandedItems, setExpandedItems] = useState<Set<string>>(new Set());
 
   // Fetch approvals
-  const { data: approvals = [], isLoading: loadingApprovals, error: approvalsError } = useQuery<ApprovalRequest[]>({
+  const { data: approvals = [], isLoading: loadingApprovals, error: approvalsError } = useQuery<any[]>({
     queryKey: ["approvals", "pending"],
     queryFn: () => fetchApi(`/approvals?tenant_id=${MOCK_TENANT_ID}&status=pending`),
     refetchInterval: 30000,
   });
 
   // Fetch campaigns needing attention
-  const { data: campaigns = [], isLoading: loadingCampaigns, error: campaignsError } = useQuery<BacklinkCampaign[]>({
+  const { data: campaigns = [], isLoading: loadingCampaigns, error: campaignsError } = useQuery<any[]>({
     queryKey: ["campaigns", "attention"],
     queryFn: () => fetchApi(`/campaigns?tenant_id=${MOCK_TENANT_ID}`),
     refetchInterval: 60000,

@@ -61,7 +61,7 @@ export function CampaignManagementTab({ customerId }: { customerId: string }) {
     queryFn: async () => {
       const response = await fetchApi<any>(`/business-intelligence/intelligence/campaigns?tenant_id=${tenantId}`);
       const allCampaigns = response?.data?.campaigns || [];
-      return allCampaigns.filter((c: Campaign) => c.client_id === customerId);
+      return allCampaigns.filter((c: Campaign) => c.id.includes(customerId));
     },
     refetchInterval: 30000,
   });

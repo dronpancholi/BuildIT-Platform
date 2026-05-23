@@ -74,7 +74,8 @@ export default function CampaignsPage() {
 
   const filtered = campaigns.filter((c) => {
     const matchesSearch = !searchQuery || 
-      c.name.toLowerCase().includes(searchQuery.toLowerCase());
+      c.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (c.client_name || "").toLowerCase().includes(searchQuery.toLowerCase());
     
     const matchesStatus = statusFilter === "all" || c.status === statusFilter;
     
@@ -140,7 +141,7 @@ export default function CampaignsPage() {
             <option value="all">All Health</option>
             <option value="healthy">Healthy (≥70%)</option>
             <option value="at_risk">At Risk (40-70%)</option>
-            <option value="critical">Critical (less than 40%)</option>
+            <option value="critical">Critical (<40%)</option>
           </select>
 
           {/* View Mode */}
