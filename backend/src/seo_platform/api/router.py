@@ -178,3 +178,10 @@ api_router.include_router(campaign_timeline_router, tags=["campaign-timeline"])
 api_router.include_router(search_router, prefix="/search", tags=["search"])
 api_router.include_router(providers_router, prefix="/providers")
 api_router.include_router(webhooks_router)
+
+# Phase 12B Communication Studio routers
+from seo_platform.api.endpoints.communication_templates import router as communication_templates_router
+from seo_platform.api.endpoints.email_scheduling import router as email_scheduling_router
+
+api_router.include_router(communication_templates_router, prefix="/communication-templates", tags=["communication-templates"])
+api_router.include_router(email_scheduling_router, prefix="/email-scheduling", tags=["email-scheduling"])
