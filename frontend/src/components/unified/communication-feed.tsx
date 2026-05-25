@@ -32,11 +32,23 @@ interface Communication {
 export function CommunicationFeed({ className }: CommunicationFeedProps) {
   const { data, isLoading } = useQuery<any>({
     queryKey: ["communications-feed"],
-    queryFn: () => fetchApi("/communications/list"),
+    queryFn: () => fetchApi("/campaigns/threads/all"),
     refetchInterval: 15000,
   });
 
-  const communications: Communication[] = data?.data?.communications || [];
+  // Transform thread data to communication format
+  const threads = data?.data || [];
+  const communications: any[] = threads.map((t: any) => ({
+    id: t.id,
+    type: t.status === 'replied' ? 'reply' : t.status === 'link_acquired' ? 'sent' : 'draft',
+    subject: t.subject,
+    recipient: t.to_email,
+    prospect_name: t.prospect_name,
+    status: t.status,
+    created_at: t.created_at,
+    sent_at: t.sent_at,
+    campaign_name: t.campaign_name,
+  }));
 
   const getStatusIcon = (type: string, status?: string) => {
     switch (type) {
@@ -88,7 +100,7 @@ export function CommunicationFeed({ className }: CommunicationFeedProps) {
           </div>
         ) : (
           <div className="space-y-3">
-            {communications.map((comm) => (
+            {communications.map((comm: any) => (
               <div
                 key={comm.id}
                 className="p-4 rounded-lg bg-surface-darker border border-surface-border hover:border-platform-500/50 transition-colors"
@@ -117,6 +129,9 @@ export function CommunicationFeed({ className }: CommunicationFeedProps) {
                           ? `To: ${comm.recipient}`
                           : "No recipient"}
                       </p>
+                      {comm.campaign_name && (
+                        <p className="text-xs text-slate-600 mt-1">{comm.campaign_name}</p>
+                      )}
                     </div>
                   </div>
                 </div>

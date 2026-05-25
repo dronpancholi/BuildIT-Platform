@@ -5,16 +5,8 @@ import { fetchApi } from "@/lib/api";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { 
-  UserPlus, 
-  GitBranch, 
-  Sparkles, 
-  Search, 
-  Mail, 
-  CheckCircle, 
-  FileText,
-  AlertCircle,
-  TrendingUp,
-  Clock
+  UserPlus, GitBranch, Sparkles, Search, Mail, 
+  CheckCircle, FileText, AlertCircle, TrendingUp, Clock 
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { formatDistanceToNow } from "date-fns";
@@ -25,13 +17,12 @@ interface ActivityTimelineProps {
 
 interface Activity {
   id: string;
-  type: "customer_created" | "campaign_created" | "keyword_discovered" | "prospect_found" | "email_generated" | "email_sent" | "reply_received" | "approval_completed" | "report_generated" | "link_acquired";
+  type: string;
   title: string;
   description: string;
   timestamp: string;
   customer_name?: string;
   campaign_name?: string;
-  metadata?: any;
 }
 
 const typeConfig: any = {
@@ -47,14 +38,36 @@ const typeConfig: any = {
   link_acquired: { icon: TrendingUp, color: "text-emerald-400", bg: "bg-emerald-500/10" },
 };
 
+function mapEventType(eventType: string): string {
+  const mapping: any = {
+    'prospecting_active': 'campaign_created',
+    'outreach_replies_received': 'reply_received',
+    'links_verified': 'link_acquired',
+    'keyword_discovered': 'keyword_discovered',
+    'email_sent': 'email_sent',
+    'approval_completed': 'approval_completed',
+  };
+  return mapping[eventType] || 'customer_created';
+}
+
 export function ActivityTimeline({ className }: ActivityTimelineProps) {
   const { data, isLoading } = useQuery<any>({
     queryKey: ["activity-timeline"],
-    queryFn: () => fetchApi("/campaigns/timeline"),
+    queryFn: () => fetchApi("/business-intelligence/intelligence/events?limit=20"),
     refetchInterval: 30000,
   });
 
-  const activities: Activity[] = data?.data?.events || [];
+  // Transform BI events to activity format
+  const events = data?.data?.events || [];
+  const activities: Activity[] = events.map((e: any) => ({
+    id: e.id || e.event_type,
+    type: mapEventType(e.event_type),
+    title: e.event_type?.replace('_', ' ').toUpperCase() || 'Event',
+    description: e.description || e.message || '',
+    timestamp: e.occurred_at || e.created_at || new Date().toISOString(),
+    campaign_name: e.campaign_name,
+    customer_name: e.customer_name,
+  }));
 
   return (
     <Card className={cn("bg-surface-card border-surface-border", className)}>
