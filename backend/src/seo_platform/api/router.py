@@ -90,6 +90,7 @@ from seo_platform.api.endpoints.webhooks import router as webhooks_router
 from seo_platform.api.endpoints.provider_health import router as provider_health_router
 from seo_platform.api.endpoints.demo_scenarios import router as demo_scenarios_router
 from seo_platform.api.endpoints.campaign_timeline import router as campaign_timeline_router
+from seo_platform.api.endpoints.search import router as search_router
 
 # Root API router — all service routers mount here
 api_router = APIRouter(prefix="/api/v1")
@@ -174,5 +175,6 @@ api_router.include_router(business_intelligence_router, prefix="/business-intell
 api_router.include_router(provider_health_router, tags=["provider-health"])
 api_router.include_router(demo_scenarios_router, tags=["demo-scenarios"])
 api_router.include_router(campaign_timeline_router, tags=["campaign-timeline"])
+api_router.include_router(search_router, prefix="/search", tags=["search"])
 api_router.include_router(providers_router, prefix="/providers")
 api_router.include_router(webhooks_router)
