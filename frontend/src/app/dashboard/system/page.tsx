@@ -93,7 +93,7 @@ export default function SystemPage() {
     <div className="space-y-5">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-slate-100 tracking-tight font-mono">INFRA_COMMAND</h1>
+          <h1 className="text-3xl font-bold text-slate-100 tracking-tight">System Status</h1>
           <p className="text-slate-400 mt-1 font-mono text-sm uppercase tracking-wider">Live Infrastructure Command Center</p>
         </div>
         <div className="flex items-center gap-3">

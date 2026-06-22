@@ -3,154 +3,159 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { fetchApi, MOCK_TENANT_ID } from "@/lib/api";
-import { 
-  Mail, FileText, Clock, CheckCircle2, AlertTriangle, 
+import { EmailComposer } from "@/components/email/email-composer";
+import { TemplateManager } from "@/components/email/template-manager";
+import {
+  Mail, FileText, Clock, CheckCircle2, AlertTriangle,
   Send, Edit2, Trash2, Filter, Search, Plus,
-  ChevronDown, ChevronUp, Paperclip, Smile, Calendar, CheckSquare
+  ChevronDown, ChevronUp, Paperclip, Calendar, CheckSquare,
+  Eye, X, Loader2, Archive, Copy, ExternalLink,
 } from "lucide-react";
 
-interface EmailThread {
+// ── Types ──────────────────────────────────────────────
+interface Draft {
   id: string;
-  campaign_id: string;
-  campaign_name?: string;
-  prospect_domain: string;
-  prospect_name?: string;
-  to_email: string;
+  template_id?: string;
   subject: string;
   body_html: string;
+  to_email?: string;
+  variables?: Record<string, string>;
   status: string;
-  follow_up_count: number;
-  sent_at?: string;
-  replied_at?: string;
   created_at: string;
   updated_at: string;
-  confidence_score: number;
 }
 
 interface Template {
   id: string;
-  name: string;
+  title: string;
+  category: string;
   subject: string;
-  body_html: string;
-  usage_count: number;
-  avg_reply_rate: number;
+  body: string;
+  variables: string[];
+  is_archived: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+interface ScheduledEmail {
+  id: string;
+  thread_id: string;
+  subject: string;
+  to_email: string;
+  scheduled_at: string;
+  status: string;
   created_at: string;
 }
 
+// ── Helpers ────────────────────────────────────────────
+const statusConfig: Record<string, { color: string; label: string; icon: any }> = {
+  draft: { color: "bg-slate-500/10 text-slate-400 border-slate-500/20", label: "DRAFT", icon: FileText },
+  pending: { color: "bg-blue-500/10 text-blue-400 border-blue-500/20", label: "PENDING", icon: Clock },
+  sent: { color: "bg-indigo-500/10 text-indigo-400 border-indigo-500/20", label: "SENT", icon: Send },
+  cancelled: { color: "bg-red-500/10 text-red-400 border-red-500/20", label: "CANCELLED", icon: X },
+};
+
+function StatusBadge({ status }: { status: string }) {
+  const cfg = statusConfig[status] || statusConfig.draft;
+  const Icon = cfg.icon;
+  return (
+    <span className={`px-2 py-1 text-[10px] font-mono rounded border ${cfg.color} flex items-center gap-1`}>
+      <Icon className="w-3 h-3" /> {cfg.label}
+    </span>
+  );
+}
+
+// ── Page ───────────────────────────────────────────────
 export default function CommunicationHub() {
   const queryClient = useQueryClient();
-  const [activeTab, setActiveTab] = useState<"inbox" | "approvals" | "templates" | "drafts">("inbox");
-  const [selectedThread, setSelectedThread] = useState<EmailThread | null>(null);
-  const [searchQuery, setSearchQuery] = useState("");
-  const [filterStatus, setFilterStatus] = useState<string>("all");
-  const [selectedThreads, setSelectedThreads] = useState<Set<string>>(new Set());
+  const [activeTab, setActiveTab] = useState<"compose" | "drafts" | "scheduled" | "sent" | "templates">("drafts");
+  const [showComposer, setShowComposer] = useState(false);
+  const [composerDraftId, setComposerDraftId] = useState<string | undefined>();
+  const [editingTemplate, setEditingTemplate] = useState<Template | null>(null);
+  const [templateManagerMode, setTemplateManagerMode] = useState<"create" | "edit" | "duplicate" | "archive" | null>(null);
 
-  const tenantId = process.env.NEXT_PUBLIC_TENANT_ID || "00000000-0000-0000-0000-000000000001";
-
-  // Fetch threads
-  const { data: threads = [], isLoading: loadingThreads } = useQuery<EmailThread[]>({
-    queryKey: ["communications", "threads"],
-    queryFn: () => fetchApi(`/campaigns/threads/all?tenant_id=${tenantId}`),
-    refetchInterval: 30000,
-  });
-
-  // Fetch templates
-  const { data: templates = [], isLoading: loadingTemplates } = useQuery<Template[]>({
-    queryKey: ["communications", "templates"],
+  // ── Drafts ──
+  const { data: drafts = [], isLoading: loadingDrafts } = useQuery<Draft[]>({
+    queryKey: ["email-drafts"],
     queryFn: async () => {
-      // Templates would come from a dedicated endpoint - using empty array for now
-      return [];
+      const res = await fetchApi(`/email-drafts?tenant_id=${MOCK_TENANT_ID}`);
+      return (res as any)?.data || [];
+    },
+    refetchInterval: 10000,
+  });
+
+  // ── Templates ──
+  const { data: templatesData, isLoading: loadingTemplates } = useQuery({
+    queryKey: ["communication-templates", "all", false],
+    queryFn: async () => {
+      const params = new URLSearchParams({ tenant_id: MOCK_TENANT_ID });
+      const res = await fetch(`/api/v1/communication-templates?${params}`);
+      const json = await res.json();
+      return json.data || [];
     },
   });
 
-  const filteredThreads = threads.filter(thread => {
-    const matchesSearch = !searchQuery || 
-      thread.subject.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      thread.prospect_domain.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesStatus = filterStatus === "all" || thread.status === filterStatus;
-    return matchesSearch && matchesStatus;
+  // ── Scheduled ──
+  const { data: scheduled = [], isLoading: loadingScheduled } = useQuery<ScheduledEmail[]>({
+    queryKey: ["email-scheduled"],
+    queryFn: async () => {
+      const res = await fetchApi(`/email-scheduling?tenant_id=${MOCK_TENANT_ID}`);
+      return (res as any)?.data || [];
+    },
   });
 
+  // ── Delete draft ──
+  const deleteDraftMutation = useMutation({
+    mutationFn: (id: string) =>
+      fetchApi(`/email-drafts/${id}?tenant_id=${MOCK_TENANT_ID}`, { method: "DELETE" }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["email-drafts"] }),
+  });
+
+  // ── Cancel schedule ──
+  const cancelScheduleMutation = useMutation({
+    mutationFn: (id: string) =>
+      fetchApi(`/email-scheduling/${id}/cancel?tenant_id=${MOCK_TENANT_ID}`, { method: "POST" }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["email-scheduled"] }),
+  });
+
+  // ── Archive template ──
+  const archiveTemplateMutation = useMutation({
+    mutationFn: (id: string) =>
+      fetchApi(`/communication-templates/${id}?tenant_id=${MOCK_TENANT_ID}`, { method: "DELETE" }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["communication-templates"] });
+    },
+  });
+
+  // ── Duplicate template ──
+  const duplicateTemplateMutation = useMutation({
+    mutationFn: (id: string) =>
+      fetchApi(`/communication-templates/${id}/duplicate?tenant_id=${MOCK_TENANT_ID}`, { method: "POST" }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["communication-templates"] });
+    },
+  });
+
+  // ── Stats ──
   const stats = {
-    total: threads.length,
-    draft: threads.filter(t => t.status === "draft").length,
-    sent: threads.filter(t => ["sent", "delivered", "opened"].includes(t.status)).length,
-    replied: threads.filter(t => t.status === "replied").length,
-    linkAcquired: threads.filter(t => t.status === "link_acquired").length,
+    drafts: drafts.length,
+    scheduled: scheduled.filter((s) => s.status === "pending").length,
+    sent: scheduled.filter((s) => s.status === "sent").length,
+    templates: (templatesData as Template[] | undefined)?.length || 0,
   };
 
-  const sendMutation = useMutation({
-    mutationFn: async (threadId: string) => {
-      return fetchApi(`/campaigns/threads/${threadId}/send?tenant_id=${tenantId}`, {
-        method: "POST",
-        body: JSON.stringify({}),
-      });
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["communications", "threads"] });
-      setSelectedThread(null);
-    },
-  });
-
-  const bulkSendMutation = useMutation({
-    mutationFn: async (threadIds: string[]) => {
-      const promises = threadIds.map(id => 
-        fetchApi(`/campaigns/threads/${id}/send?tenant_id=${tenantId}`, {
-          method: "POST",
-          body: JSON.stringify({}),
-        })
-      );
-      return Promise.all(promises);
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["communications", "threads"] });
-      setSelectedThreads(new Set());
-    },
-  });
-
-  const handleBulkSend = () => {
-    if (selectedThreads.size === 0) return;
-    bulkSendMutation.mutate(Array.from(selectedThreads));
+  // ── Handlers ──
+  const handleCompose = (draftId?: string) => {
+    setComposerDraftId(draftId);
+    setShowComposer(true);
   };
 
-  const toggleSelectThread = (id: string) => {
-    setSelectedThreads(prev => {
-      const next = new Set(prev);
-      if (next.has(id)) next.delete(id);
-      else next.add(id);
-      return next;
-    });
+  const handleEditDraft = (draft: Draft) => {
+    setComposerDraftId(draft.id);
+    setShowComposer(true);
   };
 
-  const toggleSelectAll = () => {
-    const draftThreads = filteredThreads.filter(t => t.status === "draft");
-    if (selectedThreads.size === draftThreads.length && draftThreads.length > 0) {
-      setSelectedThreads(new Set());
-    } else {
-      setSelectedThreads(new Set(draftThreads.map(t => t.id)));
-    }
-  };
-
-  const getStatusBadge = (status: string) => {
-    const config: Record<string, { color: string; label: string; icon: any }> = {
-      draft: { color: "bg-slate-500/10 text-slate-400 border-slate-500/20", label: "DRAFT", icon: FileText },
-      queued: { color: "bg-blue-500/10 text-blue-400 border-blue-500/20", label: "QUEUED", icon: Clock },
-      sent: { color: "bg-indigo-500/10 text-indigo-400 border-indigo-500/20", label: "SENT", icon: Send },
-      delivered: { color: "bg-cyan-500/10 text-cyan-400 border-cyan-500/20", label: "DELIVERED", icon: CheckCircle2 },
-      opened: { color: "bg-teal-500/10 text-teal-400 border-teal-500/20", label: "OPENED", icon: Mail },
-      replied: { color: "bg-emerald-500/10 text-emerald-400 border-emerald-500/20", label: "REPLIED", icon: CheckCircle2 },
-      link_acquired: { color: "bg-green-500/10 text-green-400 border-green-500/20", label: "LINK ACQUIRED", icon: CheckCircle2 },
-      bounced: { color: "bg-red-500/10 text-red-400 border-red-500/20", label: "BOUNCED", icon: AlertTriangle },
-    };
-    const { color, label, icon: Icon } = config[status] || config.draft;
-    return (
-      <span className={`px-2 py-1 text-[10px] font-mono rounded border ${color} flex items-center gap-1`}>
-        <Icon className="w-3 h-3" />
-        {label}
-      </span>
-    );
-  };
-
+  // ── Render ──
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -159,44 +164,27 @@ export default function CommunicationHub() {
           <h1 className="text-3xl font-bold text-slate-100 tracking-tight">Communication Hub</h1>
           <p className="text-slate-400 mt-1">Unified email management for all outreach activities</p>
         </div>
-        <div className="flex items-center gap-3">
-          {selectedThreads.size > 0 && (
-            <div className="flex items-center gap-2">
-              <span className="text-sm font-mono text-slate-500">
-                {selectedThreads.size} selected
-              </span>
-              <button
-                onClick={handleBulkSend}
-                disabled={bulkSendMutation.isPending}
-                className="px-4 py-2 bg-emerald-600/80 hover:bg-emerald-600 text-white rounded-lg text-xs font-bold font-mono transition-colors disabled:opacity-50 flex items-center gap-2"
-              >
-                <Send className="w-4 h-4" /> Send All ({selectedThreads.size})
-              </button>
-            </div>
-          )}
-          <div className="px-4 py-2 bg-platform-600/20 border border-platform-500/30 rounded-lg flex items-center gap-2">
-            <Mail className="w-4 h-4 text-platform-400" />
-            <span className="text-sm font-mono text-platform-300">{stats.total} Threads</span>
-          </div>
-          <button className="px-4 py-2 bg-platform-600 hover:bg-platform-500 text-white rounded-lg text-xs font-bold font-mono transition-colors flex items-center gap-2">
-            <Plus className="w-4 h-4" /> Compose
-          </button>
-        </div>
+        <button
+          onClick={() => handleCompose()}
+          className="px-4 py-2 bg-platform-600 hover:bg-platform-500 text-white rounded-lg text-xs font-bold font-mono transition-colors flex items-center gap-2"
+        >
+          <Plus className="w-4 h-4" /> Compose Email
+        </button>
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-5 gap-3">
+      <div className="grid grid-cols-4 gap-3">
         <div className="glass-panel p-4">
           <div className="flex items-center gap-2 text-[10px] font-mono text-slate-500 uppercase mb-2">
-            <Mail className="w-3.5 h-3.5" /> Total
+            <FileText className="w-3.5 h-3.5" /> Drafts
           </div>
-          <p className="text-2xl font-bold font-mono text-slate-100">{stats.total}</p>
+          <p className="text-2xl font-bold font-mono text-slate-100">{stats.drafts}</p>
         </div>
-        <div className="glass-panel p-4 border-slate-500/20">
-          <div className="flex items-center gap-2 text-[10px] font-mono text-slate-500 uppercase mb-2">
-            <FileText className="w-3.5 h-3.5" /> Draft
+        <div className="glass-panel p-4 border-blue-500/20">
+          <div className="flex items-center gap-2 text-[10px] font-mono text-blue-500 uppercase mb-2">
+            <Clock className="w-3.5 h-3.5" /> Scheduled
           </div>
-          <p className="text-2xl font-bold font-mono text-slate-300">{stats.draft}</p>
+          <p className="text-2xl font-bold font-mono text-blue-400">{stats.scheduled}</p>
         </div>
         <div className="glass-panel p-4 border-indigo-500/20">
           <div className="flex items-center gap-2 text-[10px] font-mono text-indigo-500 uppercase mb-2">
@@ -204,17 +192,11 @@ export default function CommunicationHub() {
           </div>
           <p className="text-2xl font-bold font-mono text-indigo-400">{stats.sent}</p>
         </div>
-        <div className="glass-panel p-4 border-emerald-500/20">
-          <div className="flex items-center gap-2 text-[10px] font-mono text-emerald-500 uppercase mb-2">
-            <CheckCircle2 className="w-3.5 h-3.5" /> Replied
+        <div className="glass-panel p-4 border-platform-500/20">
+          <div className="flex items-center gap-2 text-[10px] font-mono text-platform-500 uppercase mb-2">
+            <FileText className="w-3.5 h-3.5" /> Templates
           </div>
-          <p className="text-2xl font-bold font-mono text-emerald-400">{stats.replied}</p>
-        </div>
-        <div className="glass-panel p-4 border-green-500/20">
-          <div className="flex items-center gap-2 text-[10px] font-mono text-green-500 uppercase mb-2">
-            <CheckCircle2 className="w-3.5 h-3.5" /> Links
-          </div>
-          <p className="text-2xl font-bold font-mono text-green-400">{stats.linkAcquired}</p>
+          <p className="text-2xl font-bold font-mono text-platform-400">{stats.templates}</p>
         </div>
       </div>
 
@@ -222,16 +204,17 @@ export default function CommunicationHub() {
       <div className="glass-panel overflow-hidden">
         <div className="flex items-center gap-1 p-1 bg-surface-darker/50 border-b border-surface-border">
           {[
-            { id: "inbox", label: "Inbox", icon: Mail },
-            { id: "approvals", label: "Approvals", icon: CheckCircle2 },
-            { id: "templates", label: "Templates", icon: FileText },
-            { id: "drafts", label: "Drafts", icon: Edit2 },
+            { id: "compose" as const, label: "Compose", icon: Edit2 },
+            { id: "drafts" as const, label: "Drafts", icon: FileText },
+            { id: "scheduled" as const, label: "Scheduled", icon: Clock },
+            { id: "sent" as const, label: "Sent", icon: Send },
+            { id: "templates" as const, label: "Templates", icon: FileText },
           ].map((tab) => {
             const Icon = tab.icon;
             return (
               <button
                 key={tab.id}
-                onClick={() => setActiveTab(tab.id as any)}
+                onClick={() => setActiveTab(tab.id)}
                 className={`flex items-center gap-2 px-4 py-2 text-xs font-mono rounded-md transition-all ${
                   activeTab === tab.id
                     ? "bg-platform-600 text-white"
@@ -240,254 +223,291 @@ export default function CommunicationHub() {
               >
                 <Icon className="w-4 h-4" />
                 {tab.label}
+                {tab.id === "drafts" && stats.drafts > 0 && (
+                  <span className="ml-1 px-1.5 py-0.5 text-[10px] bg-slate-700 rounded-full">{stats.drafts}</span>
+                )}
               </button>
             );
           })}
         </div>
 
-        {/* Filters */}
-        <div className="p-4 flex items-center justify-between gap-3 border-b border-surface-border">
-          <div className="flex items-center gap-3 flex-1">
-            <div className="relative max-w-md flex-1">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
-              <input
-                type="text"
-                placeholder="Search threads..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full pl-10 pr-4 py-2 bg-surface-darker border border-surface-border rounded-lg text-sm text-slate-200 placeholder-slate-600 focus:outline-none focus:border-platform-500"
-              />
-            </div>
-            <select
-              value={filterStatus}
-              onChange={(e) => setFilterStatus(e.target.value)}
-              className="px-3 py-2 bg-surface-darker border border-surface-border rounded-lg text-sm text-slate-300 focus:outline-none focus:border-platform-500"
-            >
-              <option value="all">All Status</option>
-              <option value="draft">Draft</option>
-              <option value="sent">Sent</option>
-              <option value="replied">Replied</option>
-              <option value="link_acquired">Link Acquired</option>
-            </select>
-          </div>
-          {selectedThreads.size > 0 && (
-            <div className="flex items-center gap-2">
-              <span className="text-xs font-mono text-slate-500">
-                {selectedThreads.size} draft{selectedThreads.size > 1 ? "s" : ""} selected
-              </span>
+        <div className="p-4">
+          {/* ── Compose Tab ── */}
+          {activeTab === "compose" && (
+            <div className="text-center py-12">
+              <Edit2 className="w-16 h-16 text-slate-700 mx-auto mb-4" />
+              <h3 className="text-lg font-bold text-slate-300 mb-2">Start Composing</h3>
+              <p className="text-sm text-slate-500 mb-4">Create a new email or select a draft to continue</p>
+              <button
+                onClick={() => handleCompose()}
+                className="px-6 py-3 bg-platform-600 hover:bg-platform-500 text-white rounded-lg text-sm font-bold font-mono transition-colors"
+              >
+                Open Email Composer
+              </button>
             </div>
           )}
-        </div>
 
-        {/* Content */}
-        <div className="p-4">
-          {activeTab === "inbox" && (
+          {/* ── Drafts Tab ── */}
+          {activeTab === "drafts" && (
             <div className="space-y-3">
-              {loadingThreads ? (
-                <div className="text-center p-8">
-                  <Mail className="w-12 h-12 text-platform-500 animate-spin mx-auto mb-3" />
-                  <p className="text-xs font-mono text-slate-500">Loading threads...</p>
+              {loadingDrafts ? (
+                <div className="text-center py-12">
+                  <Loader2 className="w-8 h-8 animate-spin text-platform-500 mx-auto mb-3" />
+                  <p className="text-xs text-slate-500">Loading drafts...</p>
                 </div>
-              ) : filteredThreads.length === 0 ? (
-                <div className="text-center p-8 glass-panel">
-                  <Mail className="w-12 h-12 text-slate-700 mx-auto mb-3" />
-                  <h3 className="text-sm font-bold font-mono text-slate-300 mb-2">No Threads Found</h3>
-                  <p className="text-xs text-slate-500">Email threads will appear here once campaigns are launched</p>
+              ) : drafts.length === 0 ? (
+                <div className="text-center py-12 glass-panel">
+                  <FileText className="w-16 h-16 text-slate-700 mx-auto mb-4" />
+                  <h3 className="text-sm font-bold font-mono text-slate-300 mb-2">No Drafts</h3>
+                  <p className="text-xs text-slate-500 mb-4">Save a draft in the email composer to see it here</p>
+                  <button
+                    onClick={() => handleCompose()}
+                    className="px-4 py-2 bg-platform-600 hover:bg-platform-500 text-white rounded-lg text-xs font-bold font-mono transition-colors"
+                  >
+                    Create Draft
+                  </button>
                 </div>
               ) : (
-                <>
-                  {/* Select All Header for Drafts */}
-                  {activeTab === "inbox" && stats.draft > 0 && (
-                    <div className="glass-panel p-3 flex items-center justify-between mb-3">
-                      <div className="flex items-center gap-2">
-                        <input
-                          type="checkbox"
-                          checked={selectedThreads.size === stats.draft && stats.draft > 0}
-                          onChange={toggleSelectAll}
-                          className="w-4 h-4 rounded border-slate-600 bg-slate-800 text-platform-600 focus:ring-platform-500"
-                        />
-                        <span className="text-xs font-mono text-slate-400">
-                          {selectedThreads.size === stats.draft ? "Deselect All Drafts" : "Select All Drafts"}
-                        </span>
-                      </div>
-                      {selectedThreads.size > 0 && (
-                        <button
-                          onClick={handleBulkSend}
-                          disabled={bulkSendMutation.isPending}
-                          className="px-3 py-1.5 text-xs font-mono rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 hover:bg-emerald-500/20 transition-colors disabled:opacity-50"
-                        >
-                          Send All ({selectedThreads.size})
-                        </button>
-                      )}
-                    </div>
-                  )}
-
-                  {filteredThreads.map((thread) => (
-                    <div
-                      key={thread.id}
-                      className={`glass-panel p-4 hover:bg-surface-border/20 transition-all cursor-pointer ${
-                        selectedThreads.has(thread.id) ? "bg-platform-500/5 border-2 border-platform-500" : "border border-transparent"
-                      }`}
-                      onClick={() => selectedThreads.has(thread.id) || setSelectedThread(thread)}
-                    >
-                      <div className="flex items-start justify-between mb-2">
-                        <div className="flex items-center gap-2 flex-1">
-                          {thread.status === "draft" && (
-                            <input
-                              type="checkbox"
-                              checked={selectedThreads.has(thread.id)}
-                              onChange={(e) => { e.stopPropagation(); toggleSelectThread(thread.id); }}
-                              onClick={(e) => e.stopPropagation()}
-                              className="w-4 h-4 rounded border-slate-600 bg-slate-800 text-platform-600 focus:ring-platform-500"
-                            />
-                          )}
-                          <div className="flex-1">
-                            <div className="flex items-center gap-2 mb-1">
-                              <h3 className="text-sm font-bold font-mono text-slate-200">{thread.subject}</h3>
-                              {getStatusBadge(thread.status)}
-                            </div>
-                            <p className="text-[10px] font-mono text-slate-500">
-                              To: {thread.prospect_name || "Contact"}@{thread.prospect_domain}
-                            </p>
-                          </div>
+                drafts.map((draft) => (
+                  <div
+                    key={draft.id}
+                    className="glass-panel p-4 hover:bg-surface-border/20 transition-all cursor-pointer"
+                    onClick={() => handleEditDraft(draft)}
+                  >
+                    <div className="flex items-start justify-between mb-2">
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2 mb-1">
+                          <h3 className="text-sm font-bold font-mono text-slate-200">
+                            {draft.subject || "Untitled Draft"}
+                          </h3>
+                          <StatusBadge status={draft.status} />
                         </div>
-                        <div className="text-right ml-4 flex-shrink-0">
-                          <span className="text-[10px] font-mono text-slate-600">
-                            {new Date(thread.created_at).toLocaleDateString()}
-                          </span>
-                        </div>
+                        <p className="text-[10px] font-mono text-slate-500">
+                          {draft.to_email || "No recipient"} · {new Date(draft.updated_at).toLocaleString()}
+                        </p>
                       </div>
-                      <div className="flex items-center gap-4 text-[10px] font-mono text-slate-600">
-                        {thread.campaign_name && (
-                          <span className="flex items-center gap-1">
-                            <FileText className="w-3 h-3 text-platform-500" />
-                            {thread.campaign_name}
-                          </span>
-                        )}
-                        {thread.follow_up_count > 0 && (
-                          <span className="flex items-center gap-1">
-                            <Clock className="w-3 h-3 text-amber-500" />
-                            {thread.follow_up_count} follow-up{thread.follow_up_count > 1 ? "s" : ""}
-                          </span>
-                        )}
-                        <span className="flex items-center gap-1">
-                          <Mail className="w-3 h-3 text-slate-500" />
-                          {thread.prospect_domain}
-                        </span>
-                      </div>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          deleteDraftMutation.mutate(draft.id);
+                        }}
+                        className="p-1.5 hover:bg-red-500/10 rounded transition-colors"
+                      >
+                        <Trash2 className="w-4 h-4 text-red-400" />
+                      </button>
                     </div>
-                  ))}
-                </>
+                  </div>
+                ))
               )}
             </div>
           )}
 
-          {activeTab === "approvals" && (
-            <div className="text-center p-8 glass-panel">
-              <CheckCircle2 className="w-12 h-12 text-slate-700 mx-auto mb-3" />
-              <h3 className="text-sm font-bold font-mono text-slate-300 mb-2">Email Approvals</h3>
-              <p className="text-xs text-slate-500 mb-4">Pending email templates requiring approval</p>
-              <button className="px-4 py-2 bg-platform-600 hover:bg-platform-500 text-white rounded-lg text-xs font-bold font-mono transition-colors">
-                View in Approval Center
-              </button>
+          {/* ── Scheduled Tab ── */}
+          {activeTab === "scheduled" && (
+            <div className="space-y-3">
+              {loadingScheduled ? (
+                <div className="text-center py-12">
+                  <Loader2 className="w-8 h-8 animate-spin text-platform-500 mx-auto mb-3" />
+                  <p className="text-xs text-slate-500">Loading scheduled emails...</p>
+                </div>
+              ) : scheduled.length === 0 ? (
+                <div className="text-center py-12 glass-panel">
+                  <Clock className="w-16 h-16 text-slate-700 mx-auto mb-4" />
+                  <h3 className="text-sm font-bold font-mono text-slate-300 mb-2">No Scheduled Emails</h3>
+                  <p className="text-xs text-slate-500 mb-4">Schedule an email from the composer to see it here</p>
+                </div>
+              ) : (
+                scheduled.map((email) => (
+                  <div key={email.id} className="glass-panel p-4">
+                    <div className="flex items-start justify-between mb-2">
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2 mb-1">
+                          <h3 className="text-sm font-bold font-mono text-slate-200">{email.subject}</h3>
+                          <StatusBadge status={email.status} />
+                        </div>
+                        <p className="text-[10px] font-mono text-slate-500">
+                          To: {email.to_email} · {new Date(email.scheduled_at).toLocaleString()}
+                        </p>
+                      </div>
+                      {email.status === "pending" && (
+                        <button
+                          onClick={() => cancelScheduleMutation.mutate(email.id)}
+                          className="p-1.5 hover:bg-red-500/10 rounded transition-colors"
+                        >
+                          <X className="w-4 h-4 text-red-400" />
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                ))
+              )}
             </div>
           )}
 
+          {/* ── Sent Tab ── */}
+          {activeTab === "sent" && (
+            <div className="space-y-3">
+              {scheduled.filter(s => s.status === "sent").length === 0 ? (
+                <div className="text-center py-12 glass-panel">
+                  <Send className="w-16 h-16 text-slate-700 mx-auto mb-4" />
+                  <h3 className="text-sm font-bold font-mono text-slate-300 mb-2">No Sent Emails</h3>
+                  <p className="text-xs text-slate-500">Sent emails will appear here</p>
+                </div>
+              ) : (
+                scheduled.filter(s => s.status === "sent").map((email) => (
+                  <div key={email.id} className="glass-panel p-4">
+                    <div className="flex items-start justify-between">
+                      <div>
+                        <div className="flex items-center gap-2 mb-1">
+                          <h3 className="text-sm font-bold font-mono text-slate-200">{email.subject}</h3>
+                          <StatusBadge status="sent" />
+                        </div>
+                        <p className="text-[10px] font-mono text-slate-500">
+                          To: {email.to_email}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+          )}
+
+          {/* ── Templates Tab ── */}
           {activeTab === "templates" && (
-            <div className="text-center p-8 glass-panel">
-              <FileText className="w-12 h-12 text-slate-700 mx-auto mb-3" />
-              <h3 className="text-sm font-bold font-mono text-slate-300 mb-2">Templates Library</h3>
-              <p className="text-xs text-slate-500 mb-4">Reusable email templates with performance tracking</p>
-              <button className="px-4 py-2 bg-platform-600 hover:bg-platform-500 text-white rounded-lg text-xs font-bold font-mono transition-colors">
-                Create Template
-              </button>
-            </div>
-          )}
+            <div className="space-y-3">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-sm font-bold font-mono text-slate-300">
+                  Template Library ({stats.templates})
+                </h3>
+                <button
+                  onClick={() => {
+                    setEditingTemplate(null);
+                    setTemplateManagerMode("create");
+                  }}
+                  className="px-3 py-1.5 bg-platform-600 hover:bg-platform-500 text-white rounded text-xs font-mono transition-colors flex items-center gap-1"
+                >
+                  <Plus className="w-3 h-3" /> New Template
+                </button>
+              </div>
 
-          {activeTab === "drafts" && (
-            <div className="text-center p-8 glass-panel">
-              <Edit2 className="w-12 h-12 text-slate-700 mx-auto mb-3" />
-              <h3 className="text-sm font-bold font-mono text-slate-300 mb-2">Drafts</h3>
-              <p className="text-xs text-slate-500 mb-4">Unsent email drafts</p>
-              <button className="px-4 py-2 bg-platform-600 hover:bg-platform-500 text-white rounded-lg text-xs font-bold font-mono transition-colors">
-                Compose Draft
-              </button>
+              {loadingTemplates ? (
+                <div className="text-center py-8">
+                  <Loader2 className="w-8 h-8 animate-spin text-platform-500 mx-auto" />
+                </div>
+              ) : !templatesData || (templatesData as Template[]).length === 0 ? (
+                <div className="text-center py-12 glass-panel">
+                  <FileText className="w-16 h-16 text-slate-700 mx-auto mb-4" />
+                  <h3 className="text-sm font-bold font-mono text-slate-300 mb-2">No Templates</h3>
+                  <p className="text-xs text-slate-500 mb-4">Create your first email template</p>
+                  <button
+                    onClick={() => {
+                      setEditingTemplate(null);
+                      setTemplateManagerMode("create");
+                    }}
+                    className="px-4 py-2 bg-platform-600 hover:bg-platform-500 text-white rounded-lg text-xs font-bold font-mono transition-colors"
+                  >
+                    Create Template
+                  </button>
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                  {(templatesData as Template[]).map((tpl) => (
+                    <div
+                      key={tpl.id}
+                      className="glass-panel p-4 hover:bg-surface-border/20 transition-all border border-surface-border"
+                    >
+                      <div className="flex items-start justify-between mb-2">
+                        <div className="flex-1 min-w-0">
+                          <h4 className="text-sm font-bold font-mono text-slate-200 truncate">{tpl.title}</h4>
+                          <span className="text-[10px] font-mono text-slate-500">{tpl.category}</span>
+                        </div>
+                      </div>
+                      <p className="text-[10px] text-slate-500 truncate mb-2">{tpl.subject}</p>
+                      <div className="flex flex-wrap gap-1 mb-3">
+                        {(tpl.variables || []).slice(0, 4).map((v) => (
+                          <span key={v} className="text-[9px] text-platform-400 bg-platform-500/10 px-1 rounded">
+                            {`{{${v}}}`}
+                          </span>
+                        ))}
+                        {(tpl.variables || []).length > 4 && (
+                          <span className="text-[9px] text-slate-500">+{tpl.variables.length - 4}</span>
+                        )}
+                      </div>
+                      <div className="flex items-center gap-1">
+                        <button
+                          onClick={() => {
+                            setEditingTemplate(tpl);
+                            setTemplateManagerMode("edit");
+                          }}
+                          className="p-1.5 hover:bg-surface-border rounded transition-colors"
+                          title="Edit"
+                        >
+                          <Edit2 className="w-3.5 h-3.5 text-slate-400" />
+                        </button>
+                        <button
+                          onClick={() => duplicateTemplateMutation.mutate(tpl.id)}
+                          className="p-1.5 hover:bg-surface-border rounded transition-colors"
+                          title="Duplicate"
+                        >
+                          <Copy className="w-3.5 h-3.5 text-slate-400" />
+                        </button>
+                        <button
+                          onClick={() => {
+                            setEditingTemplate(tpl);
+                            setTemplateManagerMode("archive");
+                          }}
+                          className="p-1.5 hover:bg-red-500/10 rounded transition-colors"
+                          title="Archive"
+                        >
+                          <Archive className="w-3.5 h-3.5 text-red-400" />
+                        </button>
+                        <button
+                          onClick={() => {
+                            setEditingTemplate(tpl);
+                            setTemplateManagerMode("duplicate");
+                          }}
+                          className="p-1.5 hover:bg-surface-border rounded transition-colors"
+                          title="Use in Composer"
+                        >
+                          <ExternalLink className="w-3.5 h-3.5 text-platform-400" />
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           )}
         </div>
       </div>
 
-      {/* Thread Detail Modal */}
-      {selectedThread && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm">
-          <div className="glass-panel w-full max-w-3xl max-h-[90vh] overflow-hidden flex flex-col">
-            <div className="p-6 border-b border-surface-border bg-surface-darker/50">
-              <div className="flex items-center justify-between">
-                <div>
-                  <h2 className="text-xl font-bold text-slate-100">{selectedThread.subject}</h2>
-                  <p className="text-sm text-slate-400">
-                    To: {selectedThread.prospect_name || "Contact"}@{selectedThread.prospect_domain}
-                  </p>
-                </div>
-                <button
-                  onClick={() => setSelectedThread(null)}
-                  className="p-2 hover:bg-surface-border rounded-lg transition-colors"
-                >
-                  <ChevronDown className="w-5 h-5 text-slate-400" />
-                </button>
-              </div>
-            </div>
+      {/* Email Composer Modal */}
+      {showComposer && (
+        <EmailComposer
+          draftId={composerDraftId}
+          onClose={() => {
+            setShowComposer(false);
+            setComposerDraftId(undefined);
+            queryClient.invalidateQueries({ queryKey: ["email-drafts"] });
+          }}
+        />
+      )}
 
-            <div className="p-6 overflow-y-auto flex-1">
-              {/* Thread Status */}
-              <div className="mb-4 flex items-center gap-2">
-                {getStatusBadge(selectedThread.status)}
-                {selectedThread.sent_at && (
-                  <span className="text-[10px] font-mono text-slate-600">
-                    Sent: {new Date(selectedThread.sent_at).toLocaleString()}
-                  </span>
-                )}
-                {selectedThread.replied_at && (
-                  <span className="text-[10px] font-mono text-emerald-600">
-                    Replied: {new Date(selectedThread.replied_at).toLocaleString()}
-                  </span>
-                )}
-              </div>
-
-              {/* Email Content */}
-              <div className="glass-panel p-4 mb-4">
-                <div 
-                  className="prose prose-invert prose-sm max-w-none"
-                  dangerouslySetInnerHTML={{ __html: selectedThread.body_html }}
-                />
-              </div>
-
-              {/* Quick Actions */}
-              <div className="flex items-center gap-2">
-                {selectedThread.status === "draft" && (
-                  <button
-                    onClick={() => sendMutation.mutate(selectedThread.id)}
-                    disabled={sendMutation.isPending}
-                    className="px-4 py-2 bg-emerald-600/80 hover:bg-emerald-600 text-white rounded-lg text-xs font-bold font-mono transition-colors disabled:opacity-50"
-                  >
-                    {sendMutation.isPending ? "Sending..." : "Send Email"}
-                  </button>
-                )}
-                <button className="px-4 py-2 bg-surface-darker hover:bg-surface-border border border-surface-border text-slate-300 rounded-lg text-xs font-mono transition-colors">
-                  Edit Draft
-                </button>
-                <button className="px-4 py-2 bg-surface-darker hover:bg-surface-border border border-surface-border text-slate-300 rounded-lg text-xs font-mono transition-colors">
-                  Follow-up
-                </button>
-                {selectedThread.status === "sent" && (
-                  <button className="px-4 py-2 bg-amber-600/20 hover:bg-amber-600/30 text-amber-400 border border-amber-500/20 rounded-lg text-xs font-mono transition-colors">
-                    Mark Link Acquired
-                  </button>
-                )}
-              </div>
-            </div>
-          </div>
-        </div>
+      {/* Template Manager Modal */}
+      {templateManagerMode && (
+        <TemplateManager
+          mode={templateManagerMode}
+          template={editingTemplate || undefined}
+          onClose={() => {
+            setTemplateManagerMode(null);
+            setEditingTemplate(null);
+          }}
+          onSuccess={() => {
+            queryClient.invalidateQueries({ queryKey: ["communication-templates"] });
+            setActiveTab("drafts");
+          }}
+        />
       )}
     </div>
   );

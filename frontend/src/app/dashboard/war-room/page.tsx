@@ -9,6 +9,7 @@ import { useQuery } from "@tanstack/react-query";
 import { fetchApi } from "@/lib/api";
 import { useMemo } from "react";
 import { useRealtime, useRealtimeStore } from "@/hooks/use-realtime";
+import { safeArr, safeStr, safeNum, safeUpper, safeLower, safeFixed, safeReplace, safeObj, safeValues, safeEntries, safeKeys, safeFind } from "@/lib/safe";
 
 interface InfraTopology {
   nodes: { id: string; name: string; type: string; status: string }[];
@@ -184,7 +185,7 @@ export default function WarRoomPage() {
     refetchInterval: 10000,
   });
 
-  const operationalPressureEntries = pressureData?.components ?? [];
+  const operationalPressureEntries = safeArr<OperationalPressureEntry>(pressureData?.components);
 
   const { data: imbalanceData } = useQuery<WorkerImbalanceEntry[] | { pairs: WorkerImbalanceEntry[] }>({
     queryKey: ["worker-imbalance"],
@@ -228,7 +229,7 @@ export default function WarRoomPage() {
     } else if (Array.isArray(qp)) {
       base = qp as any;
     }
-    if (!sseQueues || Object.keys(sseQueues).length === 0) return base;
+    if (!sseQueues || safeKeys(sseQueues).length === 0) return base;
     return base.map((q) => ({
       ...q,
       depth: sseQueues[q.queue_name] !== undefined ? sseQueues[q.queue_name] : q.depth,
@@ -249,28 +250,29 @@ export default function WarRoomPage() {
         saturation_pct: w.slot_utilization_pct ?? w.saturation_pct ?? 0,
       }));
     }
-    if (!sseWorkers || sseWorkers.length === 0) return base;
+    if (!sseWorkers || safeArr<any>(sseWorkers).length === 0) return base;
     return base.map((w) => ({
       ...w,
-      active_tasks: sseWorkers.find((sw) => sw.task_queue === w.task_queue)?.worker_id ? w.active_tasks + 1 : w.active_tasks,
-      saturation_pct: sseWorkers.find((sw) => sw.task_queue === w.task_queue)
-        ? Math.min(w.saturation_pct + 5, 100)
+      active_tasks: safeArr<any>(sseWorkers).find((sw) => sw.task_queue === w.task_queue)?.worker_id ? w.active_tasks + 1 : w.active_tasks,
+      saturation_pct: safeArr<any>(sseWorkers).find((sw) => sw.task_queue === w.task_queue)
+        ? Math.min(safeNum(w.saturation_pct) + 5, 100)
         : w.saturation_pct,
     }));
   }, [workerSaturation, sseWorkers]);
 
-  const alertList = alerts || [];
+  const alertList = safeArr<SaturationAlert>(alerts);
 
   const nodes = useMemo(() => {
-    const base = topology?.nodes || [];
-    if (!sseInfra || Object.keys(sseInfra).length === 0) return base;
+    const base = safeArr<InfraTopology["nodes"][number]>(topology?.nodes);
+    const sseInfraSafe = safeObj(sseInfra);
+    if (!sseInfra || safeKeys(sseInfra).length === 0) return base;
     return base.map((n) => ({
       ...n,
-      status: sseInfra[n.id] || sseInfra[n.name.toLowerCase()] || n.status,
+      status: sseInfraSafe[n.id] || sseInfraSafe[safeLower(n.name)] || n.status,
     }));
   }, [topology, sseInfra]);
 
-  const edges = topology?.edges || [];
+  const edges = safeArr<InfraTopology["edges"][number]>(topology?.edges);
 
   const criticalAlerts = alertList.filter(a => a.severity === "critical").length;
   const highAlerts = alertList.filter(a => a.severity === "high").length;
@@ -279,15 +281,15 @@ export default function WarRoomPage() {
   const totalNodes = nodes.length;
 
   const avgSaturation = useMemo(() => {
-    if (!workerEntries || workerEntries.length === 0) return 0;
-    return workerEntries.reduce((s, w) => s + (w.saturation_pct || 0), 0) / workerEntries.length;
+    if (safeArr<WorkerSaturationEntry>(workerEntries).length === 0) return 0;
+    return safeArr<WorkerSaturationEntry>(workerEntries).reduce((s, w) => s + safeNum(w.saturation_pct), 0) / safeArr<WorkerSaturationEntry>(workerEntries).length;
   }, [workerEntries]);
 
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-slate-100 tracking-tight font-mono">WAR_ROOM</h1>
+          <h1 className="text-3xl font-bold text-slate-100 tracking-tight">War Room</h1>
           <p className="text-slate-400 mt-1 font-mono text-sm uppercase tracking-wider">Enterprise Operational Command</p>
         </div>
         <div className="flex items-center gap-3">
@@ -307,7 +309,7 @@ export default function WarRoomPage() {
         </div>
       </div>
 
-      {loadingTopology && pressureEntries.length === 0 ? (
+      {loadingTopology && safeArr<QueuePressureEntry>(pressureEntries).length === 0 ? (
         <div className="flex items-center justify-center py-20">
           <Loader2 className="w-8 h-8 text-platform-500 animate-spin" />
         </div>
@@ -349,7 +351,7 @@ export default function WarRoomPage() {
                 <span className="text-[10px] font-mono text-slate-500 uppercase tracking-wider">Throughput</span>
               </div>
               <span className="text-2xl font-bold font-mono text-slate-100">
-                {throughput ? `${throughput.events_per_second.toFixed(1)}/s` : "—"}
+                {throughput ? `${safeFixed(throughput.events_per_second, 1)}/s` : "—"}
               </span>
               <p className="text-[10px] font-mono text-slate-600 mt-1">Event rate</p>
             </motion.div>
@@ -363,10 +365,10 @@ export default function WarRoomPage() {
                 <h3 className="text-lg font-medium text-slate-200 font-mono">TOPOLOGY_OVERVIEW</h3>
               </div>
               <div className="space-y-2">
-                {nodes.length === 0 ? (
+                {safeArr<InfraTopology["nodes"][number]>(nodes).length === 0 ? (
                   <div className="text-sm text-slate-500 font-mono py-8 text-center">No topology data</div>
                 ) : (
-                  nodes.map((node, i) => (
+                  safeArr<InfraTopology["nodes"][number]>(nodes).map((node, i) => (
                     <motion.div
                       key={node.id}
                       initial={{ opacity: 0, x: -10 }}
@@ -383,9 +385,9 @@ export default function WarRoomPage() {
                   ))
                 )}
               </div>
-              {edges.length > 0 && (
+              {safeArr<InfraTopology["edges"][number]>(edges).length > 0 && (
                 <div className="mt-4 pt-4 border-t border-surface-border">
-                  <p className="text-[10px] font-mono text-slate-600">{edges.length} connections monitored</p>
+                  <p className="text-[10px] font-mono text-slate-600">{safeArr<InfraTopology["edges"][number]>(edges).length} connections monitored</p>
                 </div>
               )}
             </div>
@@ -397,11 +399,11 @@ export default function WarRoomPage() {
                 <h3 className="text-lg font-medium text-slate-200 font-mono">QUEUE_PRESSURE</h3>
               </div>
               <div className="space-y-3">
-                {pressureEntries.length === 0 ? (
+                {safeArr<QueuePressureEntry>(pressureEntries).length === 0 ? (
                   <div className="text-sm text-slate-500 font-mono py-8 text-center">No queue pressure data</div>
                 ) : (
-                  pressureEntries.map((q, i) => {
-                    const pct = Math.min(q.pressure_score || q.depth * 5, 100);
+                  safeArr<QueuePressureEntry>(pressureEntries).map((q, i) => {
+                    const pct = Math.min(safeNum(q.pressure_score) || safeNum(q.depth) * 5, 100);
                     const barColor = pct > 80 ? "bg-red-500" : pct > 50 ? "bg-amber-500" : "bg-emerald-500";
                     return (
                       <motion.div
@@ -411,7 +413,7 @@ export default function WarRoomPage() {
                         transition={{ delay: i * 0.05 }}
                       >
                         <div className="flex items-center justify-between mb-1">
-                          <span className="text-xs font-mono text-slate-300 uppercase">{q.queue_name.replace(/_/g, " ")}</span>
+                          <span className="text-xs font-mono text-slate-300 uppercase">{safeReplace(q.queue_name, /_/g, " ")}</span>
                           <span className={`text-[10px] font-mono ${pct > 50 ? "text-amber-400" : "text-slate-500"}`}>{Math.round(pct)}%</span>
                         </div>
                         <div className="w-full h-2.5 bg-surface-darker rounded-full overflow-hidden">
@@ -423,8 +425,8 @@ export default function WarRoomPage() {
                           />
                         </div>
                         <div className="flex justify-between text-[10px] font-mono text-slate-600 mt-0.5">
-                          <span>Depth: {q.depth}</span>
-                          <span className="capitalize">{q.level}</span>
+                          <span>Depth: {safeStr(q.depth)}</span>
+                          <span className="capitalize">{safeStr(q.level)}</span>
                         </div>
                       </motion.div>
                     );
@@ -440,11 +442,11 @@ export default function WarRoomPage() {
                 <h3 className="text-lg font-medium text-slate-200 font-mono">WORKER_SATURATION</h3>
               </div>
               <div className="space-y-3">
-                {!workerEntries || workerEntries.length === 0 ? (
+                {safeArr<WorkerSaturationEntry>(workerEntries).length === 0 ? (
                   <div className="text-sm text-slate-500 font-mono py-8 text-center">No worker saturation data</div>
                 ) : (
-                  workerEntries.slice(0, 8).map((w, i) => {
-                    const pct = w.saturation_pct || 0;
+                  safeArr<WorkerSaturationEntry>(workerEntries).slice(0, 8).map((w, i) => {
+                    const pct = safeNum(w.saturation_pct);
                     const barColor = pct > 80 ? "bg-red-500" : pct > 50 ? "bg-amber-500" : "bg-emerald-500";
                     return (
                       <motion.div
@@ -499,12 +501,12 @@ export default function WarRoomPage() {
                     </div>
                   </div>
                   <span className={`px-3 py-1.5 rounded text-xs font-mono font-bold border ${LEVEL_COLORS[pressure?.level || "none"] || LEVEL_COLORS.none}`}>
-                    {(pressure?.level || "none").toUpperCase()}
+                    {safeUpper(pressure?.level, "NONE")}
                   </span>
                 </div>
-                {(pressure?.queue_pressures || []).map((qp, i) => (
+                {safeArr<PressureTelemetry["queue_pressures"][number]>(pressure?.queue_pressures).map((qp, i) => (
                   <div key={qp.queue} className="flex items-center gap-3">
-                    <span className="text-xs font-mono text-slate-400 w-32 truncate uppercase">{qp.queue.replace(/_/g, " ")}</span>
+                    <span className="text-xs font-mono text-slate-400 w-32 truncate uppercase">{safeReplace(qp.queue, /_/g, " ")}</span>
                     <div className="flex-1 h-2 bg-surface-darker rounded-full overflow-hidden">
                       <motion.div
                         initial={{ width: 0 }}
@@ -513,7 +515,7 @@ export default function WarRoomPage() {
                         transition={{ duration: 0.5 }}
                       />
                     </div>
-                    <span className="text-[10px] font-mono text-slate-500 w-10 text-right">{Math.round(qp.score)}%</span>
+                    <span className="text-[10px] font-mono text-slate-500 w-10 text-right">{Math.round(safeNum(qp.score))}%</span>
                   </div>
                 ))}
               </div>
@@ -531,13 +533,13 @@ export default function WarRoomPage() {
                 )}
               </div>
               <div className="space-y-2 max-h-[300px] overflow-auto custom-scrollbar">
-                {alertList.length === 0 ? (
+                {safeArr<SaturationAlert>(alertList).length === 0 ? (
                   <div className="text-sm text-slate-500 font-mono py-8 text-center flex flex-col items-center">
                     <Shield className="w-8 h-8 text-emerald-500 mb-2" />
                     <span>ALL_SYSTEMS_NOMINAL</span>
                   </div>
                 ) : (
-                  alertList.map((a, i) => (
+                  safeArr<SaturationAlert>(alertList).map((a, i) => (
                     <motion.div
                       key={i}
                       initial={{ opacity: 0, x: -5 }}
@@ -559,8 +561,8 @@ export default function WarRoomPage() {
                           <div className="flex items-center gap-2 mb-0.5">
                             <span className={`px-1.5 py-0.5 rounded text-[9px] font-bold uppercase ${
                               a.severity === "critical" ? "bg-red-500/10 text-red-400" : a.severity === "high" ? "bg-orange-500/10 text-orange-400" : "bg-amber-500/10 text-amber-400"
-                            }`}>&gt;_{a.severity}</span>
-                            <span className="text-[9px] text-slate-600">{a.component}</span>
+                            }`}>&gt;_{safeStr(a.severity)}</span>
+                            <span className="text-[9px] text-slate-600">{safeStr(a.component)}</span>
                           </div>
                           <p className="text-slate-300 mt-0.5">{a.message}</p>
                           <p className="text-[9px] text-slate-600 mt-1">
@@ -584,8 +586,8 @@ export default function WarRoomPage() {
               </div>
               <div className="grid grid-cols-2 gap-3">
                 {["postgresql", "redis", "temporal", "kafka", "qdrant", "minio", "nim", "playwright"].map((svc) => {
-                  const node = nodes.find(n => n.id === svc || n.name === svc);
-                  const sseStatus = sseInfra[svc];
+                  const node = safeFind(nodes, (n: any) => n.id === svc || n.name === svc);
+                  const sseStatus = safeObj(sseInfra)[svc];
                   const status = sseStatus || node?.status || "unknown";
                   return (
                     <div key={svc} className="p-3 rounded-md bg-surface-darker/50 border border-surface-border/50">
@@ -608,23 +610,23 @@ export default function WarRoomPage() {
               </div>
               <div className="space-y-3">
                 {providerHealth ? (
-                  Object.entries(providerHealth.providers).map(([name, prov]) => (
+                  safeEntries(providerHealth.providers).map(([name, prov]: [string, any]) => (
                     <div key={name} className="flex items-center justify-between p-2.5 rounded-md bg-surface-darker/50 border border-surface-border/50">
                       <div className="flex items-center gap-2 min-w-0">
                         <span className={`w-2 h-2 rounded-full flex-shrink-0 ${
-                          prov.circuit_breaker_state === "OPEN" ? "bg-red-500 animate-pulse" :
-                          prov.circuit_breaker_state === "HALF_OPEN" ? "bg-amber-500 animate-pulse" :
+                          prov?.circuit_breaker_state === "OPEN" ? "bg-red-500 animate-pulse" :
+                          prov?.circuit_breaker_state === "HALF_OPEN" ? "bg-amber-500 animate-pulse" :
                           "bg-emerald-500"
                         }`} />
                         <span className="text-[11px] font-mono text-slate-300 truncate">{name}</span>
                       </div>
                       <div className="flex items-center gap-3 flex-shrink-0">
-                        <span className="text-[9px] font-mono text-slate-500">{prov.uptime_pct}%</span>
+                        <span className="text-[9px] font-mono text-slate-500">{safeStr(prov?.uptime_pct)}%</span>
                         <span className={`text-[10px] font-mono font-bold ${
-                          prov.circuit_breaker_state === "OPEN" ? "text-red-400" :
-                          prov.circuit_breaker_state === "HALF_OPEN" ? "text-amber-400" :
+                          prov?.circuit_breaker_state === "OPEN" ? "text-red-400" :
+                          prov?.circuit_breaker_state === "HALF_OPEN" ? "text-amber-400" :
                           "text-emerald-400"
-                        }`}>{prov.circuit_breaker_state}</span>
+                        }`}>{safeStr(prov?.circuit_breaker_state)}</span>
                       </div>
                     </div>
                   ))
@@ -634,7 +636,7 @@ export default function WarRoomPage() {
               </div>
               {providerHealth && (
                 <div className="mt-3 pt-3 border-t border-surface-border flex items-center justify-between text-[9px] font-mono text-slate-600">
-                  <span>Healthy: {Object.values(providerHealth.providers).filter(p => p.healthy).length}/{Object.keys(providerHealth.providers).length}</span>
+                  <span>Healthy: {safeValues(providerHealth.providers).filter((p: any) => p?.healthy).length}/{safeKeys(providerHealth.providers).length}</span>
                   <span>Avg latency</span>
                 </div>
               )}
@@ -649,17 +651,17 @@ export default function WarRoomPage() {
               <div className="flex items-center justify-center py-4">
                 <div className="text-center">
                   <span className="text-4xl font-bold font-mono text-slate-100">
-                    {throughput ? throughput.events_per_second.toFixed(1) : "—"}
+                    {throughput ? safeFixed(throughput.events_per_second, 1) : "—"}
                   </span>
                   <p className="text-xs font-mono text-slate-500 mt-1">events/sec</p>
                 </div>
               </div>
-              {throughput?.events_per_topic && Object.keys(throughput.events_per_topic).length > 0 && (
+              {safeKeys(throughput?.events_per_topic).length > 0 && (
                 <div className="mt-4 pt-4 border-t border-surface-border space-y-2">
-                  {Object.entries(throughput.events_per_topic).map(([topic, rate]) => (
+                  {safeEntries(throughput?.events_per_topic).map(([topic, rate]: [string, any]) => (
                     <div key={topic} className="flex items-center justify-between text-xs font-mono">
                       <span className="text-slate-400 truncate max-w-[200px]">{topic}</span>
-                      <span className="text-slate-500">{rate.toFixed(1)}/s</span>
+                      <span className="text-slate-500">{safeFixed(rate, 1)}/s</span>
                     </div>
                   ))}
                 </div>
@@ -667,7 +669,7 @@ export default function WarRoomPage() {
               {throughput?.peak_throughput ? (
                 <div className="mt-4 pt-4 border-t border-surface-border flex items-center justify-between text-[10px] font-mono text-slate-600">
                   <span>PEAK</span>
-                  <span>{throughput.peak_throughput.toFixed(1)}/s</span>
+                  <span>{safeFixed(throughput.peak_throughput, 1)}/s</span>
                 </div>
               ) : null}
             </div>
@@ -682,22 +684,22 @@ export default function WarRoomPage() {
             <div className="flex items-center gap-2 mb-4">
               <AlertTriangle className="w-5 h-5 text-amber-500" />
               <h3 className="text-lg font-medium text-slate-200 font-mono">ANOMALY_PREDICTION</h3>
-              {anomalyDashboard && anomalyDashboard.predicted_anomalies.filter(a => a.severity === "critical").length > 0 && (
+              {anomalyDashboard && safeArr<PredictiveAlert>(anomalyDashboard.predicted_anomalies).filter(a => a.severity === "critical").length > 0 && (
                 <span className="ml-auto px-2 py-0.5 rounded bg-red-500/10 border border-red-500/20 text-xs font-mono text-red-400">
-                  {anomalyDashboard.predicted_anomalies.filter(a => a.severity === "critical").length} CRITICAL
+                  {safeArr<PredictiveAlert>(anomalyDashboard.predicted_anomalies).filter(a => a.severity === "critical").length} CRITICAL
                 </span>
               )}
             </div>
             {!anomalyDashboard ? (
               <div className="text-sm text-slate-500 font-mono py-8 text-center">Loading predictions...</div>
-            ) : anomalyDashboard.predicted_anomalies.length === 0 ? (
+            ) : safeArr<PredictiveAlert>(anomalyDashboard.predicted_anomalies).length === 0 ? (
               <div className="flex flex-col items-center justify-center py-8">
                 <Shield className="w-8 h-8 text-emerald-500 mb-2" />
                 <span className="text-sm font-mono text-slate-500">NO_PREDICTED_ANOMALIES</span>
               </div>
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-                {anomalyDashboard.predicted_anomalies.map((a, i) => (
+                {safeArr<PredictiveAlert>(anomalyDashboard.predicted_anomalies).map((a, i) => (
                   <motion.div
                     key={a.id || i}
                     initial={{ opacity: 0, y: 5 }}
@@ -710,8 +712,8 @@ export default function WarRoomPage() {
                         a.severity === "critical" ? "bg-red-500/10 text-red-400 border-red-500/20" :
                         a.severity === "high" ? "bg-orange-500/10 text-orange-400 border-orange-500/20" :
                         "bg-amber-500/10 text-amber-400 border-amber-500/20"
-                      }`}>{a.severity.toUpperCase()}</span>
-                      <span className="text-[10px] font-mono text-slate-500 uppercase">{a.component}</span>
+                      }`}>{safeUpper(a.severity)}</span>
+                      <span className="text-[10px] font-mono text-slate-500 uppercase">{safeStr(a.component)}</span>
                     </div>
                     <div className="text-xs font-mono text-slate-300 mb-1">{a.type}</div>
                     <p className="text-[10px] font-mono text-slate-400 mb-2">{a.message}</p>
@@ -719,12 +721,12 @@ export default function WarRoomPage() {
                       <span className="text-slate-500">Probability</span>
                       <span className={`font-bold ${
                         a.probability >= 0.7 ? "text-emerald-400" : a.probability >= 0.4 ? "text-amber-400" : "text-red-400"
-                      }`}>{Math.round(a.probability * 100)}%</span>
+                      }`}>{Math.round(safeNum(a.probability) * 100)}%</span>
                     </div>
                     <div className="w-full h-1.5 bg-surface-darker rounded-full overflow-hidden">
                       <motion.div
-                        initial={{ width: 0 }}
-                        animate={{ width: `${a.probability * 100}%` }}
+                          initial={{ width: 0 }}
+                          animate={{ width: `${safeNum(a.probability) * 100}%` }}
                         className={`h-full rounded-full ${
                           a.probability >= 0.7 ? "bg-emerald-500" : a.probability >= 0.4 ? "bg-amber-500" : "bg-red-500"
                         }`}
@@ -751,27 +753,27 @@ export default function WarRoomPage() {
               </div>
               {!pressureData ? (
                 <div className="text-sm text-slate-500 font-mono py-8 text-center">Loading pressure data...</div>
-              ) : operationalPressureEntries.length === 0 ? (
+              ) : safeArr<OperationalPressureEntry>(operationalPressureEntries).length === 0 ? (
                 <div className="text-sm text-slate-500 font-mono py-8 text-center">No pressure data</div>
               ) : (
                 <div className="space-y-3">
-                  {operationalPressureEntries.map((p, i) => (
+                  {safeArr<OperationalPressureEntry>(operationalPressureEntries).map((p, i) => (
                     <div key={p.name || i}>
                       <div className="flex items-center justify-between mb-1">
-                        <span className="text-xs font-mono text-slate-300 uppercase">{p.name}</span>
+                        <span className="text-xs font-mono text-slate-300 uppercase">{safeStr(p.name)}</span>
                         <span className={`text-[10px] font-mono ${p.pressure_score > 70 ? "text-red-400" : p.pressure_score > 40 ? "text-amber-400" : "text-slate-500"}`}>
-                          {Math.round(p.pressure_score)}%
+                          {Math.round(safeNum(p.pressure_score))}%
                         </span>
                       </div>
                       <div className="w-full h-2 bg-surface-darker rounded-full overflow-hidden">
                         <motion.div
                           initial={{ width: 0 }}
-                          animate={{ width: `${p.pressure_score}%` }}
+                          animate={{ width: `${safeNum(p.pressure_score)}%` }}
                           className={`h-full rounded-full ${p.pressure_score > 70 ? "bg-red-500" : p.pressure_score > 40 ? "bg-amber-500" : "bg-emerald-500"}`}
                           transition={{ duration: 0.5 }}
                         />
                       </div>
-                      <div className="text-[10px] font-mono text-slate-600 mt-0.5">load: {Math.round(p.current_load)} / {Math.round(p.capacity)}</div>
+                      <div className="text-[10px] font-mono text-slate-600 mt-0.5">load: {Math.round(safeNum(p.current_load))} / {Math.round(safeNum(p.capacity))}</div>
                     </div>
                   ))}
                 </div>
@@ -789,11 +791,11 @@ export default function WarRoomPage() {
                 <Activity className="w-5 h-5 text-red-500" />
                 <h3 className="text-lg font-medium text-slate-200 font-mono">WORKER_IMBALANCE</h3>
               </div>
-              {!imbalancePairs || imbalancePairs.length === 0 ? (
+              {safeArr<WorkerImbalanceEntry>(imbalancePairs).length === 0 ? (
                 <div className="text-sm text-slate-500 font-mono py-8 text-center">No imbalance detected</div>
               ) : (
                 <div className="space-y-3">
-                  {imbalancePairs.map((im, i) => (
+                  {safeArr<WorkerImbalanceEntry>(imbalancePairs).map((im, i) => (
                     <motion.div
                       key={i}
                       initial={{ opacity: 0, y: 5 }}
@@ -804,13 +806,13 @@ export default function WarRoomPage() {
                       <div className="flex items-center justify-between mb-1">
                         <span className="text-xs font-mono text-slate-300">{im.worker_a} ↔ {im.worker_b}</span>
                         <span className={`text-[10px] font-mono font-bold ${im.imbalance_score > 50 ? "text-red-400" : im.imbalance_score > 25 ? "text-amber-400" : "text-slate-500"}`}>
-                          {Math.round(im.imbalance_score)}%
+                          {Math.round(safeNum(im.imbalance_score))}%
                         </span>
                       </div>
                       <div className="w-full h-1.5 bg-surface-darker rounded-full overflow-hidden">
                         <motion.div
                           initial={{ width: 0 }}
-                          animate={{ width: `${im.imbalance_score}%` }}
+                          animate={{ width: `${safeNum(im.imbalance_score)}%` }}
                           className={`h-full rounded-full ${im.imbalance_score > 50 ? "bg-red-500" : im.imbalance_score > 25 ? "bg-amber-500" : "bg-emerald-500"}`}
                           transition={{ duration: 0.5 }}
                         />
@@ -837,32 +839,32 @@ export default function WarRoomPage() {
                 <div className="text-sm text-slate-500 font-mono py-8 text-center">Loading cross-system data...</div>
               ) : (
                 <div className="space-y-4">
-                  {crossSystemData.system_states && crossSystemData.system_states.length > 0 && (
+                  {safeArr<CrossSystemAwareness["system_states"][number]>(crossSystemData?.system_states).length > 0 && (
                     <div>
                       <p className="text-[10px] font-mono text-slate-500 uppercase mb-2">System States</p>
                       <div className="space-y-2">
-                        {crossSystemData.system_states.map((s, i) => (
+                        {safeArr<CrossSystemAwareness["system_states"][number]>(crossSystemData?.system_states).map((s, i) => (
                           <div key={i} className="flex items-center justify-between p-2 rounded bg-surface-darker/30 border border-surface-border/30">
                             <div className="flex items-center gap-2">
                               <span className={`w-2 h-2 rounded-full ${s.status === "healthy" ? "bg-emerald-500" : s.status === "degraded" ? "bg-amber-500" : "bg-red-500"}`} />
-                              <span className="text-xs font-mono text-slate-300">{s.system}</span>
+                              <span className="text-xs font-mono text-slate-300">{safeStr(s.system)}</span>
                             </div>
-                            <span className="text-[10px] font-mono text-slate-500">{Math.round(s.load)}%</span>
+                            <span className="text-[10px] font-mono text-slate-500">{Math.round(safeNum(s.load))}%</span>
                           </div>
                         ))}
                       </div>
                     </div>
                   )}
-                  {crossSystemData.critical_path && crossSystemData.critical_path.length > 0 && (
+                  {safeArr<CrossSystemAwareness["critical_path"][number]>(crossSystemData?.critical_path).length > 0 && (
                     <div>
                       <p className="text-[10px] font-mono text-red-400 uppercase mb-2">Critical Path</p>
                       <div className="space-y-1">
-                        {crossSystemData.critical_path.map((c, i) => (
+                        {safeArr<CrossSystemAwareness["critical_path"][number]>(crossSystemData?.critical_path).map((c, i) => (
                           <div key={i} className="flex items-center gap-2 text-xs font-mono">
                             <span className={`w-1.5 h-1.5 rounded-full ${c.risk === "high" ? "bg-red-500" : c.risk === "medium" ? "bg-amber-500" : "bg-emerald-500"}`} />
-                            <span className="text-slate-300">{c.step}</span>
-                            <span className="text-slate-500">→ {c.system}</span>
-                            <span className={`text-[10px] ml-auto ${c.risk === "high" ? "text-red-400" : c.risk === "medium" ? "text-amber-400" : "text-emerald-400"}`}>{c.risk.toUpperCase()}</span>
+                            <span className="text-slate-300">{safeStr(c.step)}</span>
+                            <span className="text-slate-500">→ {safeStr(c.system)}</span>
+                            <span className={`text-[10px] ml-auto ${c.risk === "high" ? "text-red-400" : c.risk === "medium" ? "text-amber-400" : "text-emerald-400"}`}>{safeUpper(c.risk)}</span>
                           </div>
                         ))}
                       </div>
