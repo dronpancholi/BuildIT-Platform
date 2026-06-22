@@ -1,0 +1,7281 @@
+{
+  "summary": {
+    "total_tests": 803,
+    "passed": 770,
+    "failed": 33,
+    "skipped": 0,
+    "pass_rate": 95.9,
+    "issues": {
+      "critical": [
+        "GET /automation/actions?tenant_id=00000000-0000-0000-0000-000000000001: Unexpected 500"
+      ],
+      "high": [
+        "GET /automation/actions?tenant_id=00000000-0000-0000-0000-000000000001 [Happy path]: Unexpected 500 Internal Server Error",
+        "Concurrency test: Some requests failed: [429, 429, 429, 429, 429, 429, 429, 429, 429, 429]"
+      ],
+      "medium": [
+        "POST /clients [POST malformed JSON]: Expected 400, got 429",
+        "POST /campaigns [POST malformed JSON]: Expected 400, got 422",
+        "POST /plans/generate [POST malformed JSON]: Expected 400, got 429",
+        "POST /keywords/research [POST malformed JSON]: Expected 400, got 422",
+        "POST /reports/generate [POST malformed JSON]: Expected 400, got 429",
+        "POST /citations [POST malformed JSON]: Expected 400, got 429",
+        "POST /actions [POST malformed JSON]: Expected 400, got 429",
+        "POST /executions [POST malformed JSON]: Expected 400, got 429",
+        "POST /goals [POST malformed JSON]: Expected 400, got 429",
+        "POST /autonomous-agents [POST malformed JSON]: Expected 400, got 429",
+        "POST /email-drafts [POST malformed JSON]: Expected 400, got 429",
+        "POST /email-scheduling [POST malformed JSON]: Expected 400, got 429",
+        "POST /communication-templates [POST malformed JSON]: Expected 400, got 429",
+        "POST /tenants [POST malformed JSON]: Expected 400, got 429",
+        "POST /ai/query [POST malformed JSON]: Expected 400, got 429",
+        "POST /ai/copilot/ask [POST malformed JSON]: Expected 400, got 429",
+        "POST /semantic/search [POST malformed JSON]: Expected 400, got 422",
+        "POST /semantic/index [POST malformed JSON]: Expected 400, got 429",
+        "POST /knowledge/rebuild [POST malformed JSON]: Expected 400, got 429",
+        "POST /forecast/revenue [POST malformed JSON]: Expected 400, got 429",
+        "POST /forecast/campaign [POST malformed JSON]: Expected 400, got 429",
+        "POST /forecast/customer [POST malformed JSON]: Expected 400, got 429",
+        "POST /alerts/acknowledge [POST malformed JSON]: Expected 400, got 429",
+        "POST /alerts/resolve [POST malformed JSON]: Expected 400, got 429",
+        "POST /local-seo/authority-analysis [POST malformed JSON]: Expected 400, got 429",
+        "POST /local-seo/nap-consistency [POST malformed JSON]: Expected 400, got 429",
+        "POST /local-seo/geo-map [POST malformed JSON]: Expected 400, got 429",
+        "POST /local-seo/directory-score [POST malformed JSON]: Expected 400, got 429",
+        "POST /local-seo/citation-opportunities [POST malformed JSON]: Expected 400, got 429",
+        "POST /local-seo/competitor-intelligence [POST malformed JSON]: Expected 400, got 429",
+        "GET /nonexistent-endpoint-12345 [Non-existent endpoint]: Expected 404, got 429"
+      ],
+      "low": []
+    }
+  },
+  "results": [
+    {
+      "method": "GET",
+      "path": "/healthz",
+      "test": "Happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 11.2,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/healthz",
+      "test": "Missing tenant",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.8,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/ready",
+      "test": "Happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.7,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/ready",
+      "test": "Missing tenant",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.7,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/health",
+      "test": "Happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.7,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/health",
+      "test": "Missing tenant",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.9,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/metrics",
+      "test": "Happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.7,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/metrics",
+      "test": "Missing tenant",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.6,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/telemetry",
+      "test": "Happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.6,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/telemetry",
+      "test": "Missing tenant",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.7,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/telemetry/00000000-0000-0000-0000-000000000001",
+      "test": "Happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.6,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/telemetry/00000000-0000-0000-0000-000000000001",
+      "test": "Missing tenant",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.7,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/analytics/backlink-roi?tenant_id=00000000-0000-0000-0000-000000000001",
+      "test": "Happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.6,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/analytics/campaign-efficiency?tenant_id=00000000-0000-0000-0000-000000000001",
+      "test": "Happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.6,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/analytics/local-seo-effectiveness?tenant_id=00000000-0000-0000-0000-000000000001",
+      "test": "Happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.6,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/analytics/outreach-performance?tenant_id=00000000-0000-0000-0000-000000000001",
+      "test": "Happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 1.1,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/analytics/scraping-quality?tenant_id=00000000-0000-0000-0000-000000000001",
+      "test": "Happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.6,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/analytics/workflow-latency?tenant_id=00000000-0000-0000-0000-000000000001",
+      "test": "Happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.7,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/ai-ops/confidence-drift?tenant_id=00000000-0000-0000-0000-000000000001",
+      "test": "Happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.7,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/ai-ops/inference-analytics?tenant_id=00000000-0000-0000-0000-000000000001",
+      "test": "Happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.7,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/ai-ops/operational-metrics?tenant_id=00000000-0000-0000-0000-000000000001",
+      "test": "Happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.7,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/ai-ops/prompt-performance?tenant_id=00000000-0000-0000-0000-000000000001",
+      "test": "Happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.7,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/ai-quality/dashboard?tenant_id=00000000-0000-0000-0000-000000000001",
+      "test": "Happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.7,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/ai-quality/recommendation-quality?tenant_id=00000000-0000-0000-0000-000000000001",
+      "test": "Happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.8,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/ai-resilience/drift-detection?tenant_id=00000000-0000-0000-0000-000000000001",
+      "test": "Happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.6,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/ai-resilience/failure-analytics?tenant_id=00000000-0000-0000-0000-000000000001",
+      "test": "Happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.6,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/ai-resilience/fallback-route?tenant_id=00000000-0000-0000-0000-000000000001",
+      "test": "Happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.6,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/ai-resilience/inference-health?tenant_id=00000000-0000-0000-0000-000000000001",
+      "test": "Happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.6,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/ai-resilience/throttle-status?tenant_id=00000000-0000-0000-0000-000000000001",
+      "test": "Happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.7,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/adaptive-optimization/communication-timing?tenant_id=00000000-0000-0000-0000-000000000001",
+      "test": "Happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.8,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/adaptive-optimization/event-propagation?tenant_id=00000000-0000-0000-0000-000000000001",
+      "test": "Happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.7,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/adaptive-optimization/queue-prioritization?tenant_id=00000000-0000-0000-0000-000000000001",
+      "test": "Happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.6,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/adaptive-optimization/retry-tuning?tenant_id=00000000-0000-0000-0000-000000000001",
+      "test": "Happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.7,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/adaptive-optimization/scraping?tenant_id=00000000-0000-0000-0000-000000000001",
+      "test": "Happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.7,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/adaptive-optimization/worker-allocation?tenant_id=00000000-0000-0000-0000-000000000001",
+      "test": "Happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.6,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/adaptive-optimization/workflow?tenant_id=00000000-0000-0000-0000-000000000001",
+      "test": "Happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.7,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/advanced-sre/autonomous-diagnostics?tenant_id=00000000-0000-0000-0000-000000000001",
+      "test": "Happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.7,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/advanced-sre/distributed-anomaly-intelligence?tenant_id=00000000-0000-0000-0000-000000000001",
+      "test": "Happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.7,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/advanced-sre/incident-predictions?tenant_id=00000000-0000-0000-0000-000000000001",
+      "test": "Happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.6,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/advanced-sre/infra-self-analysis?tenant_id=00000000-0000-0000-0000-000000000001",
+      "test": "Happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.7,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/advanced-sre/operational-pressure-prediction?tenant_id=00000000-0000-0000-0000-000000000001",
+      "test": "Happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.5,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/advanced-sre/workflow-degradation-forecast?tenant_id=00000000-0000-0000-0000-000000000001",
+      "test": "Happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.5,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/alerts?tenant_id=00000000-0000-0000-0000-000000000001",
+      "test": "Happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.7,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/alerts/summary?tenant_id=00000000-0000-0000-0000-000000000001",
+      "test": "Happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.7,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/anomaly-prediction/ai-quality?tenant_id=00000000-0000-0000-0000-000000000001",
+      "test": "Happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.7,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/anomaly-prediction/communication?tenant_id=00000000-0000-0000-0000-000000000001",
+      "test": "Happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.6,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/anomaly-prediction/dashboard?tenant_id=00000000-0000-0000-0000-000000000001",
+      "test": "Happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.7,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/anomaly-prediction/event-propagation?tenant_id=00000000-0000-0000-0000-000000000001",
+      "test": "Happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.8,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/anomaly-prediction/retry-storms?tenant_id=00000000-0000-0000-0000-000000000001",
+      "test": "Happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.7,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/anomaly-prediction/scraping?tenant_id=00000000-0000-0000-0000-000000000001",
+      "test": "Happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.7,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/anomaly-prediction/worker-failures?tenant_id=00000000-0000-0000-0000-000000000001",
+      "test": "Happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.7,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/anomaly-prediction/workflow-deadlocks?tenant_id=00000000-0000-0000-0000-000000000001",
+      "test": "Happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.7,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/approvals?tenant_id=00000000-0000-0000-0000-000000000001",
+      "test": "Happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.7,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/autonomous-coordination/allocation-recommendations?tenant_id=00000000-0000-0000-0000-000000000001",
+      "test": "Happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.6,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/autonomous-coordination/enterprise-optimizations?tenant_id=00000000-0000-0000-0000-000000000001",
+      "test": "Happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.6,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/autonomous-coordination/orchestration-optimizations?tenant_id=00000000-0000-0000-0000-000000000001",
+      "test": "Happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.7,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/autonomous-coordination/strategic-recommendations?tenant_id=00000000-0000-0000-0000-000000000001",
+      "test": "Happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.7,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/autonomous-coordination/workflow-coordination?tenant_id=00000000-0000-0000-0000-000000000001",
+      "test": "Happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.9,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/autonomous-agents?tenant_id=00000000-0000-0000-0000-000000000001",
+      "test": "Happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.6,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/autonomous-agents/conflicts?tenant_id=00000000-0000-0000-0000-000000000001",
+      "test": "Happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.7,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/autonomous-agents/tasks?tenant_id=00000000-0000-0000-0000-000000000001",
+      "test": "Happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.5,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/autonomy/infra-recommendations?tenant_id=00000000-0000-0000-0000-000000000001",
+      "test": "Happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.6,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/autonomy/optimization-intelligence?tenant_id=00000000-0000-0000-0000-000000000001",
+      "test": "Happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.6,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/autonomy/strategic-guidance?tenant_id=00000000-0000-0000-0000-000000000001",
+      "test": "Happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.7,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/autonomy/workflow-suggestions?tenant_id=00000000-0000-0000-0000-000000000001",
+      "test": "Happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.5,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/automation/actions?tenant_id=00000000-0000-0000-0000-000000000001",
+      "test": "Happy path",
+      "status": "FAIL",
+      "http_code": 500,
+      "time_ms": 13.4,
+      "issues": "Unexpected 500 Internal Server Error"
+    },
+    {
+      "method": "GET",
+      "path": "/automation/audit?tenant_id=00000000-0000-0000-0000-000000000001",
+      "test": "Happy path",
+      "status": "PASS",
+      "http_code": 200,
+      "time_ms": 6.7,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/automation/failures?tenant_id=00000000-0000-0000-0000-000000000001",
+      "test": "Happy path",
+      "status": "PASS",
+      "http_code": 200,
+      "time_ms": 6.2,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/automation/monitor?tenant_id=00000000-0000-0000-0000-000000000001",
+      "test": "Happy path",
+      "status": "PASS",
+      "http_code": 200,
+      "time_ms": 6.3,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/automation/rules?tenant_id=00000000-0000-0000-0000-000000000001",
+      "test": "Happy path",
+      "status": "PASS",
+      "http_code": 200,
+      "time_ms": 3.8,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/automation/runs?tenant_id=00000000-0000-0000-0000-000000000001",
+      "test": "Happy path",
+      "status": "PASS",
+      "http_code": 200,
+      "time_ms": 3.4,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/automation/stats?tenant_id=00000000-0000-0000-0000-000000000001",
+      "test": "Happy path",
+      "status": "PASS",
+      "http_code": 200,
+      "time_ms": 5.3,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/backlink-acquisition/authority-propagation?tenant_id=00000000-0000-0000-0000-000000000001",
+      "test": "Happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.9,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/backlink-acquisition/campaign-optimization?tenant_id=00000000-0000-0000-0000-000000000001",
+      "test": "Happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.8,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/backlink-acquisition/introductions?tenant_id=00000000-0000-0000-0000-000000000001",
+      "test": "Happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.7,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/backlink-acquisition/opportunities?tenant_id=00000000-0000-0000-0000-000000000001",
+      "test": "Happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.7,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/backlink-acquisition/outreach-forecast?tenant_id=00000000-0000-0000-0000-000000000001",
+      "test": "Happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.7,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/backlink-acquisition/relationship-network?tenant_id=00000000-0000-0000-0000-000000000001",
+      "test": "Happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.7,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/backlink-intelligence/authority-analysis?tenant_id=00000000-0000-0000-0000-000000000001",
+      "test": "Happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.6,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/backlink-intelligence/authority-propagation?tenant_id=00000000-0000-0000-0000-000000000001",
+      "test": "Happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.6,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/backlink-intelligence/broken-links?tenant_id=00000000-0000-0000-0000-000000000001",
+      "test": "Happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.7,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/backlink-intelligence/outreach-predictions?tenant_id=00000000-0000-0000-0000-000000000001",
+      "test": "Happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.7,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/backlink-intelligence/prospects?tenant_id=00000000-0000-0000-0000-000000000001",
+      "test": "Happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.7,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/backlink-intelligence/response-probability?tenant_id=00000000-0000-0000-0000-000000000001",
+      "test": "Happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 1.0,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/business-intelligence/intelligence/campaigns?tenant_id=00000000-0000-0000-0000-000000000001",
+      "test": "Happy path",
+      "status": "PASS",
+      "http_code": 200,
+      "time_ms": 27.5,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/business-intelligence/intelligence/cluster-visualization?tenant_id=00000000-0000-0000-0000-000000000001",
+      "test": "Happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 1.1,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/business-intelligence/intelligence/clusters?tenant_id=00000000-0000-0000-0000-000000000001",
+      "test": "Happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.8,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/business-intelligence/intelligence/events?tenant_id=00000000-0000-0000-0000-000000000001",
+      "test": "Happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.7,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/business-intelligence/intelligence/keyword-opportunities?tenant_id=00000000-0000-0000-0000-000000000001",
+      "test": "Happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.6,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/business-intelligence/intelligence/keywords?tenant_id=00000000-0000-0000-0000-000000000001",
+      "test": "Happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.7,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/business-intelligence/intelligence/overview?tenant_id=00000000-0000-0000-0000-000000000001",
+      "test": "Happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.6,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/business-intelligence/intelligence/recommendations?tenant_id=00000000-0000-0000-0000-000000000001",
+      "test": "Happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.7,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/business-intelligence/intelligence/serp-volatility?tenant_id=00000000-0000-0000-0000-000000000001",
+      "test": "Happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.6,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/campaigns?tenant_id=00000000-0000-0000-0000-000000000001",
+      "test": "Happy path",
+      "status": "PASS",
+      "http_code": 200,
+      "time_ms": 6.6,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/campaigns/threads/all?tenant_id=00000000-0000-0000-0000-000000000001",
+      "test": "Happy path",
+      "status": "PASS",
+      "http_code": 200,
+      "time_ms": 23.3,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/citations?tenant_id=00000000-0000-0000-0000-000000000001",
+      "test": "Happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.8,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/clients?tenant_id=00000000-0000-0000-0000-000000000001",
+      "test": "Happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.6,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/communication-reliability/bounce-intelligence?tenant_id=00000000-0000-0000-0000-000000000001",
+      "test": "Happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.7,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/communication-reliability/delivery-analytics?tenant_id=00000000-0000-0000-0000-000000000001",
+      "test": "Happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.6,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/communication-reliability/provider-health?tenant_id=00000000-0000-0000-0000-000000000001",
+      "test": "Happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.6,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/communication-reliability/replay-safety?tenant_id=00000000-0000-0000-0000-000000000001",
+      "test": "Happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.5,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/communication-reliability/workflow-consistency?tenant_id=00000000-0000-0000-0000-000000000001",
+      "test": "Happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.6,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/communication-templates?tenant_id=00000000-0000-0000-0000-000000000001",
+      "test": "Happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.6,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/cross-tenant/analytics?tenant_id=00000000-0000-0000-0000-000000000001",
+      "test": "Happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.5,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/cross-tenant/anomaly-comparison?tenant_id=00000000-0000-0000-0000-000000000001",
+      "test": "Happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.5,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/cross-tenant/benchmarks?tenant_id=00000000-0000-0000-0000-000000000001",
+      "test": "Happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.5,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/cross-tenant/infrastructure-utilization?tenant_id=00000000-0000-0000-0000-000000000001",
+      "test": "Happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.8,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/cross-tenant/operational-trends?tenant_id=00000000-0000-0000-0000-000000000001",
+      "test": "Happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 1.1,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/cross-tenant/tenant-benchmarks?tenant_id=00000000-0000-0000-0000-000000000001",
+      "test": "Happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 1.3,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/cross-tenant/workflow-baselines?tenant_id=00000000-0000-0000-0000-000000000001",
+      "test": "Happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 1.4,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/demo/readiness?tenant_id=00000000-0000-0000-0000-000000000001",
+      "test": "Happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 1.5,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/demo/scenarios?tenant_id=00000000-0000-0000-0000-000000000001",
+      "test": "Happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.8,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/deployment/autoscaling-optimization?tenant_id=00000000-0000-0000-0000-000000000001",
+      "test": "Happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.6,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/deployment/blue-green?tenant_id=00000000-0000-0000-0000-000000000001",
+      "test": "Happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.6,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/deployment/canary-analysis?tenant_id=00000000-0000-0000-0000-000000000001",
+      "test": "Happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.5,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/deployment/infra-versions?tenant_id=00000000-0000-0000-0000-000000000001",
+      "test": "Happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.7,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/deployment/intelligence?tenant_id=00000000-0000-0000-0000-000000000001",
+      "test": "Happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.7,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/deployment/multi-region-readiness?tenant_id=00000000-0000-0000-0000-000000000001",
+      "test": "Happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.5,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/deployment/rollback-safety?tenant_id=00000000-0000-0000-0000-000000000001",
+      "test": "Happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.6,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/deployment/rollback-safety-report?tenant_id=00000000-0000-0000-0000-000000000001",
+      "test": "Happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.7,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/deployment/topology?tenant_id=00000000-0000-0000-0000-000000000001",
+      "test": "Happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.7,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/distributed/degradation?tenant_id=00000000-0000-0000-0000-000000000001",
+      "test": "Happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.6,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/distributed/dependency-graph?tenant_id=00000000-0000-0000-0000-000000000001",
+      "test": "Happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.6,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/distributed/kafka-health?tenant_id=00000000-0000-0000-0000-000000000001",
+      "test": "Happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.6,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/distributed/postgres-health?tenant_id=00000000-0000-0000-0000-000000000001",
+      "test": "Happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.7,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/distributed/redis-recovery?tenant_id=00000000-0000-0000-0000-000000000001",
+      "test": "Happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.7,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/distributed/temporal-health?tenant_id=00000000-0000-0000-0000-000000000001",
+      "test": "Happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.7,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/ecosystem-maturity/compliance-evolution?tenant_id=00000000-0000-0000-0000-000000000001",
+      "test": "Happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.6,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/ecosystem-maturity/cross-system-trace?tenant_id=00000000-0000-0000-0000-000000000001",
+      "test": "Happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.7,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/ecosystem-maturity/ecosystem-intelligence?tenant_id=00000000-0000-0000-0000-000000000001",
+      "test": "Happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.6,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/ecosystem-maturity/integration-lifecycle?tenant_id=00000000-0000-0000-0000-000000000001",
+      "test": "Happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.7,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/ecosystem-maturity/organization-governance?tenant_id=00000000-0000-0000-0000-000000000001",
+      "test": "Happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.7,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/email-drafts?tenant_id=00000000-0000-0000-0000-000000000001",
+      "test": "Happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.6,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/email-scheduling?tenant_id=00000000-0000-0000-0000-000000000001",
+      "test": "Happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 1.0,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/enterprise-cognition/campaign-memory?tenant_id=00000000-0000-0000-0000-000000000001",
+      "test": "Happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.7,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/enterprise-cognition/history?tenant_id=00000000-0000-0000-0000-000000000001",
+      "test": "Happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.6,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/enterprise-cognition/organization-intelligence?tenant_id=00000000-0000-0000-0000-000000000001",
+      "test": "Happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.7,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/enterprise-cognition/strategic-context?tenant_id=00000000-0000-0000-0000-000000000001",
+      "test": "Happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.6,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/enterprise-cognition/summary?tenant_id=00000000-0000-0000-0000-000000000001",
+      "test": "Happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.7,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/enterprise-ecosystem/campaign-orchestration?tenant_id=00000000-0000-0000-0000-000000000001",
+      "test": "Happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.7,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/enterprise-ecosystem/cross-team-coordination?tenant_id=00000000-0000-0000-0000-000000000001",
+      "test": "Happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.6,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/enterprise-ecosystem/department-analysis?tenant_id=00000000-0000-0000-0000-000000000001",
+      "test": "Happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.8,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/enterprise-ecosystem/operational-dependencies?tenant_id=00000000-0000-0000-0000-000000000001",
+      "test": "Happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.5,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/enterprise-ecosystem/operational-hierarchy?tenant_id=00000000-0000-0000-0000-000000000001",
+      "test": "Happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.7,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/enterprise-ecosystem/organization-intelligence?tenant_id=00000000-0000-0000-0000-000000000001",
+      "test": "Happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.7,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/enterprise-ecosystem/organizational-graph?tenant_id=00000000-0000-0000-0000-000000000001",
+      "test": "Happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.7,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/enterprise-ecosystem/organizational-performance?tenant_id=00000000-0000-0000-0000-000000000001",
+      "test": "Happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.7,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/enterprise-lifecycle/audit-export?tenant_id=00000000-0000-0000-0000-000000000001",
+      "test": "Happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.7,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/enterprise-lifecycle/governance-assessment?tenant_id=00000000-0000-0000-0000-000000000001",
+      "test": "Happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.5,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/enterprise-lifecycle/organization-lifecycle?tenant_id=00000000-0000-0000-0000-000000000001",
+      "test": "Happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.7,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/event-infrastructure/failed-events?tenant_id=00000000-0000-0000-0000-000000000001",
+      "test": "Happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.6,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/event-infrastructure/lineage-analytics?tenant_id=00000000-0000-0000-0000-000000000001",
+      "test": "Happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.8,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/event-infrastructure/replayable?tenant_id=00000000-0000-0000-0000-000000000001",
+      "test": "Happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.7,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/event-infrastructure/retention-policies?tenant_id=00000000-0000-0000-0000-000000000001",
+      "test": "Happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.6,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/event-infrastructure/throughput?tenant_id=00000000-0000-0000-0000-000000000001",
+      "test": "Happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.6,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/event-infrastructure/topic-analytics?tenant_id=00000000-0000-0000-0000-000000000001",
+      "test": "Happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.5,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/event-lineage/timeline?tenant_id=00000000-0000-0000-0000-000000000001",
+      "test": "Happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.5,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/extreme-scale-orchestration/capacity-forecast?tenant_id=00000000-0000-0000-0000-000000000001",
+      "test": "Happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.7,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/extreme-scale-orchestration/distributed-execution-analysis?tenant_id=00000000-0000-0000-0000-000000000001",
+      "test": "Happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.6,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/extreme-scale-orchestration/infrastructure-segmentation?tenant_id=00000000-0000-0000-0000-000000000001",
+      "test": "Happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.6,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/extreme-scale-orchestration/load-balance-plan?tenant_id=00000000-0000-0000-0000-000000000001",
+      "test": "Happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.6,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/extreme-scale-orchestration/orchestration-federation?tenant_id=00000000-0000-0000-0000-000000000001",
+      "test": "Happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.6,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/extreme-scale-orchestration/queue-partitioning?tenant_id=00000000-0000-0000-0000-000000000001",
+      "test": "Happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.6,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/extreme-scale-orchestration/workflow-sharding?tenant_id=00000000-0000-0000-0000-000000000001",
+      "test": "Happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.6,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/forecast/backtest?tenant_id=00000000-0000-0000-0000-000000000001",
+      "test": "Happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.5,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/global-infra/active-active-topology?tenant_id=00000000-0000-0000-0000-000000000001",
+      "test": "Happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.5,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/global-infra/disaster-recovery?tenant_id=00000000-0000-0000-0000-000000000001",
+      "test": "Happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.6,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/global-infra/geo-routes?tenant_id=00000000-0000-0000-0000-000000000001",
+      "test": "Happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.6,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/global-infra/locality-intelligence?tenant_id=00000000-0000-0000-0000-000000000001",
+      "test": "Happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.6,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/global-infra/queue-federation?tenant_id=00000000-0000-0000-0000-000000000001",
+      "test": "Happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.5,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/global-infra/regional-observability?tenant_id=00000000-0000-0000-0000-000000000001",
+      "test": "Happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.5,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/global-infra/regions?tenant_id=00000000-0000-0000-0000-000000000001",
+      "test": "Happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.5,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/global-infra/workflow-replication?tenant_id=00000000-0000-0000-0000-000000000001",
+      "test": "Happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.6,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/global-orchestration/cross-cluster?tenant_id=00000000-0000-0000-0000-000000000001",
+      "test": "Happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.6,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/global-orchestration/distributed-intelligence?tenant_id=00000000-0000-0000-0000-000000000001",
+      "test": "Happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.5,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/global-orchestration/federation?tenant_id=00000000-0000-0000-0000-000000000001",
+      "test": "Happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.5,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/global-orchestration/federation-analytics?tenant_id=00000000-0000-0000-0000-000000000001",
+      "test": "Happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.5,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/global-orchestration/global-topology?tenant_id=00000000-0000-0000-0000-000000000001",
+      "test": "Happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.5,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/global-orchestration/partition-intelligence?tenant_id=00000000-0000-0000-0000-000000000001",
+      "test": "Happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.6,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/goals?tenant_id=00000000-0000-0000-0000-000000000001",
+      "test": "Happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.5,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/governance/audit-export?tenant_id=00000000-0000-0000-0000-000000000001",
+      "test": "Happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.9,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/governance/compliance-report?tenant_id=00000000-0000-0000-0000-000000000001",
+      "test": "Happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.5,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/governance/infra-access-control?tenant_id=00000000-0000-0000-0000-000000000001",
+      "test": "Happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.5,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/governance/lineage?tenant_id=00000000-0000-0000-0000-000000000001",
+      "test": "Happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.5,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/governance/rbac-hardening?tenant_id=00000000-0000-0000-0000-000000000001",
+      "test": "Happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.6,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/governance/trace?tenant_id=00000000-0000-0000-0000-000000000001",
+      "test": "Happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.7,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/governance/workflow-authorization?tenant_id=00000000-0000-0000-0000-000000000001",
+      "test": "Happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.7,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/incident-evolution/failure-lineage?tenant_id=00000000-0000-0000-0000-000000000001",
+      "test": "Happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.7,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/incident-evolution/historical-analysis?tenant_id=00000000-0000-0000-0000-000000000001",
+      "test": "Happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.6,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/incident-evolution/incident-patterns?tenant_id=00000000-0000-0000-0000-000000000001",
+      "test": "Happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.7,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/incident-evolution/incident-recommendations?tenant_id=00000000-0000-0000-0000-000000000001",
+      "test": "Happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.6,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/incident-evolution/incident-replay-cognition?tenant_id=00000000-0000-0000-0000-000000000001",
+      "test": "Happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.7,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/incident-evolution/operational-learning-memory?tenant_id=00000000-0000-0000-0000-000000000001",
+      "test": "Happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.6,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/incident-evolution/postmortem?tenant_id=00000000-0000-0000-0000-000000000001",
+      "test": "Happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.6,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/incident-intelligence/correlations?tenant_id=00000000-0000-0000-0000-000000000001",
+      "test": "Happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.6,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/incident-intelligence/predictions?tenant_id=00000000-0000-0000-0000-000000000001",
+      "test": "Happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.6,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/incident/diagnostics?tenant_id=00000000-0000-0000-0000-000000000001",
+      "test": "Happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.5,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/incident/incidents?tenant_id=00000000-0000-0000-0000-000000000001",
+      "test": "Happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.6,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/incident/queue-intervention?tenant_id=00000000-0000-0000-0000-000000000001",
+      "test": "Happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.6,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/incident/replay-debug?tenant_id=00000000-0000-0000-0000-000000000001",
+      "test": "Happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.6,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/incident/rollback-checklist?tenant_id=00000000-0000-0000-0000-000000000001",
+      "test": "Happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.7,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/incident/workflow-recovery?tenant_id=00000000-0000-0000-0000-000000000001",
+      "test": "Happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.6,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/infra-economics/ai-costs?tenant_id=00000000-0000-0000-0000-000000000001",
+      "test": "Happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.5,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/infra-economics/ai-efficiency?tenant_id=00000000-0000-0000-0000-000000000001",
+      "test": "Happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.6,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/infra-economics/cost-optimization?tenant_id=00000000-0000-0000-0000-000000000001",
+      "test": "Happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.6,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/infra-economics/event-throughput?tenant_id=00000000-0000-0000-0000-000000000001",
+      "test": "Happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.7,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/infra-economics/optimization-intelligence?tenant_id=00000000-0000-0000-0000-000000000001",
+      "test": "Happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.7,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/infra-economics/queue-costs?tenant_id=00000000-0000-0000-0000-000000000001",
+      "test": "Happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.6,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/infra-economics/queue-efficiency?tenant_id=00000000-0000-0000-0000-000000000001",
+      "test": "Happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.5,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/infra-economics/roi?tenant_id=00000000-0000-0000-0000-000000000001",
+      "test": "Happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.5,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/infra-economics/roi-forecast?tenant_id=00000000-0000-0000-0000-000000000001",
+      "test": "Happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.5,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/infra-economics/scraping-costs?tenant_id=00000000-0000-0000-0000-000000000001",
+      "test": "Happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.6,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/infra-economics/scraping-efficiency?tenant_id=00000000-0000-0000-0000-000000000001",
+      "test": "Happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.5,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/infra-economics/utilization?tenant_id=00000000-0000-0000-0000-000000000001",
+      "test": "Happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.5,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/infra-economics/worker-efficiency?tenant_id=00000000-0000-0000-0000-000000000001",
+      "test": "Happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.6,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/infra-economics/worker-utilization?tenant_id=00000000-0000-0000-0000-000000000001",
+      "test": "Happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.5,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/infrastructure-self-analysis/infra-self-analysis/bottlenecks?tenant_id=00000000-0000-0000-0000-000000000001",
+      "test": "Happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.5,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/infrastructure-self-analysis/infra-self-analysis/degradation?tenant_id=00000000-0000-0000-0000-000000000001",
+      "test": "Happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.6,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/infrastructure-self-analysis/infra-self-analysis/pressure?tenant_id=00000000-0000-0000-0000-000000000001",
+      "test": "Happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.7,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/infrastructure-self-analysis/infra-self-analysis/queue-health-forecast?tenant_id=00000000-0000-0000-0000-000000000001",
+      "test": "Happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.5,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/infrastructure-self-analysis/infra-self-analysis/topology?tenant_id=00000000-0000-0000-0000-000000000001",
+      "test": "Happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.5,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/infrastructure-self-analysis/infra-self-analysis/worker-imbalance?tenant_id=00000000-0000-0000-0000-000000000001",
+      "test": "Happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.5,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/infrastructure-self-analysis/infra-self-analysis/workflow-congestion?tenant_id=00000000-0000-0000-0000-000000000001",
+      "test": "Happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.5,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/infrastructure/bottlenecks?tenant_id=00000000-0000-0000-0000-000000000001",
+      "test": "Happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.5,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/infrastructure/insights?tenant_id=00000000-0000-0000-0000-000000000001",
+      "test": "Happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.6,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/infrastructure/queue-saturation?tenant_id=00000000-0000-0000-0000-000000000001",
+      "test": "Happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.6,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/infrastructure/topology?tenant_id=00000000-0000-0000-0000-000000000001",
+      "test": "Happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.6,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/infrastructure/worker-utilization?tenant_id=00000000-0000-0000-0000-000000000001",
+      "test": "Happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.7,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/intelligence-queries/backlink-intelligence/authority-propagation?tenant_id=00000000-0000-0000-0000-000000000001",
+      "test": "Happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.9,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/intelligence-queries/backlink-intelligence/broken-links?tenant_id=00000000-0000-0000-0000-000000000001",
+      "test": "Happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.6,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/intelligence-queries/backlink-intelligence/outreach-predictions?tenant_id=00000000-0000-0000-0000-000000000001",
+      "test": "Happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.6,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/intelligence-queries/backlink-intelligence/prospects?tenant_id=00000000-0000-0000-0000-000000000001",
+      "test": "Happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.6,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/intelligence-queries/backlink-intelligence/response-probability?tenant_id=00000000-0000-0000-0000-000000000001",
+      "test": "Happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.6,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/intelligence-queries/citations/authority?tenant_id=00000000-0000-0000-0000-000000000001",
+      "test": "Happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.6,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/intelligence-queries/citations/competitors?tenant_id=00000000-0000-0000-0000-000000000001",
+      "test": "Happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.7,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/intelligence-queries/citations/directories?tenant_id=00000000-0000-0000-0000-000000000001",
+      "test": "Happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.6,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/intelligence-queries/citations/geographic?tenant_id=00000000-0000-0000-0000-000000000001",
+      "test": "Happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.7,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/intelligence-queries/citations/nap-consistency?tenant_id=00000000-0000-0000-0000-000000000001",
+      "test": "Happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.6,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/intelligence-queries/citations/opportunities?tenant_id=00000000-0000-0000-0000-000000000001",
+      "test": "Happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.6,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/intelligence-queries/infra-self-analysis/pressure?tenant_id=00000000-0000-0000-0000-000000000001",
+      "test": "Happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.6,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/intelligence-queries/infra-self-analysis/worker-imbalance?tenant_id=00000000-0000-0000-0000-000000000001",
+      "test": "Happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.6,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/intelligence-queries/prospect-graph?tenant_id=00000000-0000-0000-0000-000000000001",
+      "test": "Happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.6,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/intelligence-queries/prospect-graph/bridges?tenant_id=00000000-0000-0000-0000-000000000001",
+      "test": "Happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.5,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/intelligence-queries/prospect-graph/stats?tenant_id=00000000-0000-0000-0000-000000000001",
+      "test": "Happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.6,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/intelligence-queries/seo-intelligence/local-intent?tenant_id=00000000-0000-0000-0000-000000000001",
+      "test": "Happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.6,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/intelligence-queries/seo-intelligence/opportunities?tenant_id=00000000-0000-0000-0000-000000000001",
+      "test": "Happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.6,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/intelligence-queries/seo-intelligence/topical-map?tenant_id=00000000-0000-0000-0000-000000000001",
+      "test": "Happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.6,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/intelligence-queries/serp-intelligence/features?tenant_id=00000000-0000-0000-0000-000000000001",
+      "test": "Happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.5,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/intelligence-queries/serp-intelligence/ranking-difficulty?tenant_id=00000000-0000-0000-0000-000000000001",
+      "test": "Happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.6,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/intelligence/anomalies?tenant_id=00000000-0000-0000-0000-000000000001",
+      "test": "Happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.6,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/intelligence/bottlenecks?tenant_id=00000000-0000-0000-0000-000000000001",
+      "test": "Happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.6,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/intelligence/congestion?tenant_id=00000000-0000-0000-0000-000000000001",
+      "test": "Happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.7,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/intelligence/recommendations?tenant_id=00000000-0000-0000-0000-000000000001",
+      "test": "Happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.6,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/keywords/research?tenant_id=00000000-0000-0000-0000-000000000001",
+      "test": "Happy path",
+      "status": "PASS",
+      "http_code": 200,
+      "time_ms": 3.5,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/kill-switches?tenant_id=00000000-0000-0000-0000-000000000001",
+      "test": "Happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.5,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/knowledge/search?tenant_id=00000000-0000-0000-0000-000000000001",
+      "test": "Happy path",
+      "status": "PASS",
+      "http_code": 422,
+      "time_ms": 1.7,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/maintainability-dominance/api-governance?tenant_id=00000000-0000-0000-0000-000000000001",
+      "test": "Happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.7,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/maintainability-dominance/event-contract-governance?tenant_id=00000000-0000-0000-0000-000000000001",
+      "test": "Happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.6,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/maintainability-dominance/infra-compatibility?tenant_id=00000000-0000-0000-0000-000000000001",
+      "test": "Happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.5,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/maintainability-dominance/maintainability-score?tenant_id=00000000-0000-0000-0000-000000000001",
+      "test": "Happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.5,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/maintainability-dominance/migration-readiness?tenant_id=00000000-0000-0000-0000-000000000001",
+      "test": "Happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.6,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/maintainability-dominance/schema-evolution?tenant_id=00000000-0000-0000-0000-000000000001",
+      "test": "Happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.7,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/maintainability-dominance/temporal-versioning?tenant_id=00000000-0000-0000-0000-000000000001",
+      "test": "Happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.7,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/maintainability-dominance/upgrade-safety?tenant_id=00000000-0000-0000-0000-000000000001",
+      "test": "Happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.7,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/maintainability/event-schema-evolution?tenant_id=00000000-0000-0000-0000-000000000001",
+      "test": "Happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.6,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/maintainability/long-term?tenant_id=00000000-0000-0000-0000-000000000001",
+      "test": "Happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.7,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/maintainability/platform-lifecycle?tenant_id=00000000-0000-0000-0000-000000000001",
+      "test": "Happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.7,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/maintainability/replay-compatibility?tenant_id=00000000-0000-0000-0000-000000000001",
+      "test": "Happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.6,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/maintainability/service-dependencies?tenant_id=00000000-0000-0000-0000-000000000001",
+      "test": "Happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.6,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/maintainability/temporal-versioning?tenant_id=00000000-0000-0000-0000-000000000001",
+      "test": "Happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.6,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/observability/communication-telemetry?tenant_id=00000000-0000-0000-0000-000000000001",
+      "test": "Happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.9,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/observability/inference-analytics?tenant_id=00000000-0000-0000-0000-000000000001",
+      "test": "Happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.6,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/observability/retry-analytics?tenant_id=00000000-0000-0000-0000-000000000001",
+      "test": "Happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.6,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/observability/scraping-telemetry?tenant_id=00000000-0000-0000-0000-000000000001",
+      "test": "Happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.7,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/observability/traces?tenant_id=00000000-0000-0000-0000-000000000001",
+      "test": "Happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.6,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/observability/workflow-analytics?tenant_id=00000000-0000-0000-0000-000000000001",
+      "test": "Happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.6,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/operational-assistant/campaign?tenant_id=00000000-0000-0000-0000-000000000001",
+      "test": "Happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.7,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/operational-assistant/infrastructure?tenant_id=00000000-0000-0000-0000-000000000001",
+      "test": "Happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.7,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/operational-assistant/prioritize?tenant_id=00000000-0000-0000-0000-000000000001",
+      "test": "Happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.6,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/operational-assistant/queue?tenant_id=00000000-0000-0000-0000-000000000001",
+      "test": "Happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.6,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/operational-assistant/scraping?tenant_id=00000000-0000-0000-0000-000000000001",
+      "test": "Happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.8,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/operational-assistant/workflow?tenant_id=00000000-0000-0000-0000-000000000001",
+      "test": "Happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.6,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/operational-evolution/historical-anomaly-learning?tenant_id=00000000-0000-0000-0000-000000000001",
+      "test": "Happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.6,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/operational-evolution/improvement-recommendations?tenant_id=00000000-0000-0000-0000-000000000001",
+      "test": "Happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.7,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/operational-evolution/recommendation-confidence?tenant_id=00000000-0000-0000-0000-000000000001",
+      "test": "Happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.5,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/operational-evolution/recommendation-evolution?tenant_id=00000000-0000-0000-0000-000000000001",
+      "test": "Happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.6,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/operational-evolution/recommendation-explanation?tenant_id=00000000-0000-0000-0000-000000000001",
+      "test": "Happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.6,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/operational-evolution/workflow-optimization-memory?tenant_id=00000000-0000-0000-0000-000000000001",
+      "test": "Happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.6,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/operational-lifecycle/degradation-forecast?tenant_id=00000000-0000-0000-0000-000000000001",
+      "test": "Happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.6,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/operational-lifecycle/dependency-lifecycle?tenant_id=00000000-0000-0000-0000-000000000001",
+      "test": "Happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.7,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/operational-lifecycle/infra-rot-prevention?tenant_id=00000000-0000-0000-0000-000000000001",
+      "test": "Happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.6,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/operational-lifecycle/infrastructure-aging?tenant_id=00000000-0000-0000-0000-000000000001",
+      "test": "Happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.6,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/operational-lifecycle/lifecycle-score?tenant_id=00000000-0000-0000-0000-000000000001",
+      "test": "Happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.6,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/operational-lifecycle/long-term-health-forecast?tenant_id=00000000-0000-0000-0000-000000000001",
+      "test": "Happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.6,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/operational-lifecycle/operational-entropy?tenant_id=00000000-0000-0000-0000-000000000001",
+      "test": "Happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.6,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/operational-lifecycle/sustainability-analytics?tenant_id=00000000-0000-0000-0000-000000000001",
+      "test": "Happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.6,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/operational-lifecycle/workflow-drift?tenant_id=00000000-0000-0000-0000-000000000001",
+      "test": "Happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.7,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/operations/operations-feed?tenant_id=00000000-0000-0000-0000-000000000001",
+      "test": "Happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.7,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/ops/dashboard-config?tenant_id=00000000-0000-0000-0000-000000000001",
+      "test": "Happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.7,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/ops/executive-telemetry?tenant_id=00000000-0000-0000-0000-000000000001",
+      "test": "Happy path",
+      "status": "PASS",
+      "http_code": 200,
+      "time_ms": 5.1,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/ops/prioritized-alerts?tenant_id=00000000-0000-0000-0000-000000000001",
+      "test": "Happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.7,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/ops/summary?tenant_id=00000000-0000-0000-0000-000000000001",
+      "test": "Happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.6,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/ops/workflow-groups?tenant_id=00000000-0000-0000-0000-000000000001",
+      "test": "Happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.5,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/ops/workflow-summary?tenant_id=00000000-0000-0000-0000-000000000001",
+      "test": "Happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.5,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/orchestration-intelligence/bottlenecks?tenant_id=00000000-0000-0000-0000-000000000001",
+      "test": "Happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.5,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/orchestration-intelligence/critical-paths?tenant_id=00000000-0000-0000-0000-000000000001",
+      "test": "Happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.6,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/orchestration-intelligence/cross-system-awareness?tenant_id=00000000-0000-0000-0000-000000000001",
+      "test": "Happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.6,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/orchestration-intelligence/dependency-violations?tenant_id=00000000-0000-0000-0000-000000000001",
+      "test": "Happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.6,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/orchestration-intelligence/event-topology?tenant_id=00000000-0000-0000-0000-000000000001",
+      "test": "Happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.6,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/orchestration-intelligence/event-topology-anomalies?tenant_id=00000000-0000-0000-0000-000000000001",
+      "test": "Happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.6,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/orchestration-intelligence/infra-dependencies?tenant_id=00000000-0000-0000-0000-000000000001",
+      "test": "Happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.6,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/orchestration-intelligence/operational-graph?tenant_id=00000000-0000-0000-0000-000000000001",
+      "test": "Happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.7,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/orchestration-intelligence/traverse-graph?tenant_id=00000000-0000-0000-0000-000000000001",
+      "test": "Happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.7,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/orchestration-intelligence/workflow-dependencies?tenant_id=00000000-0000-0000-0000-000000000001",
+      "test": "Happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.7,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/organizational-intelligence/approval-bottlenecks?tenant_id=00000000-0000-0000-0000-000000000001",
+      "test": "Happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.6,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/organizational-intelligence/dependency-map?tenant_id=00000000-0000-0000-0000-000000000001",
+      "test": "Happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.6,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/organizational-intelligence/efficiency-forecast?tenant_id=00000000-0000-0000-0000-000000000001",
+      "test": "Happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.9,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/organizational-intelligence/operational-hierarchy?tenant_id=00000000-0000-0000-0000-000000000001",
+      "test": "Happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.6,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/organizational-intelligence/operational-productivity?tenant_id=00000000-0000-0000-0000-000000000001",
+      "test": "Happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.7,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/organizational-intelligence/team-coordination?tenant_id=00000000-0000-0000-0000-000000000001",
+      "test": "Happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.7,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/organizational-intelligence/workflow-intelligence?tenant_id=00000000-0000-0000-0000-000000000001",
+      "test": "Happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.6,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/overload/ai-throttle?tenant_id=00000000-0000-0000-0000-000000000001",
+      "test": "Happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.5,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/overload/pressure?tenant_id=00000000-0000-0000-0000-000000000001",
+      "test": "Happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.6,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/overload/queue-status?tenant_id=00000000-0000-0000-0000-000000000001",
+      "test": "Happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.7,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/overload/saturation-alerts?tenant_id=00000000-0000-0000-0000-000000000001",
+      "test": "Happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.6,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/overload/scraping-throttle?tenant_id=00000000-0000-0000-0000-000000000001",
+      "test": "Happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.6,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/overload/tenant-usage?tenant_id=00000000-0000-0000-0000-000000000001",
+      "test": "Happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.6,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/plans?tenant_id=00000000-0000-0000-0000-000000000001",
+      "test": "Happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.6,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/platform-stewardship/infra-governance-dashboard?tenant_id=00000000-0000-0000-0000-000000000001",
+      "test": "Happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.6,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/platform-stewardship/lifecycle-governance?tenant_id=00000000-0000-0000-0000-000000000001",
+      "test": "Happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.6,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/platform-stewardship/maintainability-governance?tenant_id=00000000-0000-0000-0000-000000000001",
+      "test": "Happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.5,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/platform-stewardship/operational-quality-score?tenant_id=00000000-0000-0000-0000-000000000001",
+      "test": "Happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.6,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/platform-stewardship/platform-sustainability?tenant_id=00000000-0000-0000-0000-000000000001",
+      "test": "Happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.6,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/platform-stewardship/stewardship-assessment?tenant_id=00000000-0000-0000-0000-000000000001",
+      "test": "Happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.7,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/portfolio?tenant_id=00000000-0000-0000-0000-000000000001",
+      "test": "Happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.5,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/portfolio/analytics?tenant_id=00000000-0000-0000-0000-000000000001",
+      "test": "Happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.6,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/portfolio/queue?tenant_id=00000000-0000-0000-0000-000000000001",
+      "test": "Happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.6,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/portfolio/views?tenant_id=00000000-0000-0000-0000-000000000001",
+      "test": "Happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.6,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/predictive/ai-confidence?tenant_id=00000000-0000-0000-0000-000000000001",
+      "test": "Happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.6,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/predictive/communication-failure?tenant_id=00000000-0000-0000-0000-000000000001",
+      "test": "Happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.6,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/predictive/infrastructure-bottlenecks?tenant_id=00000000-0000-0000-0000-000000000001",
+      "test": "Happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.6,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/predictive/queue-saturation?tenant_id=00000000-0000-0000-0000-000000000001",
+      "test": "Happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.6,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/predictive/scraping-degradation?tenant_id=00000000-0000-0000-0000-000000000001",
+      "test": "Happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.6,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/production-economics/ai-inference-optimization?tenant_id=00000000-0000-0000-0000-000000000001",
+      "test": "Happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.6,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/production-economics/cost-forecast?tenant_id=00000000-0000-0000-0000-000000000001",
+      "test": "Happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.6,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/production-economics/dynamic-infra-recommendations?tenant_id=00000000-0000-0000-0000-000000000001",
+      "test": "Happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.7,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/production-economics/efficiency-score?tenant_id=00000000-0000-0000-0000-000000000001",
+      "test": "Happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.6,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/production-economics/operational-roi?tenant_id=00000000-0000-0000-0000-000000000001",
+      "test": "Happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.6,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/production-economics/queue-efficiency?tenant_id=00000000-0000-0000-0000-000000000001",
+      "test": "Happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.6,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/production-economics/scraping-cost-optimization?tenant_id=00000000-0000-0000-0000-000000000001",
+      "test": "Happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.6,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/production-economics/sustainability-analysis?tenant_id=00000000-0000-0000-0000-000000000001",
+      "test": "Happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.8,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/production-economics/worker-allocation?tenant_id=00000000-0000-0000-0000-000000000001",
+      "test": "Happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.6,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/prospect-graph?tenant_id=00000000-0000-0000-0000-000000000001",
+      "test": "Happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.6,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/prospect-graph/authority-bridges?tenant_id=00000000-0000-0000-0000-000000000001",
+      "test": "Happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.7,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/prospect-graph/bridges?tenant_id=00000000-0000-0000-0000-000000000001",
+      "test": "Happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.6,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/prospect-graph/broken-link-opportunities?tenant_id=00000000-0000-0000-0000-000000000001",
+      "test": "Happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.7,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/prospect-graph/statistics?tenant_id=00000000-0000-0000-0000-000000000001",
+      "test": "Happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.7,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/prospect-graph/stats?tenant_id=00000000-0000-0000-0000-000000000001",
+      "test": "Happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.7,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/prospect-graph/traverse?tenant_id=00000000-0000-0000-0000-000000000001",
+      "test": "Happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.6,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/provider-health?tenant_id=00000000-0000-0000-0000-000000000001",
+      "test": "Happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.6,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/providers/?tenant_id=00000000-0000-0000-0000-000000000001",
+      "test": "Happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.8,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/providers/status?tenant_id=00000000-0000-0000-0000-000000000001",
+      "test": "Happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.6,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/queue-telemetry/kafka-telemetry?tenant_id=00000000-0000-0000-0000-000000000001",
+      "test": "Happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.6,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/queue-telemetry/queue-telemetry?tenant_id=00000000-0000-0000-0000-000000000001",
+      "test": "Happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.7,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/queue-telemetry/test?tenant_id=00000000-0000-0000-0000-000000000001",
+      "test": "Happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 1.0,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/queue-telemetry/worker-telemetry?tenant_id=00000000-0000-0000-0000-000000000001",
+      "test": "Happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.7,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/realtime/queues?tenant_id=00000000-0000-0000-0000-000000000001",
+      "test": "Happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.6,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/realtime/workers?tenant_id=00000000-0000-0000-0000-000000000001",
+      "test": "Happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.6,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/recommendations?tenant_id=00000000-0000-0000-0000-000000000001",
+      "test": "Happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.6,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/recommendations/ai?tenant_id=00000000-0000-0000-0000-000000000001",
+      "test": "Happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.6,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/recommendations/backlink?tenant_id=00000000-0000-0000-0000-000000000001",
+      "test": "Happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.6,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/recommendations/campaign?tenant_id=00000000-0000-0000-0000-000000000001",
+      "test": "Happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.6,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/recommendations/keyword?tenant_id=00000000-0000-0000-0000-000000000001",
+      "test": "Happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.6,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/recommendations/local-seo?tenant_id=00000000-0000-0000-0000-000000000001",
+      "test": "Happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.7,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/recommendations/workflow?tenant_id=00000000-0000-0000-0000-000000000001",
+      "test": "Happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.6,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/reports?tenant_id=00000000-0000-0000-0000-000000000001",
+      "test": "Happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.6,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/scale/queue-partitions?tenant_id=00000000-0000-0000-0000-000000000001",
+      "test": "Happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.7,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/scale/recommendations?tenant_id=00000000-0000-0000-0000-000000000001",
+      "test": "Happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.6,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/scale/worker-scaling?tenant_id=00000000-0000-0000-0000-000000000001",
+      "test": "Happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.5,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/scraping-resilience/adaptive-strategies?tenant_id=00000000-0000-0000-0000-000000000001",
+      "test": "Happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.7,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/scraping-resilience/anti-bot?tenant_id=00000000-0000-0000-0000-000000000001",
+      "test": "Happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.7,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/scraping-resilience/browser-crash-recovery?tenant_id=00000000-0000-0000-0000-000000000001",
+      "test": "Happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.7,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/scraping-resilience/captcha?tenant_id=00000000-0000-0000-0000-000000000001",
+      "test": "Happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.8,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/scraping-resilience/ip-ban-status?tenant_id=00000000-0000-0000-0000-000000000001",
+      "test": "Happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.6,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/scraping-resilience/overload?tenant_id=00000000-0000-0000-0000-000000000001",
+      "test": "Happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.6,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/scraping-resilience/predict-anomaly?tenant_id=00000000-0000-0000-0000-000000000001",
+      "test": "Happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.6,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/scraping-resilience/selector-degradation?tenant_id=00000000-0000-0000-0000-000000000001",
+      "test": "Happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.6,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/scraping-resilience/selector-evolution?tenant_id=00000000-0000-0000-0000-000000000001",
+      "test": "Happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.7,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/scraping-resilience/serp-layout-changes?tenant_id=00000000-0000-0000-0000-000000000001",
+      "test": "Happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.5,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/scraping/anti-bot?tenant_id=00000000-0000-0000-0000-000000000001",
+      "test": "Happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.6,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/scraping/browser-pool?tenant_id=00000000-0000-0000-0000-000000000001",
+      "test": "Happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.6,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/scraping/extraction-quality?tenant_id=00000000-0000-0000-0000-000000000001",
+      "test": "Happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.6,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/scraping/queue-status?tenant_id=00000000-0000-0000-0000-000000000001",
+      "test": "Happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.6,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/scraping/selector-degradation?tenant_id=00000000-0000-0000-0000-000000000001",
+      "test": "Happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.6,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/scraping/worker-status?tenant_id=00000000-0000-0000-0000-000000000001",
+      "test": "Happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.7,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/search?tenant_id=00000000-0000-0000-0000-000000000001",
+      "test": "Happy path",
+      "status": "PASS",
+      "http_code": 422,
+      "time_ms": 1.4,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/search/global?tenant_id=00000000-0000-0000-0000-000000000001",
+      "test": "Happy path",
+      "status": "PASS",
+      "http_code": 422,
+      "time_ms": 2.2,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/semantic-memory/historical-learnings?tenant_id=00000000-0000-0000-0000-000000000001",
+      "test": "Happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.8,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/semantic-memory/incident-memory?tenant_id=00000000-0000-0000-0000-000000000001",
+      "test": "Happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.6,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/semantic-memory/organizational-memory?tenant_id=00000000-0000-0000-0000-000000000001",
+      "test": "Happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.5,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/semantic-memory/replay-cognition?tenant_id=00000000-0000-0000-0000-000000000001",
+      "test": "Happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.6,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/semantic-memory/search?tenant_id=00000000-0000-0000-0000-000000000001",
+      "test": "Happy path",
+      "status": "PASS",
+      "http_code": 422,
+      "time_ms": 1.8,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/seo-intelligence/local-intent?tenant_id=00000000-0000-0000-0000-000000000001",
+      "test": "Happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.6,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/seo-intelligence/opportunities?tenant_id=00000000-0000-0000-0000-000000000001",
+      "test": "Happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.6,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/seo-intelligence/related-keywords?tenant_id=00000000-0000-0000-0000-000000000001",
+      "test": "Happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.6,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/seo-intelligence/serp-features?tenant_id=00000000-0000-0000-0000-000000000001",
+      "test": "Happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.6,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/seo-intelligence/topical-map?tenant_id=00000000-0000-0000-0000-000000000001",
+      "test": "Happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.8,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/seo-strategic/authority-forecast?tenant_id=00000000-0000-0000-0000-000000000001",
+      "test": "Happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.5,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/seo-strategic/serp-trends?tenant_id=00000000-0000-0000-0000-000000000001",
+      "test": "Happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.6,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/serp-intelligence/snapshot-history?tenant_id=00000000-0000-0000-0000-000000000001",
+      "test": "Happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.6,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/serp-intelligence/volatility?tenant_id=00000000-0000-0000-0000-000000000001",
+      "test": "Happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.6,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/sre-observability/sre/ai-latency?tenant_id=00000000-0000-0000-0000-000000000001",
+      "test": "Happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.6,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/sre-observability/sre/anomaly-heatmap?tenant_id=00000000-0000-0000-0000-000000000001",
+      "test": "Happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.7,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/sre-observability/sre/event-propagation?tenant_id=00000000-0000-0000-0000-000000000001",
+      "test": "Happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.7,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/sre-observability/sre/incident-dashboard?tenant_id=00000000-0000-0000-0000-000000000001",
+      "test": "Happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.7,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/sre-observability/sre/queue-heatmap?tenant_id=00000000-0000-0000-0000-000000000001",
+      "test": "Happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.8,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/sre-observability/sre/queue-pressure?tenant_id=00000000-0000-0000-0000-000000000001",
+      "test": "Happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.7,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/sre-observability/sre/replay-analytics?tenant_id=00000000-0000-0000-0000-000000000001",
+      "test": "Happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.7,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/sre-observability/sre/scraping-latency?tenant_id=00000000-0000-0000-0000-000000000001",
+      "test": "Happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.6,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/sre-observability/sre/topology?tenant_id=00000000-0000-0000-0000-000000000001",
+      "test": "Happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.6,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/sre-observability/sre/traces?tenant_id=00000000-0000-0000-0000-000000000001",
+      "test": "Happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.7,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/sre-observability/sre/worker-saturation?tenant_id=00000000-0000-0000-0000-000000000001",
+      "test": "Happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.9,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/sre-observability/sre/workflow-heatmap?tenant_id=00000000-0000-0000-0000-000000000001",
+      "test": "Happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.6,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/strategic-growth/campaign-expansions?tenant_id=00000000-0000-0000-0000-000000000001",
+      "test": "Happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.7,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/strategic-growth/competitive-gaps?tenant_id=00000000-0000-0000-0000-000000000001",
+      "test": "Happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.6,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/strategic-growth/growth-experiments?tenant_id=00000000-0000-0000-0000-000000000001",
+      "test": "Happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.7,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/strategic-growth/keyword-opportunities?tenant_id=00000000-0000-0000-0000-000000000001",
+      "test": "Happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.7,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/strategic-growth/market-opportunities?tenant_id=00000000-0000-0000-0000-000000000001",
+      "test": "Happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.7,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/strategic-growth/report?tenant_id=00000000-0000-0000-0000-000000000001",
+      "test": "Happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.6,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/strategic-growth/resource-allocation?tenant_id=00000000-0000-0000-0000-000000000001",
+      "test": "Happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.7,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/strategic-seo/authority-forecast?tenant_id=00000000-0000-0000-0000-000000000001",
+      "test": "Happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.7,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/strategic-seo/backlink-ecosystem?tenant_id=00000000-0000-0000-0000-000000000001",
+      "test": "Happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.7,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/strategic-seo/operational-seo-strategy?tenant_id=00000000-0000-0000-0000-000000000001",
+      "test": "Happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.7,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/strategic-seo/semantic-competitive-intelligence?tenant_id=00000000-0000-0000-0000-000000000001",
+      "test": "Happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.7,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/strategic-seo/serp-trend-forecast?tenant_id=00000000-0000-0000-0000-000000000001",
+      "test": "Happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.5,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/tenants/00000000-0000-0000-0000-000000000001?tenant_id=00000000-0000-0000-0000-000000000001",
+      "test": "Happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.6,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/workflow-resilience/dead-letter?tenant_id=00000000-0000-0000-0000-000000000001",
+      "test": "Happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.7,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/workflow-resilience/health?tenant_id=00000000-0000-0000-0000-000000000001",
+      "test": "Happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.7,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/workflow-resilience/lifecycle-analytics?tenant_id=00000000-0000-0000-0000-000000000001",
+      "test": "Happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.6,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/workflow-resilience/orphans?tenant_id=00000000-0000-0000-0000-000000000001",
+      "test": "Happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.7,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/analytics/backlink-roi",
+      "test": "Missing tenant",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.6,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/analytics/campaign-efficiency",
+      "test": "Missing tenant",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.6,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/analytics/local-seo-effectiveness",
+      "test": "Missing tenant",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.6,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/analytics/outreach-performance",
+      "test": "Missing tenant",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.6,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/analytics/scraping-quality",
+      "test": "Missing tenant",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.6,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/analytics/workflow-latency",
+      "test": "Missing tenant",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.6,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/ai-ops/confidence-drift",
+      "test": "Missing tenant",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.7,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/ai-ops/inference-analytics",
+      "test": "Missing tenant",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.5,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/ai-ops/operational-metrics",
+      "test": "Missing tenant",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.5,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/ai-ops/prompt-performance",
+      "test": "Missing tenant",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.9,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/ai-quality/dashboard",
+      "test": "Missing tenant",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.7,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/ai-quality/recommendation-quality",
+      "test": "Missing tenant",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.6,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/ai-resilience/drift-detection",
+      "test": "Missing tenant",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.7,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/ai-resilience/failure-analytics",
+      "test": "Missing tenant",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.7,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/ai-resilience/fallback-route",
+      "test": "Missing tenant",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.6,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/ai-resilience/inference-health",
+      "test": "Missing tenant",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.6,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/ai-resilience/throttle-status",
+      "test": "Missing tenant",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.7,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/adaptive-optimization/communication-timing",
+      "test": "Missing tenant",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.7,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/adaptive-optimization/event-propagation",
+      "test": "Missing tenant",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.7,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/adaptive-optimization/queue-prioritization",
+      "test": "Missing tenant",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.6,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/analytics/backlink-roi?tenant_id=invalid-uuid",
+      "test": "Invalid tenant",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.6,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/analytics/campaign-efficiency?tenant_id=invalid-uuid",
+      "test": "Invalid tenant",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.6,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/analytics/local-seo-effectiveness?tenant_id=invalid-uuid",
+      "test": "Invalid tenant",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.6,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/analytics/outreach-performance?tenant_id=invalid-uuid",
+      "test": "Invalid tenant",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.6,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/analytics/scraping-quality?tenant_id=invalid-uuid",
+      "test": "Invalid tenant",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.7,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/analytics/workflow-latency?tenant_id=invalid-uuid",
+      "test": "Invalid tenant",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.7,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/ai-ops/confidence-drift?tenant_id=invalid-uuid",
+      "test": "Invalid tenant",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.7,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/ai-ops/inference-analytics?tenant_id=invalid-uuid",
+      "test": "Invalid tenant",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.6,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/ai-ops/operational-metrics?tenant_id=invalid-uuid",
+      "test": "Invalid tenant",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.6,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/ai-ops/prompt-performance?tenant_id=invalid-uuid",
+      "test": "Invalid tenant",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.8,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/ai-quality/dashboard?tenant_id=invalid-uuid",
+      "test": "Invalid tenant",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.6,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/ai-quality/recommendation-quality?tenant_id=invalid-uuid",
+      "test": "Invalid tenant",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.6,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/ai-resilience/drift-detection?tenant_id=invalid-uuid",
+      "test": "Invalid tenant",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.6,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/ai-resilience/failure-analytics?tenant_id=invalid-uuid",
+      "test": "Invalid tenant",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.7,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/ai-resilience/fallback-route?tenant_id=invalid-uuid",
+      "test": "Invalid tenant",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.7,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/ai-resilience/inference-health?tenant_id=invalid-uuid",
+      "test": "Invalid tenant",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.6,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/ai-resilience/throttle-status?tenant_id=invalid-uuid",
+      "test": "Invalid tenant",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.6,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/adaptive-optimization/communication-timing?tenant_id=invalid-uuid",
+      "test": "Invalid tenant",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.7,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/adaptive-optimization/event-propagation?tenant_id=invalid-uuid",
+      "test": "Invalid tenant",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.7,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/adaptive-optimization/queue-prioritization?tenant_id=invalid-uuid",
+      "test": "Invalid tenant",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.6,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/clients?tenant_id=%27%20OR%201%3D1%20--",
+      "test": "SQL injection",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.7,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/campaigns?tenant_id=%27%20OR%201%3D1%20--",
+      "test": "SQL injection",
+      "status": "PASS",
+      "http_code": 422,
+      "time_ms": 1.2,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/plans?tenant_id=%27%20OR%201%3D1%20--",
+      "test": "SQL injection",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.6,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/keywords/research?tenant_id=%27%20OR%201%3D1%20--",
+      "test": "SQL injection",
+      "status": "PASS",
+      "http_code": 422,
+      "time_ms": 1.0,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/reports?tenant_id=%27%20OR%201%3D1%20--",
+      "test": "SQL injection",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.6,
+      "issues": ""
+    },
+    {
+      "method": "POST",
+      "path": "/clients",
+      "test": "POST happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.8,
+      "issues": ""
+    },
+    {
+      "method": "POST",
+      "path": "/campaigns",
+      "test": "POST happy path",
+      "status": "PASS",
+      "http_code": 422,
+      "time_ms": 2.0,
+      "issues": ""
+    },
+    {
+      "method": "POST",
+      "path": "/plans/generate",
+      "test": "POST happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.9,
+      "issues": ""
+    },
+    {
+      "method": "POST",
+      "path": "/keywords/research",
+      "test": "POST happy path",
+      "status": "PASS",
+      "http_code": 422,
+      "time_ms": 2.1,
+      "issues": ""
+    },
+    {
+      "method": "POST",
+      "path": "/reports/generate",
+      "test": "POST happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.9,
+      "issues": ""
+    },
+    {
+      "method": "POST",
+      "path": "/citations",
+      "test": "POST happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.9,
+      "issues": ""
+    },
+    {
+      "method": "POST",
+      "path": "/actions",
+      "test": "POST happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.8,
+      "issues": ""
+    },
+    {
+      "method": "POST",
+      "path": "/executions",
+      "test": "POST happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.8,
+      "issues": ""
+    },
+    {
+      "method": "POST",
+      "path": "/goals",
+      "test": "POST happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.8,
+      "issues": ""
+    },
+    {
+      "method": "POST",
+      "path": "/autonomous-agents",
+      "test": "POST happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.8,
+      "issues": ""
+    },
+    {
+      "method": "POST",
+      "path": "/email-drafts",
+      "test": "POST happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.8,
+      "issues": ""
+    },
+    {
+      "method": "POST",
+      "path": "/email-scheduling",
+      "test": "POST happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 1.0,
+      "issues": ""
+    },
+    {
+      "method": "POST",
+      "path": "/communication-templates",
+      "test": "POST happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.7,
+      "issues": ""
+    },
+    {
+      "method": "POST",
+      "path": "/tenants",
+      "test": "POST happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.8,
+      "issues": ""
+    },
+    {
+      "method": "POST",
+      "path": "/ai/query",
+      "test": "POST happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.8,
+      "issues": ""
+    },
+    {
+      "method": "POST",
+      "path": "/ai/copilot/ask",
+      "test": "POST happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.8,
+      "issues": ""
+    },
+    {
+      "method": "POST",
+      "path": "/semantic/search",
+      "test": "POST happy path",
+      "status": "PASS",
+      "http_code": 422,
+      "time_ms": 2.2,
+      "issues": ""
+    },
+    {
+      "method": "POST",
+      "path": "/semantic/index",
+      "test": "POST happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.9,
+      "issues": ""
+    },
+    {
+      "method": "POST",
+      "path": "/knowledge/rebuild",
+      "test": "POST happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.8,
+      "issues": ""
+    },
+    {
+      "method": "POST",
+      "path": "/forecast/revenue",
+      "test": "POST happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.7,
+      "issues": ""
+    },
+    {
+      "method": "POST",
+      "path": "/forecast/campaign",
+      "test": "POST happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.7,
+      "issues": ""
+    },
+    {
+      "method": "POST",
+      "path": "/forecast/customer",
+      "test": "POST happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.8,
+      "issues": ""
+    },
+    {
+      "method": "POST",
+      "path": "/alerts/acknowledge",
+      "test": "POST happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.8,
+      "issues": ""
+    },
+    {
+      "method": "POST",
+      "path": "/alerts/resolve",
+      "test": "POST happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.9,
+      "issues": ""
+    },
+    {
+      "method": "POST",
+      "path": "/local-seo/authority-analysis",
+      "test": "POST happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.7,
+      "issues": ""
+    },
+    {
+      "method": "POST",
+      "path": "/local-seo/nap-consistency",
+      "test": "POST happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.7,
+      "issues": ""
+    },
+    {
+      "method": "POST",
+      "path": "/local-seo/geo-map",
+      "test": "POST happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.8,
+      "issues": ""
+    },
+    {
+      "method": "POST",
+      "path": "/local-seo/directory-score",
+      "test": "POST happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.8,
+      "issues": ""
+    },
+    {
+      "method": "POST",
+      "path": "/local-seo/citation-opportunities",
+      "test": "POST happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.8,
+      "issues": ""
+    },
+    {
+      "method": "POST",
+      "path": "/local-seo/competitor-intelligence",
+      "test": "POST happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.8,
+      "issues": ""
+    },
+    {
+      "method": "POST",
+      "path": "/backlink-intelligence/analyze-response",
+      "test": "POST happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.9,
+      "issues": ""
+    },
+    {
+      "method": "POST",
+      "path": "/backlink-intelligence/predict-success",
+      "test": "POST happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.8,
+      "issues": ""
+    },
+    {
+      "method": "POST",
+      "path": "/backlink-intelligence/predict-opportunity",
+      "test": "POST happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.8,
+      "issues": ""
+    },
+    {
+      "method": "POST",
+      "path": "/backlink-intelligence/prospect-quality",
+      "test": "POST happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.8,
+      "issues": ""
+    },
+    {
+      "method": "POST",
+      "path": "/backlink-intelligence/response-probability",
+      "test": "POST happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.8,
+      "issues": ""
+    },
+    {
+      "method": "POST",
+      "path": "/backlink-acquisition/prospect-intent",
+      "test": "POST happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.8,
+      "issues": ""
+    },
+    {
+      "method": "POST",
+      "path": "/outreach-intelligence/analyze-subject",
+      "test": "POST happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.8,
+      "issues": ""
+    },
+    {
+      "method": "POST",
+      "path": "/outreach-intelligence/predict-response",
+      "test": "POST happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.8,
+      "issues": ""
+    },
+    {
+      "method": "POST",
+      "path": "/outreach-intelligence/prioritize",
+      "test": "POST happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.8,
+      "issues": ""
+    },
+    {
+      "method": "POST",
+      "path": "/outreach-intelligence/score-communication",
+      "test": "POST happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.8,
+      "issues": ""
+    },
+    {
+      "method": "POST",
+      "path": "/outreach-intelligence/timing",
+      "test": "POST happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.8,
+      "issues": ""
+    },
+    {
+      "method": "POST",
+      "path": "/outreach-intelligence/follow-up",
+      "test": "POST happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 1.1,
+      "issues": ""
+    },
+    {
+      "method": "POST",
+      "path": "/serp-intelligence/capture-snapshot",
+      "test": "POST happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 1.0,
+      "issues": ""
+    },
+    {
+      "method": "POST",
+      "path": "/serp-intelligence/analyze-paa",
+      "test": "POST happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.8,
+      "issues": ""
+    },
+    {
+      "method": "POST",
+      "path": "/serp-intelligence/compare",
+      "test": "POST happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.7,
+      "issues": ""
+    },
+    {
+      "method": "POST",
+      "path": "/serp-intelligence/competitor-overlap",
+      "test": "POST happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.9,
+      "issues": ""
+    },
+    {
+      "method": "POST",
+      "path": "/serp-intelligence/detect-features",
+      "test": "POST happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.7,
+      "issues": ""
+    },
+    {
+      "method": "POST",
+      "path": "/serp-intelligence/dominance",
+      "test": "POST happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.8,
+      "issues": ""
+    },
+    {
+      "method": "POST",
+      "path": "/seo-intelligence/analyze-intent",
+      "test": "POST happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.8,
+      "issues": ""
+    },
+    {
+      "method": "POST",
+      "path": "/seo-intelligence/keyword-graph",
+      "test": "POST happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.8,
+      "issues": ""
+    },
+    {
+      "method": "POST",
+      "path": "/seo-intelligence/local-intent-map",
+      "test": "POST happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.8,
+      "issues": ""
+    },
+    {
+      "method": "POST",
+      "path": "/seo-intelligence/local-opportunity",
+      "test": "POST happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.7,
+      "issues": ""
+    },
+    {
+      "method": "POST",
+      "path": "/seo-intelligence/opportunity-detailed",
+      "test": "POST happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.6,
+      "issues": ""
+    },
+    {
+      "method": "POST",
+      "path": "/seo-intelligence/ranking-difficulty",
+      "test": "POST happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.7,
+      "issues": ""
+    },
+    {
+      "method": "POST",
+      "path": "/seo-intelligence/semantic-cluster",
+      "test": "POST happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.7,
+      "issues": ""
+    },
+    {
+      "method": "POST",
+      "path": "/seo-intelligence/topical-tree",
+      "test": "POST happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.7,
+      "issues": ""
+    },
+    {
+      "method": "POST",
+      "path": "/seo-strategic/authority-propagation-simulation",
+      "test": "POST happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.7,
+      "issues": ""
+    },
+    {
+      "method": "POST",
+      "path": "/seo-strategic/competitor-dominance",
+      "test": "POST happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.8,
+      "issues": ""
+    },
+    {
+      "method": "POST",
+      "path": "/seo-strategic/keywords",
+      "test": "POST happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.8,
+      "issues": ""
+    },
+    {
+      "method": "POST",
+      "path": "/seo-strategic/local-expansion",
+      "test": "POST happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.8,
+      "issues": ""
+    },
+    {
+      "method": "POST",
+      "path": "/seo-strategic/ranking-opportunity",
+      "test": "POST happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.8,
+      "issues": ""
+    },
+    {
+      "method": "POST",
+      "path": "/strategic-seo/authority-propagation-simulation",
+      "test": "POST happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.8,
+      "issues": ""
+    },
+    {
+      "method": "POST",
+      "path": "/strategic-seo/ranking-prediction",
+      "test": "POST happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.8,
+      "issues": ""
+    },
+    {
+      "method": "POST",
+      "path": "/strategic-seo/semantic-market-intelligence",
+      "test": "POST happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.8,
+      "issues": ""
+    },
+    {
+      "method": "POST",
+      "path": "/strategic-seo/strategic-backlink-map",
+      "test": "POST happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.8,
+      "issues": ""
+    },
+    {
+      "method": "POST",
+      "path": "/incident-intelligence/analyze",
+      "test": "POST happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.8,
+      "issues": ""
+    },
+    {
+      "method": "POST",
+      "path": "/incident-intelligence/cluster",
+      "test": "POST happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 1.1,
+      "issues": ""
+    },
+    {
+      "method": "POST",
+      "path": "/incident-intelligence/root-cause",
+      "test": "POST happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.8,
+      "issues": ""
+    },
+    {
+      "method": "POST",
+      "path": "/incident-intelligence/severity-score",
+      "test": "POST happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.8,
+      "issues": ""
+    },
+    {
+      "method": "POST",
+      "path": "/incident/incidents",
+      "test": "POST happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.8,
+      "issues": ""
+    },
+    {
+      "method": "POST",
+      "path": "/ai-quality/clustering-quality",
+      "test": "POST happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.8,
+      "issues": ""
+    },
+    {
+      "method": "POST",
+      "path": "/ai-quality/hallucination-risk",
+      "test": "POST happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.8,
+      "issues": ""
+    },
+    {
+      "method": "POST",
+      "path": "/ai-quality/outreach-quality",
+      "test": "POST happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.9,
+      "issues": ""
+    },
+    {
+      "method": "POST",
+      "path": "/ai-quality/recommendation-confidence",
+      "test": "POST happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.8,
+      "issues": ""
+    },
+    {
+      "method": "POST",
+      "path": "/ai-ops/detect-hallucinations",
+      "test": "POST happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.8,
+      "issues": ""
+    },
+    {
+      "method": "POST",
+      "path": "/enterprise-lifecycle/compliance-orchestration",
+      "test": "POST happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.7,
+      "issues": ""
+    },
+    {
+      "method": "POST",
+      "path": "/enterprise-lifecycle/migration-plan",
+      "test": "POST happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.8,
+      "issues": ""
+    },
+    {
+      "method": "POST",
+      "path": "/enterprise-lifecycle/onboarding",
+      "test": "POST happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.9,
+      "issues": ""
+    },
+    {
+      "method": "POST",
+      "path": "/enterprise-ecosystem/strategic-coordination",
+      "test": "POST happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.9,
+      "issues": ""
+    },
+    {
+      "method": "POST",
+      "path": "/enterprise-cognition/workflow-reasoning",
+      "test": "POST happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.9,
+      "issues": ""
+    },
+    {
+      "method": "POST",
+      "path": "/autonomy/self-analysis",
+      "test": "POST happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.9,
+      "issues": ""
+    },
+    {
+      "method": "POST",
+      "path": "/automation/rules",
+      "test": "POST happy path",
+      "status": "PASS",
+      "http_code": 422,
+      "time_ms": 1.7,
+      "issues": ""
+    },
+    {
+      "method": "POST",
+      "path": "/automation/trigger",
+      "test": "POST happy path",
+      "status": "PASS",
+      "http_code": 422,
+      "time_ms": 2.0,
+      "issues": ""
+    },
+    {
+      "method": "POST",
+      "path": "/automation/populate",
+      "test": "POST happy path",
+      "status": "PASS",
+      "http_code": 422,
+      "time_ms": 2.1,
+      "issues": ""
+    },
+    {
+      "method": "POST",
+      "path": "/automation/failures/test/resolve",
+      "test": "POST happy path",
+      "status": "PASS",
+      "http_code": 422,
+      "time_ms": 1.4,
+      "issues": ""
+    },
+    {
+      "method": "POST",
+      "path": "/knowledge/rebuild",
+      "test": "POST happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.8,
+      "issues": ""
+    },
+    {
+      "method": "POST",
+      "path": "/semantic/index",
+      "test": "POST happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.8,
+      "issues": ""
+    },
+    {
+      "method": "POST",
+      "path": "/semantic/search",
+      "test": "POST happy path",
+      "status": "PASS",
+      "http_code": 422,
+      "time_ms": 1.5,
+      "issues": ""
+    },
+    {
+      "method": "POST",
+      "path": "/forecast/revenue",
+      "test": "POST happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.8,
+      "issues": ""
+    },
+    {
+      "method": "POST",
+      "path": "/ai/query",
+      "test": "POST happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.8,
+      "issues": ""
+    },
+    {
+      "method": "POST",
+      "path": "/ai/copilot/ask",
+      "test": "POST happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.7,
+      "issues": ""
+    },
+    {
+      "method": "POST",
+      "path": "/agents/campaign/run",
+      "test": "POST happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.8,
+      "issues": ""
+    },
+    {
+      "method": "POST",
+      "path": "/portfolio/bulk",
+      "test": "POST happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.8,
+      "issues": ""
+    },
+    {
+      "method": "POST",
+      "path": "/portfolio/views",
+      "test": "POST happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.8,
+      "issues": ""
+    },
+    {
+      "method": "POST",
+      "path": "/executive/populate",
+      "test": "POST happy path",
+      "status": "PASS",
+      "http_code": 422,
+      "time_ms": 1.7,
+      "issues": ""
+    },
+    {
+      "method": "POST",
+      "path": "/executive/reports/generate",
+      "test": "POST happy path",
+      "status": "PASS",
+      "http_code": 422,
+      "time_ms": 1.8,
+      "issues": ""
+    },
+    {
+      "method": "POST",
+      "path": "/executive/alerts/test/acknowledge",
+      "test": "POST happy path",
+      "status": "PASS",
+      "http_code": 422,
+      "time_ms": 2.4,
+      "issues": ""
+    },
+    {
+      "method": "POST",
+      "path": "/executive/alerts/test/dismiss",
+      "test": "POST happy path",
+      "status": "PASS",
+      "http_code": 422,
+      "time_ms": 1.6,
+      "issues": ""
+    },
+    {
+      "method": "POST",
+      "path": "/executive/alerts/test/resolve",
+      "test": "POST happy path",
+      "status": "PASS",
+      "http_code": 422,
+      "time_ms": 1.7,
+      "issues": ""
+    },
+    {
+      "method": "POST",
+      "path": "/demo/reset",
+      "test": "POST happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.9,
+      "issues": ""
+    },
+    {
+      "method": "POST",
+      "path": "/demo/scenarios/load",
+      "test": "POST happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 1.0,
+      "issues": ""
+    },
+    {
+      "method": "POST",
+      "path": "/deployments/blue-green-plan",
+      "test": "POST happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.7,
+      "issues": ""
+    },
+    {
+      "method": "POST",
+      "path": "/deployments/failover-plan",
+      "test": "POST happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.8,
+      "issues": ""
+    },
+    {
+      "method": "POST",
+      "path": "/distributed/recover-kafka",
+      "test": "POST happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.8,
+      "issues": ""
+    },
+    {
+      "method": "POST",
+      "path": "/distributed/recover-postgres",
+      "test": "POST happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.8,
+      "issues": ""
+    },
+    {
+      "method": "POST",
+      "path": "/distributed/recover-redis",
+      "test": "POST happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.8,
+      "issues": ""
+    },
+    {
+      "method": "POST",
+      "path": "/distributed/recover-temporal",
+      "test": "POST happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.9,
+      "issues": ""
+    },
+    {
+      "method": "POST",
+      "path": "/event-infrastructure/compact",
+      "test": "POST happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.8,
+      "issues": ""
+    },
+    {
+      "method": "POST",
+      "path": "/event-infrastructure/replay",
+      "test": "POST happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.8,
+      "issues": ""
+    },
+    {
+      "method": "POST",
+      "path": "/event-infrastructure/retention",
+      "test": "POST happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.7,
+      "issues": ""
+    },
+    {
+      "method": "POST",
+      "path": "/event-infrastructure/retry-event/test",
+      "test": "POST happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.8,
+      "issues": ""
+    },
+    {
+      "method": "POST",
+      "path": "/global-infra/failover-plan",
+      "test": "POST happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.9,
+      "issues": ""
+    },
+    {
+      "method": "POST",
+      "path": "/global-orchestration/global-replay",
+      "test": "POST happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.8,
+      "issues": ""
+    },
+    {
+      "method": "POST",
+      "path": "/global-orchestration/migration-plan",
+      "test": "POST happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.7,
+      "issues": ""
+    },
+    {
+      "method": "POST",
+      "path": "/incident/incidents/test/resolve",
+      "test": "POST happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.7,
+      "issues": ""
+    },
+    {
+      "method": "POST",
+      "path": "/incident/worker-action",
+      "test": "POST happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.8,
+      "issues": ""
+    },
+    {
+      "method": "POST",
+      "path": "/intelligence/recommendations/test/dismiss",
+      "test": "POST happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.8,
+      "issues": ""
+    },
+    {
+      "method": "POST",
+      "path": "/intelligence/recommendations/test/implement",
+      "test": "POST happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 1.2,
+      "issues": ""
+    },
+    {
+      "method": "POST",
+      "path": "/kill-switches/activate",
+      "test": "POST happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.8,
+      "issues": ""
+    },
+    {
+      "method": "POST",
+      "path": "/kill-switches/deactivate",
+      "test": "POST happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.8,
+      "issues": ""
+    },
+    {
+      "method": "POST",
+      "path": "/maintainability-dominance/compatibility-simulation",
+      "test": "POST happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.7,
+      "issues": ""
+    },
+    {
+      "method": "POST",
+      "path": "/maintainability/workflow-migration-plan",
+      "test": "POST happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.8,
+      "issues": ""
+    },
+    {
+      "method": "POST",
+      "path": "/ops/suppress-alerts",
+      "test": "POST happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.8,
+      "issues": ""
+    },
+    {
+      "method": "POST",
+      "path": "/overload/adjust-scraping",
+      "test": "POST happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.7,
+      "issues": ""
+    },
+    {
+      "method": "POST",
+      "path": "/overload/enforce-quota",
+      "test": "POST happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.8,
+      "issues": ""
+    },
+    {
+      "method": "POST",
+      "path": "/overload/release-queue",
+      "test": "POST happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.7,
+      "issues": ""
+    },
+    {
+      "method": "POST",
+      "path": "/overload/throttle-queue",
+      "test": "POST happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.8,
+      "issues": ""
+    },
+    {
+      "method": "POST",
+      "path": "/operational-evolution/learn-pattern",
+      "test": "POST happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.8,
+      "issues": ""
+    },
+    {
+      "method": "POST",
+      "path": "/operational-evolution/record-tuning",
+      "test": "POST happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.8,
+      "issues": ""
+    },
+    {
+      "method": "POST",
+      "path": "/operational-assistant/explain-anomaly",
+      "test": "POST happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.8,
+      "issues": ""
+    },
+    {
+      "method": "POST",
+      "path": "/predictive/backlink-acquisition",
+      "test": "POST happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.8,
+      "issues": ""
+    },
+    {
+      "method": "POST",
+      "path": "/predictive/campaign-forecast",
+      "test": "POST happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.8,
+      "issues": ""
+    },
+    {
+      "method": "POST",
+      "path": "/predictive/workflow-failure",
+      "test": "POST happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.9,
+      "issues": ""
+    },
+    {
+      "method": "POST",
+      "path": "/prospect-graph/build",
+      "test": "POST happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.7,
+      "issues": ""
+    },
+    {
+      "method": "POST",
+      "path": "/prospect-graph/score-relationship",
+      "test": "POST happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.7,
+      "issues": ""
+    },
+    {
+      "method": "POST",
+      "path": "/recommendations/test/dismiss",
+      "test": "POST happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.8,
+      "issues": ""
+    },
+    {
+      "method": "POST",
+      "path": "/recommendations/test/implement",
+      "test": "POST happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.8,
+      "issues": ""
+    },
+    {
+      "method": "POST",
+      "path": "/scraping/recover-failures",
+      "test": "POST happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.8,
+      "issues": ""
+    },
+    {
+      "method": "POST",
+      "path": "/scraping/requeue-failed",
+      "test": "POST happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.8,
+      "issues": ""
+    },
+    {
+      "method": "POST",
+      "path": "/scraping/rotate-session",
+      "test": "POST happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.8,
+      "issues": ""
+    },
+    {
+      "method": "POST",
+      "path": "/scraping/scale-browsers",
+      "test": "POST happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.8,
+      "issues": ""
+    },
+    {
+      "method": "POST",
+      "path": "/semantic-memory/link",
+      "test": "POST happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.9,
+      "issues": ""
+    },
+    {
+      "method": "POST",
+      "path": "/semantic-memory/long-term-workflow",
+      "test": "POST happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 1.1,
+      "issues": ""
+    },
+    {
+      "method": "POST",
+      "path": "/semantic-memory/infrastructure-history",
+      "test": "POST happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.8,
+      "issues": ""
+    },
+    {
+      "method": "POST",
+      "path": "/sre-observability/sre/replay-trace",
+      "test": "POST happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.8,
+      "issues": ""
+    },
+    {
+      "method": "POST",
+      "path": "/webhooks/email/generic",
+      "test": "POST happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.8,
+      "issues": ""
+    },
+    {
+      "method": "POST",
+      "path": "/webhooks/email/mailgun",
+      "test": "POST happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.7,
+      "issues": ""
+    },
+    {
+      "method": "POST",
+      "path": "/webhooks/email/resend",
+      "test": "POST happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.7,
+      "issues": ""
+    },
+    {
+      "method": "POST",
+      "path": "/workflow-resilience/cleanup-orphans",
+      "test": "POST happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.8,
+      "issues": ""
+    },
+    {
+      "method": "POST",
+      "path": "/workflow-resilience/remediate",
+      "test": "POST happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.8,
+      "issues": ""
+    },
+    {
+      "method": "POST",
+      "path": "/workflow-resilience/validate-invariants",
+      "test": "POST happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.8,
+      "issues": ""
+    },
+    {
+      "method": "POST",
+      "path": "/workflow-resilience/validate-replay",
+      "test": "POST happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.8,
+      "issues": ""
+    },
+    {
+      "method": "POST",
+      "path": "/communication-reliability/failover",
+      "test": "POST happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 1.0,
+      "issues": ""
+    },
+    {
+      "method": "POST",
+      "path": "/communication-reliability/retry",
+      "test": "POST happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.7,
+      "issues": ""
+    },
+    {
+      "method": "POST",
+      "path": "/communication-reliability/suppress-bounces",
+      "test": "POST happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.7,
+      "issues": ""
+    },
+    {
+      "method": "POST",
+      "path": "/communication-reliability/sync-responses",
+      "test": "POST happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.8,
+      "issues": ""
+    },
+    {
+      "method": "POST",
+      "path": "/backlink-intelligence/analyze-response",
+      "test": "POST happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.8,
+      "issues": ""
+    },
+    {
+      "method": "POST",
+      "path": "/email-attachments/upload",
+      "test": "POST happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.8,
+      "issues": ""
+    },
+    {
+      "method": "POST",
+      "path": "/approvals/test/decide",
+      "test": "POST happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.8,
+      "issues": ""
+    },
+    {
+      "method": "POST",
+      "path": "/approvals/v2/test/decision",
+      "test": "POST happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.8,
+      "issues": ""
+    },
+    {
+      "method": "POST",
+      "path": "/campaigns/test/discover",
+      "test": "POST happy path",
+      "status": "PASS",
+      "http_code": 422,
+      "time_ms": 3.3,
+      "issues": ""
+    },
+    {
+      "method": "POST",
+      "path": "/campaigns/test/generate-emails",
+      "test": "POST happy path",
+      "status": "PASS",
+      "http_code": 422,
+      "time_ms": 2.0,
+      "issues": ""
+    },
+    {
+      "method": "POST",
+      "path": "/campaigns/test/launch",
+      "test": "POST happy path",
+      "status": "PASS",
+      "http_code": 422,
+      "time_ms": 1.6,
+      "issues": ""
+    },
+    {
+      "method": "POST",
+      "path": "/clients/test/enrich",
+      "test": "POST happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 1.0,
+      "issues": ""
+    },
+    {
+      "method": "POST",
+      "path": "/plans/test/approve",
+      "test": "POST happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.8,
+      "issues": ""
+    },
+    {
+      "method": "POST",
+      "path": "/plans/test/optimize",
+      "test": "POST happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.7,
+      "issues": ""
+    },
+    {
+      "method": "POST",
+      "path": "/plans/test/reject",
+      "test": "POST happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.8,
+      "issues": ""
+    },
+    {
+      "method": "POST",
+      "path": "/plans/test/simulate",
+      "test": "POST happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 1.6,
+      "issues": ""
+    },
+    {
+      "method": "POST",
+      "path": "/reports/generate",
+      "test": "POST happy path",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 1.4,
+      "issues": ""
+    },
+    {
+      "method": "POST",
+      "path": "/campaigns/threads/test/send",
+      "test": "POST happy path",
+      "status": "PASS",
+      "http_code": 422,
+      "time_ms": 1.9,
+      "issues": ""
+    },
+    {
+      "method": "POST",
+      "path": "/campaigns/threads/test/follow-up",
+      "test": "POST happy path",
+      "status": "PASS",
+      "http_code": 422,
+      "time_ms": 2.2,
+      "issues": ""
+    },
+    {
+      "method": "POST",
+      "path": "/campaigns/threads/test/mark-link-acquired",
+      "test": "POST happy path",
+      "status": "PASS",
+      "http_code": 422,
+      "time_ms": 2.3,
+      "issues": ""
+    },
+    {
+      "method": "POST",
+      "path": "/campaigns/threads/test/simulate-reply",
+      "test": "POST happy path",
+      "status": "PASS",
+      "http_code": 422,
+      "time_ms": 1.9,
+      "issues": ""
+    },
+    {
+      "method": "POST",
+      "path": "/clients",
+      "test": "POST empty body",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 1.0,
+      "issues": ""
+    },
+    {
+      "method": "POST",
+      "path": "/campaigns",
+      "test": "POST empty body",
+      "status": "PASS",
+      "http_code": 422,
+      "time_ms": 1.8,
+      "issues": ""
+    },
+    {
+      "method": "POST",
+      "path": "/plans/generate",
+      "test": "POST empty body",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.9,
+      "issues": ""
+    },
+    {
+      "method": "POST",
+      "path": "/keywords/research",
+      "test": "POST empty body",
+      "status": "PASS",
+      "http_code": 422,
+      "time_ms": 2.7,
+      "issues": ""
+    },
+    {
+      "method": "POST",
+      "path": "/reports/generate",
+      "test": "POST empty body",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.9,
+      "issues": ""
+    },
+    {
+      "method": "POST",
+      "path": "/citations",
+      "test": "POST empty body",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.9,
+      "issues": ""
+    },
+    {
+      "method": "POST",
+      "path": "/actions",
+      "test": "POST empty body",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.8,
+      "issues": ""
+    },
+    {
+      "method": "POST",
+      "path": "/executions",
+      "test": "POST empty body",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.9,
+      "issues": ""
+    },
+    {
+      "method": "POST",
+      "path": "/goals",
+      "test": "POST empty body",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.7,
+      "issues": ""
+    },
+    {
+      "method": "POST",
+      "path": "/autonomous-agents",
+      "test": "POST empty body",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.7,
+      "issues": ""
+    },
+    {
+      "method": "POST",
+      "path": "/email-drafts",
+      "test": "POST empty body",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.9,
+      "issues": ""
+    },
+    {
+      "method": "POST",
+      "path": "/email-scheduling",
+      "test": "POST empty body",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.9,
+      "issues": ""
+    },
+    {
+      "method": "POST",
+      "path": "/communication-templates",
+      "test": "POST empty body",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 1.0,
+      "issues": ""
+    },
+    {
+      "method": "POST",
+      "path": "/tenants",
+      "test": "POST empty body",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.9,
+      "issues": ""
+    },
+    {
+      "method": "POST",
+      "path": "/ai/query",
+      "test": "POST empty body",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.7,
+      "issues": ""
+    },
+    {
+      "method": "POST",
+      "path": "/ai/copilot/ask",
+      "test": "POST empty body",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.7,
+      "issues": ""
+    },
+    {
+      "method": "POST",
+      "path": "/semantic/search",
+      "test": "POST empty body",
+      "status": "PASS",
+      "http_code": 422,
+      "time_ms": 1.6,
+      "issues": ""
+    },
+    {
+      "method": "POST",
+      "path": "/semantic/index",
+      "test": "POST empty body",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.7,
+      "issues": ""
+    },
+    {
+      "method": "POST",
+      "path": "/knowledge/rebuild",
+      "test": "POST empty body",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.7,
+      "issues": ""
+    },
+    {
+      "method": "POST",
+      "path": "/forecast/revenue",
+      "test": "POST empty body",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.7,
+      "issues": ""
+    },
+    {
+      "method": "POST",
+      "path": "/forecast/campaign",
+      "test": "POST empty body",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.7,
+      "issues": ""
+    },
+    {
+      "method": "POST",
+      "path": "/forecast/customer",
+      "test": "POST empty body",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 1.2,
+      "issues": ""
+    },
+    {
+      "method": "POST",
+      "path": "/alerts/acknowledge",
+      "test": "POST empty body",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 1.0,
+      "issues": ""
+    },
+    {
+      "method": "POST",
+      "path": "/alerts/resolve",
+      "test": "POST empty body",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.7,
+      "issues": ""
+    },
+    {
+      "method": "POST",
+      "path": "/local-seo/authority-analysis",
+      "test": "POST empty body",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.7,
+      "issues": ""
+    },
+    {
+      "method": "POST",
+      "path": "/local-seo/nap-consistency",
+      "test": "POST empty body",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.7,
+      "issues": ""
+    },
+    {
+      "method": "POST",
+      "path": "/local-seo/geo-map",
+      "test": "POST empty body",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 1.2,
+      "issues": ""
+    },
+    {
+      "method": "POST",
+      "path": "/local-seo/directory-score",
+      "test": "POST empty body",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.9,
+      "issues": ""
+    },
+    {
+      "method": "POST",
+      "path": "/local-seo/citation-opportunities",
+      "test": "POST empty body",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.9,
+      "issues": ""
+    },
+    {
+      "method": "POST",
+      "path": "/local-seo/competitor-intelligence",
+      "test": "POST empty body",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.9,
+      "issues": ""
+    },
+    {
+      "method": "POST",
+      "path": "/clients",
+      "test": "POST malformed JSON",
+      "status": "FAIL",
+      "http_code": 429,
+      "time_ms": 0.7,
+      "issues": "Expected 400, got 429"
+    },
+    {
+      "method": "POST",
+      "path": "/campaigns",
+      "test": "POST malformed JSON",
+      "status": "FAIL",
+      "http_code": 422,
+      "time_ms": 1.6,
+      "issues": "Expected 400, got 422"
+    },
+    {
+      "method": "POST",
+      "path": "/plans/generate",
+      "test": "POST malformed JSON",
+      "status": "FAIL",
+      "http_code": 429,
+      "time_ms": 0.9,
+      "issues": "Expected 400, got 429"
+    },
+    {
+      "method": "POST",
+      "path": "/keywords/research",
+      "test": "POST malformed JSON",
+      "status": "FAIL",
+      "http_code": 422,
+      "time_ms": 1.6,
+      "issues": "Expected 400, got 422"
+    },
+    {
+      "method": "POST",
+      "path": "/reports/generate",
+      "test": "POST malformed JSON",
+      "status": "FAIL",
+      "http_code": 429,
+      "time_ms": 0.8,
+      "issues": "Expected 400, got 429"
+    },
+    {
+      "method": "POST",
+      "path": "/citations",
+      "test": "POST malformed JSON",
+      "status": "FAIL",
+      "http_code": 429,
+      "time_ms": 0.8,
+      "issues": "Expected 400, got 429"
+    },
+    {
+      "method": "POST",
+      "path": "/actions",
+      "test": "POST malformed JSON",
+      "status": "FAIL",
+      "http_code": 429,
+      "time_ms": 0.8,
+      "issues": "Expected 400, got 429"
+    },
+    {
+      "method": "POST",
+      "path": "/executions",
+      "test": "POST malformed JSON",
+      "status": "FAIL",
+      "http_code": 429,
+      "time_ms": 0.8,
+      "issues": "Expected 400, got 429"
+    },
+    {
+      "method": "POST",
+      "path": "/goals",
+      "test": "POST malformed JSON",
+      "status": "FAIL",
+      "http_code": 429,
+      "time_ms": 0.9,
+      "issues": "Expected 400, got 429"
+    },
+    {
+      "method": "POST",
+      "path": "/autonomous-agents",
+      "test": "POST malformed JSON",
+      "status": "FAIL",
+      "http_code": 429,
+      "time_ms": 1.2,
+      "issues": "Expected 400, got 429"
+    },
+    {
+      "method": "POST",
+      "path": "/email-drafts",
+      "test": "POST malformed JSON",
+      "status": "FAIL",
+      "http_code": 429,
+      "time_ms": 0.9,
+      "issues": "Expected 400, got 429"
+    },
+    {
+      "method": "POST",
+      "path": "/email-scheduling",
+      "test": "POST malformed JSON",
+      "status": "FAIL",
+      "http_code": 429,
+      "time_ms": 0.8,
+      "issues": "Expected 400, got 429"
+    },
+    {
+      "method": "POST",
+      "path": "/communication-templates",
+      "test": "POST malformed JSON",
+      "status": "FAIL",
+      "http_code": 429,
+      "time_ms": 0.9,
+      "issues": "Expected 400, got 429"
+    },
+    {
+      "method": "POST",
+      "path": "/tenants",
+      "test": "POST malformed JSON",
+      "status": "FAIL",
+      "http_code": 429,
+      "time_ms": 1.2,
+      "issues": "Expected 400, got 429"
+    },
+    {
+      "method": "POST",
+      "path": "/ai/query",
+      "test": "POST malformed JSON",
+      "status": "FAIL",
+      "http_code": 429,
+      "time_ms": 0.8,
+      "issues": "Expected 400, got 429"
+    },
+    {
+      "method": "POST",
+      "path": "/ai/copilot/ask",
+      "test": "POST malformed JSON",
+      "status": "FAIL",
+      "http_code": 429,
+      "time_ms": 0.7,
+      "issues": "Expected 400, got 429"
+    },
+    {
+      "method": "POST",
+      "path": "/semantic/search",
+      "test": "POST malformed JSON",
+      "status": "FAIL",
+      "http_code": 422,
+      "time_ms": 1.9,
+      "issues": "Expected 400, got 422"
+    },
+    {
+      "method": "POST",
+      "path": "/semantic/index",
+      "test": "POST malformed JSON",
+      "status": "FAIL",
+      "http_code": 429,
+      "time_ms": 0.8,
+      "issues": "Expected 400, got 429"
+    },
+    {
+      "method": "POST",
+      "path": "/knowledge/rebuild",
+      "test": "POST malformed JSON",
+      "status": "FAIL",
+      "http_code": 429,
+      "time_ms": 0.9,
+      "issues": "Expected 400, got 429"
+    },
+    {
+      "method": "POST",
+      "path": "/forecast/revenue",
+      "test": "POST malformed JSON",
+      "status": "FAIL",
+      "http_code": 429,
+      "time_ms": 0.9,
+      "issues": "Expected 400, got 429"
+    },
+    {
+      "method": "POST",
+      "path": "/forecast/campaign",
+      "test": "POST malformed JSON",
+      "status": "FAIL",
+      "http_code": 429,
+      "time_ms": 0.8,
+      "issues": "Expected 400, got 429"
+    },
+    {
+      "method": "POST",
+      "path": "/forecast/customer",
+      "test": "POST malformed JSON",
+      "status": "FAIL",
+      "http_code": 429,
+      "time_ms": 0.7,
+      "issues": "Expected 400, got 429"
+    },
+    {
+      "method": "POST",
+      "path": "/alerts/acknowledge",
+      "test": "POST malformed JSON",
+      "status": "FAIL",
+      "http_code": 429,
+      "time_ms": 0.7,
+      "issues": "Expected 400, got 429"
+    },
+    {
+      "method": "POST",
+      "path": "/alerts/resolve",
+      "test": "POST malformed JSON",
+      "status": "FAIL",
+      "http_code": 429,
+      "time_ms": 0.7,
+      "issues": "Expected 400, got 429"
+    },
+    {
+      "method": "POST",
+      "path": "/local-seo/authority-analysis",
+      "test": "POST malformed JSON",
+      "status": "FAIL",
+      "http_code": 429,
+      "time_ms": 0.6,
+      "issues": "Expected 400, got 429"
+    },
+    {
+      "method": "POST",
+      "path": "/local-seo/nap-consistency",
+      "test": "POST malformed JSON",
+      "status": "FAIL",
+      "http_code": 429,
+      "time_ms": 0.9,
+      "issues": "Expected 400, got 429"
+    },
+    {
+      "method": "POST",
+      "path": "/local-seo/geo-map",
+      "test": "POST malformed JSON",
+      "status": "FAIL",
+      "http_code": 429,
+      "time_ms": 1.1,
+      "issues": "Expected 400, got 429"
+    },
+    {
+      "method": "POST",
+      "path": "/local-seo/directory-score",
+      "test": "POST malformed JSON",
+      "status": "FAIL",
+      "http_code": 429,
+      "time_ms": 0.9,
+      "issues": "Expected 400, got 429"
+    },
+    {
+      "method": "POST",
+      "path": "/local-seo/citation-opportunities",
+      "test": "POST malformed JSON",
+      "status": "FAIL",
+      "http_code": 429,
+      "time_ms": 0.8,
+      "issues": "Expected 400, got 429"
+    },
+    {
+      "method": "POST",
+      "path": "/local-seo/competitor-intelligence",
+      "test": "POST malformed JSON",
+      "status": "FAIL",
+      "http_code": 429,
+      "time_ms": 0.8,
+      "issues": "Expected 400, got 429"
+    },
+    {
+      "method": "POST",
+      "path": "/clients",
+      "test": "XSS attempt",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.8,
+      "issues": ""
+    },
+    {
+      "method": "POST",
+      "path": "/campaigns",
+      "test": "XSS attempt",
+      "status": "PASS",
+      "http_code": 422,
+      "time_ms": 1.9,
+      "issues": ""
+    },
+    {
+      "method": "POST",
+      "path": "/plans/generate",
+      "test": "XSS attempt",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.9,
+      "issues": ""
+    },
+    {
+      "method": "POST",
+      "path": "/keywords/research",
+      "test": "XSS attempt",
+      "status": "PASS",
+      "http_code": 422,
+      "time_ms": 1.7,
+      "issues": ""
+    },
+    {
+      "method": "POST",
+      "path": "/email-drafts",
+      "test": "XSS attempt",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 1.0,
+      "issues": ""
+    },
+    {
+      "method": "POST",
+      "path": "/communication-templates",
+      "test": "XSS attempt",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.8,
+      "issues": ""
+    },
+    {
+      "method": "POST",
+      "path": "/autonomous-agents",
+      "test": "XSS attempt",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.8,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/clients/00000000-0000-0000-0000-000000000001",
+      "test": "Path param: Get client by ID",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.8,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/campaigns/00000000-0000-0000-0000-000000000001",
+      "test": "Path param: Get campaign by ID",
+      "status": "PASS",
+      "http_code": 422,
+      "time_ms": 1.4,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/plans/00000000-0000-0000-0000-000000000001",
+      "test": "Path param: Get plan by ID",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.7,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/reports/00000000-0000-0000-0000-000000000001",
+      "test": "Path param: Get report by ID",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.6,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/email-drafts/00000000-0000-0000-0000-000000000001",
+      "test": "Path param: Get email draft",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.6,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/email-scheduling/00000000-0000-0000-0000-000000000001",
+      "test": "Path param: Get schedule",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 1.1,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/goals/00000000-0000-0000-0000-000000000001",
+      "test": "Path param: Get goal by ID",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 1.2,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/autonomous-agents/00000000-0000-0000-0000-000000000001",
+      "test": "Path param: Get agent by ID",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.8,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/executions/00000000-0000-0000-0000-000000000001",
+      "test": "Path param: Get execution by ID",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.7,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/actions/00000000-0000-0000-0000-000000000001",
+      "test": "Path param: Get action by ID",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.6,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/communication-templates/00000000-0000-0000-0000-000000000001",
+      "test": "Path param: Get template",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.6,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/customers/00000000-0000-0000-0000-000000000001",
+      "test": "Path param: Get customer",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.6,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/customers/00000000-0000-0000-0000-000000000001/overview",
+      "test": "Path param: Customer overview",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.6,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/customers/00000000-0000-0000-0000-000000000001/health-risk",
+      "test": "Path param: Customer health risk",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.6,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/customers/00000000-0000-0000-0000-000000000001/timeline",
+      "test": "Path param: Customer timeline",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.6,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/customers/00000000-0000-0000-0000-000000000001/search",
+      "test": "Path param: Customer search",
+      "status": "PASS",
+      "http_code": 422,
+      "time_ms": 2.4,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/customers/00000000-0000-0000-0000-000000000001/populate",
+      "test": "Path param: Customer populate",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.8,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/executive/overview",
+      "test": "Path param: Executive overview",
+      "status": "PASS",
+      "http_code": 422,
+      "time_ms": 1.7,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/executive/health-matrix",
+      "test": "Path param: Health matrix",
+      "status": "PASS",
+      "http_code": 422,
+      "time_ms": 1.9,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/executive/alerts",
+      "test": "Path param: Executive alerts",
+      "status": "PASS",
+      "http_code": 422,
+      "time_ms": 1.4,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/executive/revenue",
+      "test": "Path param: Executive revenue",
+      "status": "PASS",
+      "http_code": 422,
+      "time_ms": 1.4,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/executive/revenue/history",
+      "test": "Path param: Revenue history",
+      "status": "PASS",
+      "http_code": 422,
+      "time_ms": 2.4,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/executive/risks",
+      "test": "Path param: Executive risks",
+      "status": "PASS",
+      "http_code": 422,
+      "time_ms": 1.8,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/executive/sla",
+      "test": "Path param: Executive SLA",
+      "status": "PASS",
+      "http_code": 422,
+      "time_ms": 1.5,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/executive/sla/summary",
+      "test": "Path param: SLA summary",
+      "status": "PASS",
+      "http_code": 422,
+      "time_ms": 1.6,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/executive/trends",
+      "test": "Path param: Executive trends",
+      "status": "PASS",
+      "http_code": 422,
+      "time_ms": 2.1,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/executive/reports",
+      "test": "Path param: Executive reports",
+      "status": "PASS",
+      "http_code": 422,
+      "time_ms": 1.6,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/executive/reports/00000000-0000-0000-0000-000000000001",
+      "test": "Path param: Get executive report",
+      "status": "PASS",
+      "http_code": 422,
+      "time_ms": 1.5,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/deployment/health/test-service",
+      "test": "Path param: Deployment health",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.7,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/deployment/history/test-service",
+      "test": "Path param: Deployment history",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.7,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/deployment/canary/test-service",
+      "test": "Path param: Canary status",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.6,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/realtime/state/00000000-0000-0000-0000-000000000001",
+      "test": "Path param: Realtime state",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.6,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/realtime/workflows/00000000-0000-0000-0000-000000000001",
+      "test": "Path param: Realtime workflows",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.6,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/realtime/events/stream",
+      "test": "Path param: Event stream",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.6,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/scale/tenant-capacity/00000000-0000-0000-0000-000000000001",
+      "test": "Path param: Tenant capacity",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.9,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/event-infrastructure/correlation-trace/test-id",
+      "test": "Path param: Correlation trace",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.6,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/event-lineage/tree/test-id",
+      "test": "Path param: Event lineage tree",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.7,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/event-lineage/test-id",
+      "test": "Path param: Event lineage",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.7,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/stream/00000000-0000-0000-0000-000000000001",
+      "test": "Path param: Stream",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.6,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/stream/00000000-0000-0000-0000-000000000001/full",
+      "test": "Path param: Full stream",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.6,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/semantic-memory/00000000-0000-0000-0000-000000000001/test-key",
+      "test": "Path param: Semantic memory entry",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.6,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/semantic-memory/campaign/00000000-0000-0000-0000-000000000001",
+      "test": "Path param: Campaign memory",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.6,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/semantic-memory/context/00000000-0000-0000-0000-000000000001",
+      "test": "Path param: Context memory",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.6,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/semantic-memory/lineage/test-key",
+      "test": "Path param: Memory lineage",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.6,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/semantic-memory/prospect/test.com",
+      "test": "Path param: Prospect memory",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.7,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/knowledge/entity/00000000-0000-0000-0000-000000000001",
+      "test": "Path param: Knowledge entity",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.7,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/knowledge/related/00000000-0000-0000-0000-000000000001",
+      "test": "Path param: Related entities",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.7,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/backlink-intelligence/prospect-graph/00000000-0000-0000-0000-000000000001",
+      "test": "Path param: Prospect graph",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.7,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/seo-intelligence/topical-map/00000000-0000-0000-0000-000000000001",
+      "test": "Path param: Topical map",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.7,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/prospect-graph/00000000-0000-0000-0000-000000000001/00000000-0000-0000-0000-000000000001",
+      "test": "Path param: Prospect graph by tenant/campaign",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.7,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/intelligence-queries/workflows/test/history",
+      "test": "Path param: Workflow history",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.7,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/automation/runs/00000000-0000-0000-0000-000000000001",
+      "test": "Path param: Automation run",
+      "status": "PASS",
+      "http_code": 422,
+      "time_ms": 1.8,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/automation/rules/00000000-0000-0000-0000-000000000001",
+      "test": "Path param: Automation rule",
+      "status": "PASS",
+      "http_code": 422,
+      "time_ms": 1.5,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/email-scheduling/00000000-0000-0000-0000-000000000001",
+      "test": "Path param: Email schedule",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.6,
+      "issues": ""
+    },
+    {
+      "method": "DELETE",
+      "path": "/actions/00000000-0000-0000-0000-000000000001",
+      "test": "DELETE /actions/00000000-0000-0000-0000-000000000001",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.9,
+      "issues": ""
+    },
+    {
+      "method": "DELETE",
+      "path": "/autonomous-agents/00000000-0000-0000-0000-000000000001",
+      "test": "DELETE /autonomous-agents/00000000-0000-0000-0000-000000000001",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.7,
+      "issues": ""
+    },
+    {
+      "method": "DELETE",
+      "path": "/automation/rules/00000000-0000-0000-0000-000000000001",
+      "test": "DELETE /automation/rules/00000000-0000-0000-0000-000000000001",
+      "status": "PASS",
+      "http_code": 422,
+      "time_ms": 1.6,
+      "issues": ""
+    },
+    {
+      "method": "DELETE",
+      "path": "/communication-templates/00000000-0000-0000-0000-000000000001",
+      "test": "DELETE /communication-templates/00000000-0000-0000-0000-000000000001",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.8,
+      "issues": ""
+    },
+    {
+      "method": "DELETE",
+      "path": "/email-drafts/00000000-0000-0000-0000-000000000001",
+      "test": "DELETE /email-drafts/00000000-0000-0000-0000-000000000001",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.7,
+      "issues": ""
+    },
+    {
+      "method": "DELETE",
+      "path": "/portfolio/views/00000000-0000-0000-0000-000000000001",
+      "test": "DELETE /portfolio/views/00000000-0000-0000-0000-000000000001",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.7,
+      "issues": ""
+    },
+    {
+      "method": "PUT",
+      "path": "/actions/00000000-0000-0000-0000-000000000001",
+      "test": "PUT /actions/00000000-0000-0000-0000-000000000001",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.8,
+      "issues": ""
+    },
+    {
+      "method": "PUT",
+      "path": "/autonomous-agents/00000000-0000-0000-0000-000000000001",
+      "test": "PUT /autonomous-agents/00000000-0000-0000-0000-000000000001",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.8,
+      "issues": ""
+    },
+    {
+      "method": "PUT",
+      "path": "/automation/rules/00000000-0000-0000-0000-000000000001",
+      "test": "PUT /automation/rules/00000000-0000-0000-0000-000000000001",
+      "status": "PASS",
+      "http_code": 422,
+      "time_ms": 1.9,
+      "issues": ""
+    },
+    {
+      "method": "PUT",
+      "path": "/campaigns/00000000-0000-0000-0000-000000000001",
+      "test": "PUT /campaigns/00000000-0000-0000-0000-000000000001",
+      "status": "PASS",
+      "http_code": 422,
+      "time_ms": 1.8,
+      "issues": ""
+    },
+    {
+      "method": "PUT",
+      "path": "/campaigns/threads/00000000-0000-0000-0000-000000000001",
+      "test": "PUT /campaigns/threads/00000000-0000-0000-0000-000000000001",
+      "status": "PASS",
+      "http_code": 422,
+      "time_ms": 2.0,
+      "issues": ""
+    },
+    {
+      "method": "PUT",
+      "path": "/email-drafts/00000000-0000-0000-0000-000000000001",
+      "test": "PUT /email-drafts/00000000-0000-0000-0000-000000000001",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.9,
+      "issues": ""
+    },
+    {
+      "method": "PUT",
+      "path": "/portfolio/views/00000000-0000-0000-0000-000000000001",
+      "test": "PUT /portfolio/views/00000000-0000-0000-0000-000000000001",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.8,
+      "issues": ""
+    },
+    {
+      "method": "PUT",
+      "path": "/semantic-memory",
+      "test": "PUT /semantic-memory",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.8,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/healthz",
+      "test": "Concurrency (10 parallel)",
+      "status": "FAIL",
+      "http_code": "mixed={429}",
+      "time_ms": 5.0,
+      "issues": "Not all 200: [429, 429, 429, 429, 429, 429, 429, 429, 429, 429]"
+    },
+    {
+      "method": "POST",
+      "path": "/clients",
+      "test": "Large payload (1MB)",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 4.0,
+      "issues": ""
+    },
+    {
+      "method": "GET",
+      "path": "/nonexistent-endpoint-12345",
+      "test": "Non-existent endpoint",
+      "status": "FAIL",
+      "http_code": 429,
+      "time_ms": 0.7,
+      "issues": "Expected 404, got 429"
+    },
+    {
+      "method": "DELETE",
+      "path": "/healthz",
+      "test": "DELETE on /healthz",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.7,
+      "issues": ""
+    },
+    {
+      "method": "DELETE",
+      "path": "/clients",
+      "test": "DELETE on /clients",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.6,
+      "issues": ""
+    },
+    {
+      "method": "DELETE",
+      "path": "/campaigns",
+      "test": "DELETE on /campaigns",
+      "status": "PASS",
+      "http_code": 405,
+      "time_ms": 1.6,
+      "issues": ""
+    },
+    {
+      "method": "DELETE",
+      "path": "/plans",
+      "test": "DELETE on /plans",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 1.1,
+      "issues": ""
+    },
+    {
+      "method": "DELETE",
+      "path": "/reports",
+      "test": "DELETE on /reports",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.7,
+      "issues": ""
+    },
+    {
+      "method": "DELETE",
+      "path": "/analytics/backlink-roi",
+      "test": "DELETE on /analytics/backlink-roi",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.6,
+      "issues": ""
+    },
+    {
+      "method": "DELETE",
+      "path": "/infrastructure/topology",
+      "test": "DELETE on /infrastructure/topology",
+      "status": "PASS",
+      "http_code": 429,
+      "time_ms": 0.6,
+      "issues": ""
+    }
+  ]
+}

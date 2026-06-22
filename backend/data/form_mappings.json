@@ -1,0 +1,724 @@
+{
+  "hotfrog_australia": {
+    "name": "Hotfrog Australia",
+    "url": "https://www.hotfrog.com.au",
+    "submission_url": "https://www.hotfrog.com.au/add-your-business",
+    "fields": {
+      "business_name": {"selector": "input[name='companyName'], input#companyName"},
+      "phone": {"selector": "input[name='telephone'], input#telephone"},
+      "email": {"selector": "input[name='email'], input#email"},
+      "address": {"selector": "input[name='address1'], input#address1"},
+      "city": {"selector": "input[name='city'], input#city"},
+      "state": {"selector": "select[name='state'], select#state"},
+      "postal_code": {"selector": "input[name='postcode'], input#postcode"},
+      "website": {"selector": "input[name='website'], input#website"},
+      "description": {"selector": "textarea[name='description'], textarea#description"},
+      "category": {"selector": "select[name='category'], select#category"}
+    },
+    "steps": ["fill_form", "submit"],
+    "notes": "Australian focused, relatively simple form"
+  },
+  "yellow_pages_au": {
+    "name": "Yellow Pages Australia",
+    "url": "https://www.yellowpages.com.au",
+    "submission_url": "https://www.yellowpages.com.au/manage/add-or-claim",
+    "fields": {
+      "business_name": {"selector": "input[name='businessName'], input#businessName"},
+      "phone": {"selector": "input[name='phoneNumber'], input#phoneNumber"},
+      "address": {"selector": "input[name='address'], input#address"},
+      "suburb": {"selector": "input[name='suburb'], input#suburb"},
+      "state": {"selector": "select[name='state'], select#state"},
+      "postcode": {"selector": "input[name='postcode'], input#postcode"},
+      "category": {"selector": "select[name='category'], select#category"}
+    },
+    "steps": ["search", "claim_or_create", "fill_form", "submit"],
+    "notes": "May require account creation"
+  },
+  "truelocal": {
+    "name": "True Local",
+    "url": "https://www.truelocal.com.au",
+    "submission_url": "https://www.truelocal.com.au/add",
+    "fields": {
+      "business_name": {"selector": "input[data-testid='business-name'], input[name='businessName']"},
+      "phone": {"selector": "input[data-testid='phone'], input[name='phone']"},
+      "address": {"selector": "input[data-testid='address'], input[name='address']"},
+      "suburb": {"selector": "input[data-testid='suburb'], input[name='suburb']"},
+      "state": {"selector": "select[data-testid='state'], select[name='state']"},
+      "postcode": {"selector": "input[data-testid='postcode'], input[name='postcode']"},
+      "category": {"selector": "select[data-testid='category'], select[name='category']"},
+      "description": {"selector": "textarea[data-testid='description'], textarea[name='description']"}
+    },
+    "steps": ["fill_form", "submit"],
+    "notes": "Australian focused, simple form"
+  },
+  "start_local": {
+    "name": "StartLocal",
+    "url": "https://www.startlocal.com.au",
+    "submission_url": "https://www.startlocal.com.au/submit",
+    "fields": {
+      "business_name": {"selector": "input[name='business_name']"},
+      "phone": {"selector": "input[name='phone']"},
+      "email": {"selector": "input[name='email']"},
+      "address": {"selector": "input[name='address']"},
+      "suburb": {"selector": "input[name='suburb']"},
+      "state": {"selector": "select[name='state']"},
+      "postcode": {"selector": "input[name='postcode']"},
+      "website": {"selector": "input[name='website']"},
+      "description": {"selector": "textarea[name='description']"},
+      "category": {"selector": "select[name='category']"}
+    },
+    "steps": ["fill_form", "submit"],
+    "notes": "Australian local business directory"
+  },
+  "australian_business_directory": {
+    "name": "Australian Business Directory",
+    "url": "https://www.australianbusinessdirectory.com.au",
+    "submission_url": "https://www.australianbusinessdirectory.com.au/add-listing",
+    "fields": {
+      "business_name": {"selector": "input[name='listing_title']"},
+      "phone": {"selector": "input[name='phone']"},
+      "email": {"selector": "input[name='email']"},
+      "address": {"selector": "input[name='address']"},
+      "city": {"selector": "input[name='city']"},
+      "state": {"selector": "select[name='state']"},
+      "postcode": {"selector": "input[name='postcode']"},
+      "website": {"selector": "input[name='website']"},
+      "description": {"selector": "textarea[name='description']"},
+      "category": {"selector": "select[name='category']"}
+    },
+    "steps": ["fill_form", "submit"],
+    "notes": "General Australian directory"
+  },
+  "brownbook": {
+    "name": "Brownbook",
+    "url": "https://www.brownbook.net",
+    "submission_url": "https://www.brownbook.net/add-business",
+    "fields": {
+      "business_name": {"selector": "input[name='company_name'], input#company_name"},
+      "phone": {"selector": "input[name='phone'], input#phone"},
+      "email": {"selector": "input[name='email'], input#email"},
+      "address": {"selector": "input[name='address'], input#address"},
+      "city": {"selector": "input[name='city'], input#city"},
+      "state": {"selector": "input[name='state'], input#state"},
+      "postal_code": {"selector": "input[name='zip'], input#zip"},
+      "website": {"selector": "input[name='website'], input#website"},
+      "description": {"selector": "textarea[name='description'], textarea#description"},
+      "category": {"selector": "select[name='category'], select#category"}
+    },
+    "steps": ["fill_form", "submit"],
+    "notes": "Global directory, easy submission"
+  },
+  "cybo": {
+    "name": "Cybo",
+    "url": "https://www.cybo.com",
+    "submission_url": "https://www.cybo.com/add-business",
+    "fields": {
+      "business_name": {"selector": "input[name='name'], input#name"},
+      "phone": {"selector": "input[name='phone'], input#phone"},
+      "email": {"selector": "input[name='email'], input#email"},
+      "address": {"selector": "input[name='address'], input#address"},
+      "city": {"selector": "input[name='city'], input#city"},
+      "state": {"selector": "input[name='state'], input#state"},
+      "postal_code": {"selector": "input[name='postal_code'], input#postal_code"},
+      "website": {"selector": "input[name='website'], input#website"},
+      "description": {"selector": "textarea[name='description'], textarea#description"},
+      "category": {"selector": "input[name='category'], input#category"}
+    },
+    "steps": ["fill_form", "submit"],
+    "notes": "Global business directory"
+  },
+  "showmelocal": {
+    "name": "ShowMeLocal",
+    "url": "https://www.showmelocal.com",
+    "submission_url": "https://www.showmelocal.com/add-business",
+    "fields": {
+      "business_name": {"selector": "input[name='business_name']"},
+      "phone": {"selector": "input[name='phone']"},
+      "email": {"selector": "input[name='email']"},
+      "address": {"selector": "input[name='address']"},
+      "city": {"selector": "input[name='city']"},
+      "state": {"selector": "select[name='state']"},
+      "postal_code": {"selector": "input[name='zip']"},
+      "website": {"selector": "input[name='website']"},
+      "description": {"selector": "textarea[name='description']"},
+      "category": {"selector": "select[name='category']"}
+    },
+    "steps": ["fill_form", "submit"],
+    "notes": "Local business directory"
+  },
+  "iglobal": {
+    "name": "iGlobal",
+    "url": "https://www.iglobal.co",
+    "submission_url": "https://www.iglobal.co/add-business",
+    "fields": {
+      "business_name": {"selector": "input[name='company_name']"},
+      "phone": {"selector": "input[name='phone']"},
+      "email": {"selector": "input[name='email']"},
+      "address": {"selector": "input[name='address']"},
+      "city": {"selector": "input[name='city']"},
+      "state": {"selector": "input[name='state']"},
+      "postal_code": {"selector": "input[name='zip']"},
+      "website": {"selector": "input[name='website']"},
+      "description": {"selector": "textarea[name='description']"},
+      "category": {"selector": "select[name='category']"}
+    },
+    "steps": ["fill_form", "submit"],
+    "notes": "International business directory"
+  },
+  "tupalo": {
+    "name": "Tupalo",
+    "url": "https://www.tupalo.com",
+    "submission_url": "https://www.tupalo.com/add-business",
+    "fields": {
+      "business_name": {"selector": "input[name='name']"},
+      "phone": {"selector": "input[name='phone']"},
+      "email": {"selector": "input[name='email']"},
+      "address": {"selector": "input[name='address']"},
+      "city": {"selector": "input[name='city']"},
+      "state": {"selector": "input[name='state']"},
+      "postal_code": {"selector": "input[name='zip']"},
+      "website": {"selector": "input[name='website']"},
+      "description": {"selector": "textarea[name='description']"},
+      "category": {"selector": "select[name='category']"}
+    },
+    "steps": ["fill_form", "submit"],
+    "notes": "Local business directory"
+  },
+  "2findlocal": {
+    "name": "2FindLocal",
+    "url": "https://www.2findlocal.com",
+    "submission_url": "https://www.2findlocal.com/add-business",
+    "fields": {
+      "business_name": {"selector": "input[name='business_name']"},
+      "phone": {"selector": "input[name='phone']"},
+      "email": {"selector": "input[name='email']"},
+      "address": {"selector": "input[name='address']"},
+      "city": {"selector": "input[name='city']"},
+      "state": {"selector": "select[name='state']"},
+      "postal_code": {"selector": "input[name='zip']"},
+      "website": {"selector": "input[name='website']"},
+      "description": {"selector": "textarea[name='description']"},
+      "category": {"selector": "select[name='category']"}
+    },
+    "steps": ["fill_form", "submit"],
+    "notes": "Local business directory"
+  },
+  "citysquares": {
+    "name": "CitySquares",
+    "url": "https://www.citysquares.com",
+    "submission_url": "https://www.citysquares.com/add-business",
+    "fields": {
+      "business_name": {"selector": "input[name='company']"},
+      "phone": {"selector": "input[name='phone']"},
+      "email": {"selector": "input[name='email']"},
+      "address": {"selector": "input[name='address']"},
+      "city": {"selector": "input[name='city']"},
+      "state": {"selector": "select[name='state']"},
+      "postal_code": {"selector": "input[name='zip']"},
+      "website": {"selector": "input[name='website']"},
+      "description": {"selector": "textarea[name='description']"},
+      "category": {"selector": "select[name='category']"}
+    },
+    "steps": ["fill_form", "submit"],
+    "notes": "City-focused business directory"
+  },
+  "cylex_australia": {
+    "name": "Cylex Australia",
+    "url": "https://www.cylex-australia.com.au",
+    "submission_url": "https://www.cylex-australia.com.au/add-business",
+    "fields": {
+      "business_name": {"selector": "input[name='company_name'], input#company_name"},
+      "phone": {"selector": "input[name='phone'], input#phone"},
+      "email": {"selector": "input[name='email'], input#email"},
+      "address": {"selector": "input[name='address'], input#address"},
+      "city": {"selector": "input[name='city'], input#city"},
+      "state": {"selector": "input[name='state'], input#state"},
+      "postal_code": {"selector": "input[name='zip'], input#zip"},
+      "website": {"selector": "input[name='website'], input#website"},
+      "description": {"selector": "textarea[name='description'], textarea#description"},
+      "category": {"selector": "select[name='category'], select#category"}
+    },
+    "steps": ["fill_form", "submit"],
+    "notes": "Australian business directory"
+  },
+  "yalwa": {
+    "name": "Yalwa",
+    "url": "https://www.yalwa.com.au",
+    "submission_url": "https://www.yalwa.com.au/add-business",
+    "fields": {
+      "business_name": {"selector": "input[name='company_name']"},
+      "phone": {"selector": "input[name='phone']"},
+      "email": {"selector": "input[name='email']"},
+      "address": {"selector": "input[name='address']"},
+      "city": {"selector": "input[name='city']"},
+      "state": {"selector": "input[name='state']"},
+      "postal_code": {"selector": "input[name='zip']"},
+      "website": {"selector": "input[name='website']"},
+      "description": {"selector": "textarea[name='description']"},
+      "category": {"selector": "select[name='category']"}
+    },
+    "steps": ["fill_form", "submit"],
+    "notes": "Local business directory"
+  },
+  "business_australia": {
+    "name": "Business Australia",
+    "url": "https://business.gov.au",
+    "submission_url": "https://business.gov.au",
+    "fields": {
+      "business_name": {"selector": "input[name='businessName']"},
+      "phone": {"selector": "input[name='phone']"},
+      "email": {"selector": "input[name='email']"},
+      "address": {"selector": "input[name='address']"},
+      "city": {"selector": "input[name='city']"},
+      "state": {"selector": "select[name='state']"},
+      "postal_code": {"selector": "input[name='postcode']"},
+      "website": {"selector": "input[name='website']"},
+      "description": {"selector": "textarea[name='description']"}
+    },
+    "steps": ["navigate", "fill_form", "submit"],
+    "notes": "Government portal, registration required"
+  },
+  "google_business": {
+    "name": "Google Business Profile",
+    "url": "https://business.google.com",
+    "submission_url": "https://business.google.com/create",
+    "fields": {
+      "business_name": {"selector": "input[data-challenge-id='business-name']"},
+      "phone": {"selector": "input[data-challenge-id='phone-number']"},
+      "address": {"selector": "input[data-challenge-id='street-address']"},
+      "city": {"selector": "input[data-challenge-id='city']"},
+      "state": {"selector": "select[data-challenge-id='state']"},
+      "postal_code": {"selector": "input[data-challenge-id='postal-code']"}
+    },
+    "steps": ["create_account", "fill_form", "verify_phone", "submit"],
+    "notes": "Requires Google account and phone/SMS verification"
+  },
+  "bing_places": {
+    "name": "Bing Places",
+    "url": "https://www.bingplaces.com",
+    "submission_url": "https://www.bingplaces.com/create",
+    "fields": {
+      "business_name": {"selector": "input[name='BusinessName']"},
+      "phone": {"selector": "input[name='Phone']"},
+      "address": {"selector": "input[name='AddressLine1']"},
+      "city": {"selector": "input[name='City']"},
+      "state": {"selector": "select[name='State']"},
+      "postal_code": {"selector": "input[name='PostalCode']"},
+      "category": {"selector": "select[name='Category']"}
+    },
+    "steps": ["create_account", "fill_form", "verify", "submit"],
+    "notes": "Requires Microsoft account"
+  },
+  "facebook_business": {
+    "name": "Facebook Business",
+    "url": "https://www.facebook.com/business",
+    "submission_url": "https://www.facebook.com/pages/create",
+    "fields": {
+      "business_name": {"selector": "input[name='page_name']"},
+      "category": {"selector": "input[name='category']"},
+      "description": {"selector": "textarea[name='description']"}
+    },
+    "steps": ["login", "create_page", "fill_form", "publish"],
+    "notes": "Requires Facebook account"
+  },
+  "yelp": {
+    "name": "Yelp",
+    "url": "https://yelp.com",
+    "submission_url": "https://biz.yelp.com/signup",
+    "fields": {
+      "business_name": {"selector": "#business-name, input[name='business_name']"},
+      "phone": {"selector": "#phone, input[name='phone']"},
+      "email": {"selector": "#email, input[name='email']"},
+      "address": {"selector": "#address, input[name='address']"},
+      "city": {"selector": "#city, input[name='city']"},
+      "state": {"selector": "#state, select[name='state']"},
+      "postal_code": {"selector": "#zip, input[name='zip']"},
+      "category": {"selector": "#category, select[name='category']"}
+    },
+    "steps": ["create_account", "fill_form", "submit"],
+    "notes": "Email verification required"
+  },
+  "foursquare": {
+    "name": "Foursquare",
+    "url": "https://foursquare.com",
+    "submission_url": "https://foursquare.com/add-business",
+    "fields": {
+      "business_name": {"selector": "input[name='name']"},
+      "phone": {"selector": "input[name='phone']"},
+      "address": {"selector": "input[name='address']"},
+      "city": {"selector": "input[name='city']"},
+      "postal_code": {"selector": "input[name='postalCode']"},
+      "category": {"selector": "select[name='category']"}
+    },
+    "steps": ["login", "add_venue", "fill_form", "submit"],
+    "notes": "Venue-based, requires login"
+  },
+  "apple_maps": {
+    "name": "Apple Maps Connect",
+    "url": "https://mapsconnect.apple.com",
+    "submission_url": "https://mapsconnect.apple.com",
+    "fields": {
+      "business_name": {"selector": "input[name='companyName']"},
+      "phone": {"selector": "input[name='phoneNumber']"},
+      "address": {"selector": "input[name='address']"},
+      "city": {"selector": "input[name='city']"},
+      "state": {"selector": "select[name='state']"},
+      "postal_code": {"selector": "input[name='zip']"},
+      "website": {"selector": "input[name='website']"}
+    },
+    "steps": ["login_apple_id", "search_or_add", "fill_form", "verify", "submit"],
+    "notes": "Requires Apple ID"
+  },
+  "here_maps": {
+    "name": "HERE Maps",
+    "url": "https://www.here.com",
+    "submission_url": "https://mapcreator.here.com",
+    "fields": {
+      "business_name": {"selector": "input[name='name']"},
+      "phone": {"selector": "input[name='phone']"},
+      "address": {"selector": "input[name='address']"},
+      "city": {"selector": "input[name='city']"},
+      "postal_code": {"selector": "input[name='postalCode']"},
+      "website": {"selector": "input[name='website']"},
+      "category": {"selector": "select[name='category']"}
+    },
+    "steps": ["login", "add_place", "fill_form", "submit"],
+    "notes": "Requires HERE account"
+  },
+  "tumblr": {
+    "name": "Tumblr",
+    "url": "https://www.tumblr.com",
+    "submission_url": "https://www.tumblr.com/register",
+    "fields": {
+      "business_name": {"selector": "input[name='email']"},
+      "description": {"selector": "textarea[name='password']"}
+    },
+    "steps": ["create_account", "setup_blog", "fill_profile"],
+    "notes": "Social platform, business profile setup"
+  },
+  "wordpress": {
+    "name": "WordPress.com",
+    "url": "https://wordpress.com",
+    "submission_url": "https://wordpress.com/start",
+    "fields": {
+      "business_name": {"selector": "input[name='blog_address']"},
+      "description": {"selector": "textarea[name='blog_tagline']"}
+    },
+    "steps": ["create_account", "setup_site", "fill_profile"],
+    "notes": "Blogging platform, site creation"
+  },
+  "blogger": {
+    "name": "Blogger",
+    "url": "https://www.blogger.com",
+    "submission_url": "https://www.blogger.com/signup",
+    "fields": {
+      "business_name": {"selector": "input[name='BlogTitle']"},
+      "description": {"selector": "textarea[name='Description']"}
+    },
+    "steps": ["create_account", "setup_blog", "fill_profile"],
+    "notes": "Google blogging platform"
+  },
+  "findbestseo": {
+    "name": "FindBestSEO",
+    "url": "https://www.findbestseo.com",
+    "submission_url": "https://www.findbestseo.com/signup",
+    "fields": {
+      "business_name": {"selector": "input[name='company_name']"},
+      "phone": {"selector": "input[name='phone']"},
+      "email": {"selector": "input[name='email']"},
+      "website": {"selector": "input[name='website']"},
+      "description": {"selector": "textarea[name='description']"},
+      "category": {"selector": "select[name='category']"}
+    },
+    "steps": ["create_account", "fill_form", "submit"],
+    "notes": "SEO industry directory"
+  },
+  "marketing_agency_directory": {
+    "name": "Marketing Agency Directory",
+    "url": "https://www.marketingagencydirectory.com",
+    "submission_url": "https://www.marketingagencydirectory.com/submit",
+    "fields": {
+      "business_name": {"selector": "input[name='company']"},
+      "phone": {"selector": "input[name='phone']"},
+      "email": {"selector": "input[name='email']"},
+      "website": {"selector": "input[name='website']"},
+      "description": {"selector": "textarea[name='description']"}
+    },
+    "steps": ["fill_form", "submit"],
+    "notes": "Marketing agency listing"
+  },
+  "zoomlocal": {
+    "name": "ZoomLocal",
+    "url": "https://www.zoomlocal.com.au",
+    "submission_url": "https://www.zoomlocal.com.au/add-business",
+    "fields": {
+      "business_name": {"selector": "input[name='business_name']"},
+      "phone": {"selector": "input[name='phone']"},
+      "email": {"selector": "input[name='email']"},
+      "address": {"selector": "input[name='address']"},
+      "suburb": {"selector": "input[name='suburb']"},
+      "state": {"selector": "select[name='state']"},
+      "postcode": {"selector": "input[name='postcode']"},
+      "website": {"selector": "input[name='website']"},
+      "description": {"selector": "textarea[name='description']"},
+      "category": {"selector": "select[name='category']"}
+    },
+    "steps": ["fill_form", "submit"],
+    "notes": "Australian local directory"
+  },
+  "aussieweb_directory": {
+    "name": "AussieWeb Directory",
+    "url": "https://www.aussieweb.net.au",
+    "submission_url": "https://www.aussieweb.net.au/add-listing",
+    "fields": {
+      "business_name": {"selector": "input[name='listing_title']"},
+      "phone": {"selector": "input[name='phone']"},
+      "email": {"selector": "input[name='email']"},
+      "address": {"selector": "input[name='address']"},
+      "city": {"selector": "input[name='city']"},
+      "state": {"selector": "select[name='state']"},
+      "postcode": {"selector": "input[name='postcode']"},
+      "website": {"selector": "input[name='website']"},
+      "description": {"selector": "textarea[name='description']"},
+      "category": {"selector": "select[name='category']"}
+    },
+    "steps": ["fill_form", "submit"],
+    "notes": "Australian web directory"
+  },
+  "business_directory_australia": {
+    "name": "Business Directory Australia",
+    "url": "https://www.businessdirectoryaustralia.com.au",
+    "submission_url": "https://www.businessdirectoryaustralia.com.au/add-listing",
+    "fields": {
+      "business_name": {"selector": "input[name='title']"},
+      "phone": {"selector": "input[name='phone']"},
+      "email": {"selector": "input[name='email']"},
+      "address": {"selector": "input[name='address']"},
+      "city": {"selector": "input[name='city']"},
+      "state": {"selector": "select[name='state']"},
+      "postcode": {"selector": "input[name='postcode']"},
+      "website": {"selector": "input[name='url']"},
+      "description": {"selector": "textarea[name='description']"},
+      "category": {"selector": "select[name='category']"}
+    },
+    "steps": ["fill_form", "submit"],
+    "notes": "Australian business directory"
+  },
+  "local_business_guide": {
+    "name": "Local Business Guide",
+    "url": "https://www.localbusinessguide.com.au",
+    "submission_url": "https://www.localbusinessguide.com.au/add-business",
+    "fields": {
+      "business_name": {"selector": "input[name='business_name']"},
+      "phone": {"selector": "input[name='phone']"},
+      "email": {"selector": "input[name='email']"},
+      "address": {"selector": "input[name='address']"},
+      "city": {"selector": "input[name='city']"},
+      "state": {"selector": "select[name='state']"},
+      "postcode": {"selector": "input[name='postcode']"},
+      "website": {"selector": "input[name='website']"},
+      "description": {"selector": "textarea[name='description']"},
+      "category": {"selector": "select[name='category']"}
+    },
+    "steps": ["fill_form", "submit"],
+    "notes": "Local Australian business guide"
+  },
+  "dlook": {
+    "name": "DLook",
+    "url": "https://www.dlook.com.au",
+    "submission_url": "https://www.dlook.com.au/add-business",
+    "fields": {
+      "business_name": {"selector": "input[name='company_name']"},
+      "phone": {"selector": "input[name='phone']"},
+      "email": {"selector": "input[name='email']"},
+      "address": {"selector": "input[name='address']"},
+      "suburb": {"selector": "input[name='suburb']"},
+      "state": {"selector": "select[name='state']"},
+      "postcode": {"selector": "input[name='postcode']"},
+      "website": {"selector": "input[name='website']"},
+      "description": {"selector": "textarea[name='description']"},
+      "category": {"selector": "select[name='category']"}
+    },
+    "steps": ["fill_form", "submit"],
+    "notes": "Australian business directory"
+  },
+  "aussieweb": {
+    "name": "AussieWeb",
+    "url": "https://www.aussieweb.com.au",
+    "submission_url": "https://www.aussieweb.com.au/add-listing",
+    "fields": {
+      "business_name": {"selector": "input[name='title']"},
+      "phone": {"selector": "input[name='phone']"},
+      "email": {"selector": "input[name='email']"},
+      "address": {"selector": "input[name='address']"},
+      "suburb": {"selector": "input[name='suburb']"},
+      "state": {"selector": "select[name='state']"},
+      "postcode": {"selector": "input[name='postcode']"},
+      "website": {"selector": "input[name='url']"},
+      "description": {"selector": "textarea[name='description']"},
+      "category": {"selector": "select[name='category']"}
+    },
+    "steps": ["fill_form", "submit"],
+    "notes": "Australian web directory"
+  },
+  "my_local_business": {
+    "name": "My Local Business",
+    "url": "https://www.mylocalbusiness.com.au",
+    "submission_url": "https://www.mylocalbusiness.com.au/add-listing",
+    "fields": {
+      "business_name": {"selector": "input[name='business_name']"},
+      "phone": {"selector": "input[name='phone']"},
+      "email": {"selector": "input[name='email']"},
+      "address": {"selector": "input[name='address']"},
+      "city": {"selector": "input[name='city']"},
+      "state": {"selector": "select[name='state']"},
+      "postcode": {"selector": "input[name='postcode']"},
+      "website": {"selector": "input[name='website']"},
+      "description": {"selector": "textarea[name='description']"},
+      "category": {"selector": "select[name='category']"}
+    },
+    "steps": ["fill_form", "submit"],
+    "notes": "Local Australian business directory"
+  },
+  "abn_lookup": {
+    "name": "ABN Lookup",
+    "url": "https://abr.business.gov.au",
+    "submission_url": "https://abr.business.gov.au",
+    "fields": {
+      "business_name": {"selector": "input[name='SearchText']"}
+    },
+    "steps": ["search_abn"],
+    "notes": "Read-only ABN lookup, no submission"
+  },
+  "vocal_media": {
+    "name": "Vocal Media",
+    "url": "https://vocal.media",
+    "submission_url": "https://vocal.media/signup",
+    "fields": {
+      "business_name": {"selector": "input[name='name']"},
+      "email": {"selector": "input[name='email']"},
+      "description": {"selector": "textarea[name='bio']"}
+    },
+    "steps": ["create_account", "fill_profile", "publish"],
+    "notes": "Content platform, profile creation"
+  },
+  "hashnode": {
+    "name": "Hashnode",
+    "url": "https://hashnode.com",
+    "submission_url": "https://hashnode.com/signup",
+    "fields": {
+      "business_name": {"selector": "input[name='name']"},
+      "email": {"selector": "input[name='email']"}
+    },
+    "steps": ["create_account", "setup_blog"],
+    "notes": "Developer blogging platform"
+  },
+  "dev_to": {
+    "name": "DEV Community",
+    "url": "https://dev.to",
+    "submission_url": "https://dev.to/enter",
+    "fields": {
+      "business_name": {"selector": "input[name='user[name]']"},
+      "email": {"selector": "input[name='user[email]']"}
+    },
+    "steps": ["create_account", "setup_profile"],
+    "notes": "Developer community platform"
+  },
+  "ghost": {
+    "name": "Ghost",
+    "url": "https://ghost.org",
+    "submission_url": "https://ghost.org/signup",
+    "fields": {
+      "business_name": {"selector": "input[name='blog-title']"},
+      "email": {"selector": "input[name='email']"}
+    },
+    "steps": ["create_account", "setup_site"],
+    "notes": "Publishing platform"
+  },
+  "weebly": {
+    "name": "Weebly",
+    "url": "https://www.weebly.com",
+    "submission_url": "https://www.weebly.com/signup",
+    "fields": {
+      "business_name": {"selector": "input[name='site_name']"},
+      "email": {"selector": "input[name='email']"}
+    },
+    "steps": ["create_account", "setup_site"],
+    "notes": "Website builder"
+  },
+  "substack": {
+    "name": "Substack",
+    "url": "https://substack.com",
+    "submission_url": "https://substack.com/signup",
+    "fields": {
+      "business_name": {"selector": "input[name='publication_name']"},
+      "email": {"selector": "input[name='email']"}
+    },
+    "steps": ["create_account", "setup_publication"],
+    "notes": "Newsletter platform"
+  },
+  "nsw_government": {
+    "name": "NSW Government Business",
+    "url": "https://www.business.nsw.gov.au",
+    "submission_url": "https://www.business.nsw.gov.au",
+    "fields": {},
+    "steps": ["navigate"],
+    "notes": "Government portal, informational only"
+  },
+  "victoria_business": {
+    "name": "Victoria Business",
+    "url": "https://business.vic.gov.au",
+    "submission_url": "https://business.vic.gov.au",
+    "fields": {},
+    "steps": ["navigate"],
+    "notes": "Government portal, informational only"
+  },
+  "queensland_business": {
+    "name": "Queensland Business",
+    "url": "https://www.business.qld.gov.au",
+    "submission_url": "https://www.business.qld.gov.au",
+    "fields": {},
+    "steps": ["navigate"],
+    "notes": "Government portal, informational only"
+  },
+  "south_australian_business": {
+    "name": "South Australian Business",
+    "url": "https://www.business.sa.gov.au",
+    "submission_url": "https://www.business.sa.gov.au",
+    "fields": {},
+    "steps": ["navigate"],
+    "notes": "Government portal, informational only"
+  },
+  "western_australian_business": {
+    "name": "Western Australian Business",
+    "url": "https://www.smallbusiness.wa.gov.au",
+    "submission_url": "https://www.smallbusiness.wa.gov.au",
+    "fields": {},
+    "steps": ["navigate"],
+    "notes": "Government portal, informational only"
+  },
+  "tasmanian_government": {
+    "name": "Tasmanian Government Business",
+    "url": "https://www.business.tas.gov.au",
+    "submission_url": "https://www.business.tas.gov.au",
+    "fields": {},
+    "steps": ["navigate"],
+    "notes": "Government portal, informational only"
+  },
+  "northern_territory": {
+    "name": "Northern Territory Business",
+    "url": "https://businessnt.nt.gov.au",
+    "submission_url": "https://businessnt.nt.gov.au",
+    "fields": {},
+    "steps": ["navigate"],
+    "notes": "Government portal, informational only"
+  },
+  "act_government": {
+    "name": "ACT Government Business",
+    "url": "https://www.accesscanberra.act.gov.au",
+    "submission_url": "https://www.accesscanberra.act.gov.au",
+    "fields": {},
+    "steps": ["navigate"],
+    "notes": "Government portal, informational only"
+  }
+}

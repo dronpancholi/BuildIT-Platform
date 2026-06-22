@@ -1,0 +1,360 @@
+{
+  "truelocal.com.au": {
+    "name": "True Local",
+    "verification_sender": ["noreply@truelocal.com.au", "info@truelocal.com.au", "truelocal.com.au"],
+    "subject_patterns": ["verify", "confirm", "activation", "email verification"],
+    "link_pattern": "truelocal\\.com\\.au/(verify|confirm|activate)",
+    "wait_time_seconds": 60,
+    "notes": "Australian directory, standard verification"
+  },
+  "hotfrog.com.au": {
+    "name": "Hotfrog Australia",
+    "verification_sender": ["noreply@hotfrog.com.au", "hotfrog.com.au"],
+    "subject_patterns": ["verify", "confirm", "activate"],
+    "link_pattern": "hotfrog\\.com\\.au.*(verify|confirm|activate)",
+    "wait_time_seconds": 60,
+    "notes": "Australian directory"
+  },
+  "yellowpages.com.au": {
+    "name": "Yellow Pages Australia",
+    "verification_sender": ["noreply@yellowpages.com.au", "yellowpages.com.au"],
+    "subject_patterns": ["verify", "confirm", "activation"],
+    "link_pattern": "yellowpages\\.com\\.au.*(verify|confirm|activate)",
+    "wait_time_seconds": 90,
+    "notes": "May require phone verification in addition to email"
+  },
+  "startlocal.com.au": {
+    "name": "StartLocal",
+    "verification_sender": ["noreply@startlocal.com.au", "startlocal.com.au"],
+    "subject_patterns": ["verify", "confirm"],
+    "link_pattern": "startlocal\\.com\\.au.*(verify|confirm)",
+    "wait_time_seconds": 60,
+    "notes": "Australian local directory"
+  },
+  "brownbook.net": {
+    "name": "Brownbook",
+    "verification_sender": ["noreply@brownbook.net", "brownbook.net"],
+    "subject_patterns": ["verify", "confirm", "activate"],
+    "link_pattern": "brownbook\\.net.*(verify|confirm|activate)",
+    "wait_time_seconds": 45,
+    "notes": "Global directory, quick verification"
+  },
+  "cybo.com": {
+    "name": "Cybo",
+    "verification_sender": ["noreply@cybo.com", "cybo.com"],
+    "subject_patterns": ["verify", "confirm"],
+    "link_pattern": "cybo\\.com.*(verify|confirm)",
+    "wait_time_seconds": 60,
+    "notes": "Global business directory"
+  },
+  "showmelocal.com": {
+    "name": "ShowMeLocal",
+    "verification_sender": ["noreply@showmelocal.com", "showmelocal.com"],
+    "subject_patterns": ["verify", "confirm"],
+    "link_pattern": "showmelocal\\.com.*(verify|confirm)",
+    "wait_time_seconds": 60,
+    "notes": "Local business directory"
+  },
+  "iglobal.co": {
+    "name": "iGlobal",
+    "verification_sender": ["noreply@iglobal.co", "iglobal.co"],
+    "subject_patterns": ["verify", "confirm"],
+    "link_pattern": "iglobal\\.co.*(verify|confirm)",
+    "wait_time_seconds": 60,
+    "notes": "International directory"
+  },
+  "tupalo.com": {
+    "name": "Tupalo",
+    "verification_sender": ["noreply@tupalo.com", "tupalo.com"],
+    "subject_patterns": ["verify", "confirm"],
+    "link_pattern": "tupalo\\.com.*(verify|confirm)",
+    "wait_time_seconds": 60,
+    "notes": "Local business directory"
+  },
+  "2findlocal.com": {
+    "name": "2FindLocal",
+    "verification_sender": ["noreply@2findlocal.com", "2findlocal.com"],
+    "subject_patterns": ["verify", "confirm"],
+    "link_pattern": "2findlocal\\.com.*(verify|confirm)",
+    "wait_time_seconds": 60,
+    "notes": "Local business directory"
+  },
+  "cylex-australia.com.au": {
+    "name": "Cylex Australia",
+    "verification_sender": ["noreply@cylex-australia.com.au", "cylex-australia.com.au"],
+    "subject_patterns": ["verify", "confirm"],
+    "link_pattern": "cylex-australia\\.com\\.au.*(verify|confirm)",
+    "wait_time_seconds": 60,
+    "notes": "Australian business directory"
+  },
+  "yalwa.com.au": {
+    "name": "Yalwa",
+    "verification_sender": ["noreply@yalwa.com.au", "yalwa.com.au"],
+    "subject_patterns": ["verify", "confirm"],
+    "link_pattern": "yalwa\\.com\\.au.*(verify|confirm)",
+    "wait_time_seconds": 60,
+    "notes": "Local business directory"
+  },
+  "business.gov.au": {
+    "name": "Business Australia",
+    "verification_sender": ["noreply@business.gov.au", "business.gov.au"],
+    "subject_patterns": ["verify", "confirm", "registration"],
+    "link_pattern": "business\\.gov\\.au.*(verify|confirm|register)",
+    "wait_time_seconds": 120,
+    "notes": "Government portal, may have longer delays"
+  },
+  "google.com": {
+    "name": "Google Business Profile",
+    "verification_sender": ["noreply@google.com", "googlebusiness-noreply@google.com", "google.com"],
+    "subject_patterns": ["verify", "confirm your business", "google business"],
+    "link_pattern": "business\\.google\\.com/.*verify",
+    "wait_time_seconds": 120,
+    "notes": "Requires Google account, phone/SMS verification often needed"
+  },
+  "bing.com": {
+    "name": "Bing Places",
+    "verification_sender": ["bingplaces@microsoft.com", "microsoft.com"],
+    "subject_patterns": ["verify", "confirm", "bing"],
+    "link_pattern": "bing\\.com.*(verify|confirm)",
+    "wait_time_seconds": 90,
+    "notes": "Requires Microsoft account"
+  },
+  "yelp.com": {
+    "name": "Yelp",
+    "verification_sender": ["@yelp.com"],
+    "subject_patterns": ["verify", "confirm", "email verification"],
+    "link_pattern": "yelp\\.com.*(verify_email|confirm)",
+    "wait_time_seconds": 90,
+    "notes": "Email verification required"
+  },
+  "facebook.com": {
+    "name": "Facebook Business",
+    "verification_sender": ["facebook@fb.com", "notification@facebook.com", "facebook.com"],
+    "subject_patterns": ["confirm", "verify", "email verification"],
+    "link_pattern": "facebook\\.com.*(confirmemail|verify)",
+    "wait_time_seconds": 60,
+    "notes": "Requires Facebook account"
+  },
+  "foursquare.com": {
+    "name": "Foursquare",
+    "verification_sender": ["noreply@foursquare.com", "foursquare.com"],
+    "subject_patterns": ["verify", "confirm"],
+    "link_pattern": "foursquare\\.com.*(verify|confirm)",
+    "wait_time_seconds": 60,
+    "notes": "Venue-based, requires login"
+  },
+  "mapsconnect.apple.com": {
+    "name": "Apple Maps Connect",
+    "verification_sender": ["noreply@apple.com", "apple.com"],
+    "subject_patterns": ["verify", "confirm", "apple maps"],
+    "link_pattern": "apple\\.com.*(verify|confirm)",
+    "wait_time_seconds": 120,
+    "notes": "Requires Apple ID"
+  },
+  "here.com": {
+    "name": "HERE Maps",
+    "verification_sender": ["noreply@here.com", "here.com"],
+    "subject_patterns": ["verify", "confirm"],
+    "link_pattern": "here\\.com.*(verify|confirm)",
+    "wait_time_seconds": 90,
+    "notes": "Requires HERE account"
+  },
+  "wordpress.com": {
+    "name": "WordPress.com",
+    "verification_sender": ["noreply@wordpress.com", "wordpress.com"],
+    "subject_patterns": ["verify", "confirm", "activate"],
+    "link_pattern": "wordpress\\.com.*(verify|confirm|activate)",
+    "wait_time_seconds": 60,
+    "notes": "Blogging platform"
+  },
+  "blogger.com": {
+    "name": "Blogger",
+    "verification_sender": ["noreply@blogger.com", "blogger.com", "google.com"],
+    "subject_patterns": ["verify", "confirm", "activate"],
+    "link_pattern": "blogger\\.com.*(verify|confirm|activate)",
+    "wait_time_seconds": 60,
+    "notes": "Google blogging platform"
+  },
+  "tumblr.com": {
+    "name": "Tumblr",
+    "verification_sender": ["noreply@tumblr.com", "tumblr.com"],
+    "subject_patterns": ["verify", "confirm", "email"],
+    "link_pattern": "tumblr\\.com.*(verify|confirm)",
+    "wait_time_seconds": 60,
+    "notes": "Social platform"
+  },
+  "hashnode.com": {
+    "name": "Hashnode",
+    "verification_sender": ["noreply@hashnode.com", "hashnode.com"],
+    "subject_patterns": ["verify", "confirm", "email"],
+    "link_pattern": "hashnode\\.com.*(verify|confirm)",
+    "wait_time_seconds": 45,
+    "notes": "Developer platform"
+  },
+  "dev.to": {
+    "name": "DEV Community",
+    "verification_sender": ["noreply@dev.to", "dev.to"],
+    "subject_patterns": ["verify", "confirm", "welcome"],
+    "link_pattern": "dev\\.to.*(verify|confirm)",
+    "wait_time_seconds": 45,
+    "notes": "Developer community"
+  },
+  "ghost.org": {
+    "name": "Ghost",
+    "verification_sender": ["noreply@ghost.org", "ghost.org"],
+    "subject_patterns": ["verify", "confirm"],
+    "link_pattern": "ghost\\.org.*(verify|confirm)",
+    "wait_time_seconds": 60,
+    "notes": "Publishing platform"
+  },
+  "substack.com": {
+    "name": "Substack",
+    "verification_sender": ["noreply@substack.com", "substack.com"],
+    "subject_patterns": ["verify", "confirm"],
+    "link_pattern": "substack\\.com.*(verify|confirm)",
+    "wait_time_seconds": 60,
+    "notes": "Newsletter platform"
+  },
+  "vocal.media": {
+    "name": "Vocal Media",
+    "verification_sender": ["noreply@vocal.media", "vocal.media"],
+    "subject_patterns": ["verify", "confirm"],
+    "link_pattern": "vocal\\.media.*(verify|confirm)",
+    "wait_time_seconds": 60,
+    "notes": "Content platform"
+  },
+  "weebly.com": {
+    "name": "Weebly",
+    "verification_sender": ["noreply@weebly.com", "weebly.com"],
+    "subject_patterns": ["verify", "confirm", "activate"],
+    "link_pattern": "weebly\\.com.*(verify|confirm|activate)",
+    "wait_time_seconds": 60,
+    "notes": "Website builder"
+  },
+  "citysquares.com": {
+    "name": "CitySquares",
+    "verification_sender": ["noreply@citysquares.com", "citysquares.com"],
+    "subject_patterns": ["verify", "confirm"],
+    "link_pattern": "citysquares\\.com.*(verify|confirm)",
+    "wait_time_seconds": 60,
+    "notes": "City-focused directory"
+  },
+  "gelbeseiten.de": {
+    "name": "Gelbe Seiten",
+    "language": "de",
+    "verification_sender": ["noreply@gelbeseiten.de", "info@gelbeseiten.de"],
+    "subject_patterns": {
+      "en": ["verify", "confirm", "activation"],
+      "de": ["bestätigen", "aktivieren", "verifizieren", "Bestätigung", "E-Mail"]
+    },
+    "link_pattern": "gelbeseiten\\.de/(verify|confirm|aktivieren|bestaetigen)",
+    "wait_time_seconds": 60,
+    "notes": "German business directory"
+  },
+  "pagesjaunes.fr": {
+    "name": "Pages Jaunes",
+    "language": "fr",
+    "verification_sender": ["noreply@pagesjaunes.fr", "contact@pagesjaunes.fr"],
+    "subject_patterns": {
+      "en": ["verify", "confirm"],
+      "fr": ["vérifier", "confirmer", "valider", "activation", "confirmation"]
+    },
+    "link_pattern": "pagesjaunes\\.fr/(verify|confirm|validation|activation)",
+    "wait_time_seconds": 90,
+    "notes": "French business directory"
+  },
+  "paginasamarillas.es": {
+    "name": "Páginas Amarillas",
+    "language": "es",
+    "verification_sender": ["noreply@paginasamarillas.es", "info@paginasamarillas.es"],
+    "subject_patterns": {
+      "en": ["verify", "confirm"],
+      "es": ["verificar", "confirmar", "activar", "activación", "confirmación"]
+    },
+    "link_pattern": "paginasamarillas\\.es/(verify|confirm|activar|verificar)",
+    "wait_time_seconds": 90,
+    "notes": "Spanish business directory"
+  },
+  "dastelefonbuch.de": {
+    "name": "Das Telefonbuch",
+    "language": "de",
+    "verification_sender": ["noreply@dastelefonbuch.de", "service@dastelefonbuch.de"],
+    "subject_patterns": {
+      "en": ["verify", "confirm"],
+      "de": ["bestätigen", "verifizieren", "Bestätigung", "E-Mail-Adresse"]
+    },
+    "link_pattern": "dastelefonbuch\\.de.*(verify|confirm|bestaetigen)",
+    "wait_time_seconds": 60,
+    "notes": "German phone directory"
+  },
+  "hitta.se": {
+    "name": "Hitta.se",
+    "language": "sv",
+    "verification_sender": ["noreply@hitta.se", "info@hitta.se"],
+    "subject_patterns": {
+      "en": ["verify", "confirm"],
+      "sv": ["verifiera", "bekräfta", "aktivera", "bekräftelse"]
+    },
+    "link_pattern": "hitta\\.se.*(verify|confirm|verifiera|bekrafta)",
+    "wait_time_seconds": 60,
+    "notes": "Swedish business directory"
+  },
+  "goudengids.nl": {
+    "name": "Gouden Gids",
+    "language": "nl",
+    "verification_sender": ["noreply@goudengids.nl", "info@goudengids.nl"],
+    "subject_patterns": {
+      "en": ["verify", "confirm"],
+      "nl": ["verifiëren", "bevestigen", "activeren", "bevestiging"]
+    },
+    "link_pattern": "goudengids\\.nl.*(verify|confirm|verifiëren|bevestigen)",
+    "wait_time_seconds": 60,
+    "notes": "Dutch business directory"
+  },
+  "paginegialle.it": {
+    "name": "Pagine Gialle",
+    "language": "it",
+    "verification_sender": ["noreply@paginegialle.it", "info@paginegialle.it"],
+    "subject_patterns": {
+      "en": ["verify", "confirm"],
+      "it": ["verificare", "confermare", "attivare", "conferma"]
+    },
+    "link_pattern": "paginegialle\\.it.*(verify|confirm|verificare|confermare)",
+    "wait_time_seconds": 90,
+    "notes": "Italian business directory"
+  },
+  "tabelog.com": {
+    "name": "Tabelog",
+    "language": "ja",
+    "verification_sender": ["noreply@tabelog.com", "info@tabelog.com"],
+    "subject_patterns": {
+      "en": ["verify", "confirm"],
+      "ja": ["確認", "認証", "登録", "メールアドレス"]
+    },
+    "link_pattern": "tabelog\\.com.*(verify|confirm|confirmRegistration)",
+    "wait_time_seconds": 120,
+    "notes": "Japanese restaurant directory"
+  },
+  "yellowpages.ca": {
+    "name": "Yellow Pages Canada",
+    "language": "en",
+    "verification_sender": ["noreply@yellowpages.ca", "yellowpages.ca"],
+    "subject_patterns": {
+      "en": ["verify", "confirm", "activation", "email verification"]
+    },
+    "link_pattern": "yellowpages\\.ca.*(verify|confirm|activate)",
+    "wait_time_seconds": 90,
+    "notes": "Canadian directory"
+  },
+  "yelp.ca": {
+    "name": "Yelp Canada",
+    "language": "en",
+    "verification_sender": ["noreply@yelp.ca", "yelp.ca"],
+    "subject_patterns": {
+      "en": ["verify", "confirm", "email"]
+    },
+    "link_pattern": "yelp\\.ca.*(verify|confirm)",
+    "wait_time_seconds": 60,
+    "notes": "Canadian Yelp"
+  }
+}
