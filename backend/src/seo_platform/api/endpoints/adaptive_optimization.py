@@ -1,8 +1,9 @@
 from __future__ import annotations
 
+from seo_platform.core.auth import get_validated_tenant_id
 from uuid import UUID
 
-from fastapi import APIRouter, Query, Body
+from fastapi import APIRouter, Depends, Query, Body
 from pydantic import BaseModel
 
 from seo_platform.services.adaptive_optimization import adaptive_optimization
@@ -66,7 +67,7 @@ async def suggest_event_propagation_tuning() -> dict:
 
 @router.get("/communication-timing")
 async def suggest_communication_timing(
-    tenant_id: UUID = Query(...),
+    tenant_id: UUID = Depends(get_validated_tenant_id),
     campaign_id: UUID = Query(...),
 ) -> dict:
     suggestion = await adaptive_optimization.suggest_communication_timing(

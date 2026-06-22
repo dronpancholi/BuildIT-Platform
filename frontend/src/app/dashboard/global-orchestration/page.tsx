@@ -6,6 +6,7 @@ import {
 } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { fetchApi } from "@/lib/api";
+import { safeArr, safeStr, safeNum, safeUpper, safeLower, safeFixed, safeLocale, safePct, safeDate, safeDateTime, safeTime, safeReplace, safeSplit, safeSlice, safeStartsWith, safeFind, safeIncludes, safeSort, safeObj, safeKeys, safeValues, safeEntries, safeInitials } from "@/lib/safe";
 
 interface GlobalTopologyRegion {
   region: string;
@@ -85,7 +86,7 @@ export default function GlobalOrchestrationPage() {
         )}
       </div>
 
-      {loadingTopology && regionList.length === 0 ? (
+      {loadingTopology && safeArr(regionList).length === 0 ? (
         <div className="flex items-center justify-center py-20">
           <Loader2 className="w-8 h-8 text-platform-500 animate-spin" />
         </div>
@@ -98,11 +99,11 @@ export default function GlobalOrchestrationPage() {
                 <GitBranch className="w-5 h-5 text-platform-500" />
                 <h3 className="text-lg font-medium text-slate-200 font-mono">GLOBAL_WORKFLOW_TOPOLOGY</h3>
               </div>
-              {regionList.length === 0 ? (
+              {safeArr<GlobalTopologyRegion>(regionList).length === 0 ? (
                 <div className="text-sm text-slate-500 font-mono py-8 text-center">No topology data</div>
               ) : (
                 <div className="space-y-3">
-                  {regionList.map((r, i) => (
+                  {safeArr<GlobalTopologyRegion>(regionList).map((r, i) => (
                     <motion.div
                       key={r.region || i}
                       initial={{ opacity: 0, y: 5 }}
@@ -126,24 +127,24 @@ export default function GlobalOrchestrationPage() {
                       </div>
                       <div className="flex items-center justify-between text-[10px] font-mono">
                         <span className="text-slate-500">{r.workflow_count} workflows</span>
-                        {r.dependencies.length > 0 && (
-                          <span className="text-slate-600">{r.dependencies.length} dependencies</span>
+                        {safeArr<string>(r.dependencies).length > 0 && (
+                          <span className="text-slate-600">{safeArr<string>(r.dependencies).length} dependencies</span>
                         )}
                       </div>
-                      {r.dependencies.length > 0 && (
+                      {safeArr<string>(r.dependencies).length > 0 && (
                         <div className="flex flex-wrap gap-1 mt-2">
-                          {r.dependencies.map((dep, j) => (
+                          {safeArr<string>(r.dependencies).map((dep, j) => (
                             <span key={j} className="px-1.5 py-0.5 rounded text-[9px] font-mono bg-slate-500/10 text-slate-500">{dep}</span>
                           ))}
                         </div>
                       )}
                     </motion.div>
                   ))}
-                  {interdependencies.length > 0 && (
+                  {safeArr<{ source: string; target: string; type: string }>(interdependencies).length > 0 && (
                     <div className="pt-3 border-t border-surface-border">
                       <p className="text-[10px] font-mono text-slate-500 uppercase mb-2">Interdependencies</p>
                       <div className="space-y-1">
-                        {interdependencies.map((dep, i) => (
+                        {safeArr<{ source: string; target: string; type: string }>(interdependencies).map((dep, i) => (
                           <div key={i} className="text-[10px] font-mono text-slate-400">
                             {dep.source} → {dep.target} <span className="text-slate-600">({dep.type})</span>
                           </div>
@@ -184,14 +185,14 @@ export default function GlobalOrchestrationPage() {
                   <div className="flex items-center justify-between p-3 rounded-md bg-surface-darker/50 border border-surface-border/50">
                     <span className="text-xs font-mono text-slate-400">Consistency</span>
                     <span className={`text-xs font-mono font-bold ${federation.consistency_check === "consistent" ? "text-emerald-400" : "text-amber-400"}`}>
-                      {federation.consistency_check.toUpperCase()}
+                      {safeUpper(federation.consistency_check)}
                     </span>
                   </div>
-                  {federation.regions_involved.length > 0 && (
+                  {safeArr<string>(federation.regions_involved).length > 0 && (
                     <div>
                       <p className="text-[10px] font-mono text-slate-500 uppercase mb-2">Regions Involved</p>
                       <div className="flex flex-wrap gap-1">
-                        {federation.regions_involved.map((rg, i) => (
+                        {safeArr<string>(federation.regions_involved).map((rg, i) => (
                           <span key={i} className="px-2 py-0.5 rounded text-[10px] font-mono bg-platform-500/10 text-platform-400 border border-platform-500/20">{rg}</span>
                         ))}
                       </div>
@@ -218,10 +219,10 @@ export default function GlobalOrchestrationPage() {
                   <div className="flex items-center justify-between p-3 rounded-md bg-surface-darker/50 border border-surface-border/50">
                     <span className="text-xs font-mono text-slate-400">Sync Status</span>
                     <span className={`text-xs font-mono font-bold ${crossCluster.sync_status === "synced" ? "text-emerald-400" : crossCluster.sync_status === "syncing" ? "text-amber-400" : "text-red-400"}`}>
-                      {crossCluster.sync_status.toUpperCase()}
+                      {safeUpper(crossCluster.sync_status)}
                     </span>
                   </div>
-                  {crossCluster.clusters.map((c, i) => (
+                  {safeArr<{ cluster: string; status: string; latency_ms: number }>(crossCluster.clusters).map((c, i) => (
                     <motion.div
                       key={c.cluster || i}
                       initial={{ opacity: 0, y: 5 }}
@@ -232,7 +233,7 @@ export default function GlobalOrchestrationPage() {
                       <div className="flex items-center justify-between mb-1">
                         <span className="text-xs font-mono text-slate-300">{c.cluster}</span>
                         <span className={`text-[10px] font-mono ${c.status === "healthy" ? "text-emerald-400" : c.status === "degraded" ? "text-amber-400" : "text-red-400"}`}>
-                          {c.status.toUpperCase()}
+                          {safeUpper(c.status)}
                         </span>
                       </div>
                       <div className="text-[10px] font-mono text-slate-500">Latency: {c.latency_ms}ms</div>

@@ -6,6 +6,7 @@ import { fetchApi } from "@/lib/api";
 import { motion, AnimatePresence } from "framer-motion";
 import { useRouter } from "next/navigation";
 import { Activity, Cpu, Server, Database } from "lucide-react";
+import { safeArr, safeUpper, safeFixed } from "@/lib/safe";
 
 interface HealthComponent {
   name: string;
@@ -94,17 +95,17 @@ export function HealthIndicator() {
               Per-Component Health
             </p>
             <div className="space-y-2">
-              {data.components.map((comp) => (
+              {safeArr<HealthComponent>(data.components).map((comp) => (
                 <div key={comp.name} className="flex items-center justify-between text-xs">
                   <div className="flex items-center gap-2">
                     <span className="text-slate-500">{ICON_MAP[comp.name] || <Activity className="w-4 h-4" />}</span>
                     <span className="text-slate-300 capitalize font-medium">
-                      {comp.name.replace(/_/g, " ")}
+                      {comp.name?.replace(/_/g, " ")}
                     </span>
                   </div>
                   <div className="flex items-center gap-2">
                     {comp.latency_ms !== undefined && comp.latency_ms !== null && (
-                      <span className="text-[10px] font-mono text-slate-500">{comp.latency_ms.toFixed(0)}ms</span>
+                      <span className="text-[10px] font-mono text-slate-500">{safeFixed(comp.latency_ms, 0)}ms</span>
                     )}
                     <span className={`px-1.5 py-0.5 rounded text-[10px] font-mono font-bold ${
                       comp.status === "healthy"
@@ -113,7 +114,7 @@ export function HealthIndicator() {
                           ? "bg-amber-500/10 text-amber-400"
                           : "bg-red-500/10 text-red-400"
                     }`}>
-                      {STATUS_LABELS[comp.status] || comp.status.toUpperCase()}
+                      {STATUS_LABELS[comp.status] || safeUpper(comp.status)}
                     </span>
                   </div>
                 </div>

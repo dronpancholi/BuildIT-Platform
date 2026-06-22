@@ -18,6 +18,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { formatDistanceToNow } from "date-fns";
+import { safeArr } from "@/lib/safe";
 
 interface ApprovalFeedProps {
   className?: string;
@@ -52,7 +53,7 @@ export function ApprovalFeed({ className }: ApprovalFeedProps) {
     },
   });
 
-  const approvals: Approval[] = data?.data?.approvals || [];
+  const approvals: Approval[] = safeArr<Approval>(data?.data?.approvals);
 
   const getStatusIcon = (status: string) => {
     switch (status) {

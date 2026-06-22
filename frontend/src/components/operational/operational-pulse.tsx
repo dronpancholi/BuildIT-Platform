@@ -2,13 +2,14 @@
 
 import { useMemo } from "react";
 import { motion } from "framer-motion";
-import { useRealtimeStore } from "@/hooks/use-realtime";
+import { useRealtimeStore, type WorkflowState, type WorkerState } from "@/hooks/use-realtime";
 import { useQuery } from "@tanstack/react-query";
 import { fetchApi } from "@/lib/api";
 import {
   Activity, GitBranch, Radio, Users, BarChart3, Zap,
   Loader2,
 } from "lucide-react";
+import { safeArr, safeObj, safeNum } from "@/lib/safe";
 
 export function OperationalPulse() {
   const workflows = useRealtimeStore((s) => s.workflows);
@@ -23,17 +24,17 @@ export function OperationalPulse() {
   });
 
   const activeWorkflows = useMemo(() =>
-    workflows.filter((w) => w.status === "running" || w.status === "active" || w.status === "started"),
+    safeArr<WorkflowState>(workflows).filter((w) => w.status === "running" || w.status === "active" || w.status === "started"),
     [workflows],
   );
 
   const totalQueueDepth = useMemo(() =>
-    Object.values(queues).reduce((sum, d) => sum + (d as number), 0),
+    Object.values(safeObj(queues)).reduce<number>((sum, d) => sum + safeNum(d), 0),
     [queues],
   );
 
   const activeWorkers = useMemo(() =>
-    workers.filter((w) => w.status === "active"),
+    safeArr<WorkerState>(workers).filter((w) => w.status === "active"),
     [workers],
   );
 

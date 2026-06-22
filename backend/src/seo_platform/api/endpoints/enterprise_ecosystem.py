@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from seo_platform.core.auth import get_validated_tenant_id
 from uuid import UUID
 
 from fastapi import APIRouter, Body, Query

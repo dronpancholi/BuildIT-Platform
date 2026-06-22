@@ -7,6 +7,7 @@ import {
   Activity, CheckCircle2, AlertTriangle, Zap, Server, Play,
 } from "lucide-react";
 import { API_BASE_URL, MOCK_TENANT_ID } from "@/lib/api";
+import { safeArr, safeStr, safeNum, safeUpper, safeLower, safeFixed, safeLocale, safePct, safeDate, safeDateTime, safeTime, safeReplace, safeSplit, safeSlice, safeStartsWith, safeFind, safeIncludes, safeSort, safeObj, safeKeys, safeValues, safeEntries, safeInitials } from "@/lib/safe";
 
 interface StreamEvent {
   type: string;
@@ -58,7 +59,7 @@ const SEVERITY_STYLE: Record<string, string> = {
 };
 
 function detectChannel(type: string): string {
-  const lower = type.toLowerCase();
+  const lower = safeLower(type, "");
   if (lower.includes("workflow") || lower.includes("onboarding") || lower.includes("keyword") || lower.includes("backlink") || lower.includes("citation") || lower.includes("report")) return "workflow";
   if (lower.includes("approval") || lower.includes("sla") || lower.includes("gate")) return "approval";
   if (lower.includes("campaign") || lower.includes("outreach") || lower.includes("link")) return "campaign";
@@ -138,7 +139,7 @@ export default function EventStreamPage() {
     return events.filter((evt) => {
       if (typeFilter !== "all" && evt.channel !== typeFilter) return false;
       if (severityFilter !== "all" && evt.severity !== severityFilter) return false;
-      if (sourceFilter && !(evt.source_service || "").toLowerCase().includes(sourceFilter.toLowerCase())) return false;
+      if (sourceFilter && !safeLower(evt.source_service, "").includes(safeLower(sourceFilter, ""))) return false;
       return true;
     });
   }, [events, typeFilter, severityFilter, sourceFilter]);
@@ -225,7 +226,7 @@ export default function EventStreamPage() {
                       className={`px-3 py-1.5 text-xs font-mono rounded border transition-colors ${
                         typeFilter === t ? "bg-platform-500/10 border-platform-500/30 text-platform-400" : "bg-surface-darker border-surface-border text-slate-500"
                       }`}
-                    >{t.toUpperCase()}</button>
+                    >{safeUpper(t)}</button>
                   ))}
                 </div>
               </div>
@@ -245,7 +246,7 @@ export default function EventStreamPage() {
                       className={`px-3 py-1.5 text-xs font-mono rounded border transition-colors ${
                         severityFilter === s ? "bg-platform-500/10 border-platform-500/30 text-platform-400" : "bg-surface-darker border-surface-border text-slate-500"
                       }`}
-                    >{s.toUpperCase()}</button>
+                    >{safeUpper(s)}</button>
                   ))}
                 </div>
               </div>

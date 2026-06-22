@@ -9,6 +9,7 @@ import { CheckCircle, Clock, AlertCircle, TrendingUp, TrendingDown, Minus, Activ
 
 const Campaign = Activity;
 import { cn } from "@/lib/utils";
+import { safeArr, safeFixed, safeNum } from "@/lib/safe";
 
 interface CampaignPipelineProps {
   className?: string;
@@ -34,7 +35,7 @@ export function CampaignPipeline({ className }: CampaignPipelineProps) {
     refetchInterval: 30000,
   });
 
-  const campaigns = data?.data?.campaigns || [];
+  const campaigns = safeArr<PipelineCampaign>(data?.data?.campaigns);
 
   const stages: { id: Stage; label: string; color: string }[] = [
     { id: "research", label: "Research", color: "bg-blue-500" },
@@ -46,7 +47,7 @@ export function CampaignPipeline({ className }: CampaignPipelineProps) {
   ];
 
   const getCampaignsByStage = (stage: Stage) => {
-    return campaigns.filter((c: any) => c.stage === stage);
+    return safeArr<PipelineCampaign>(campaigns).filter((c: any) => c.stage === stage);
   };
 
   const getHealthColor = (health: number) => {
@@ -104,7 +105,7 @@ export function CampaignPipeline({ className }: CampaignPipelineProps) {
                             )}
                           >
                             {getHealthIcon(campaign.health_score || 0)}
-                            {(campaign.health_score * 100).toFixed(0)}%
+                            {safeFixed(safeNum(campaign.health_score) * 100, 0)}%
                           </Badge>
                         </div>
                         <div className="flex items-center gap-2 text-xs text-slate-500">

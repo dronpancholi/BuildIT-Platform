@@ -56,7 +56,7 @@ export function CommandCenter() {
       switch (activeCommand) {
         case "add_client":
           endpoint = "/clients";
-          payload = { ...raw, tenant_id: MOCK_TENANT_ID };
+          payload = { ...raw, goals, tenant_id: MOCK_TENANT_ID };
           break;
         case "create_campaign":
           endpoint = "/campaigns";

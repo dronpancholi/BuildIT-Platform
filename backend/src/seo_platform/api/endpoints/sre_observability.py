@@ -8,6 +8,7 @@ event propagation, anomaly heatmaps, incident dashboard, trace replay.
 
 from __future__ import annotations
 
+from seo_platform.core.auth import get_validated_tenant_id
 from fastapi import APIRouter, Body, Query
 
 from seo_platform.services.sre_observability import sre_observability

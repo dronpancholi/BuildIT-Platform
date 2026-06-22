@@ -4,6 +4,7 @@ import { Cpu, Clock, AlertTriangle, Zap, BarChart3, Loader2, Shield, TrendingUp,
 import { useQuery } from "@tanstack/react-query";
 import { fetchApi, MOCK_TENANT_ID } from "@/lib/api";
 import { HealthResponse } from "@/types/api";
+import { safeArr, safeStr, safeNum, safeUpper, safeLower, safeFixed, safeLocale, safePct, safeDate, safeDateTime, safeTime, safeReplace, safeSplit, safeSlice, safeStartsWith, safeFind, safeIncludes, safeSort, safeObj, safeKeys, safeValues, safeEntries, safeInitials } from "@/lib/safe";
 
 interface AIQualityDashboard {
   avg_confidence_score: number;
@@ -126,7 +127,7 @@ export default function AiOpsPage() {
               <div>
                 <p className="text-xs font-mono text-slate-500 uppercase mb-3">Hallucination Trend (7 days)</p>
                 <div className="space-y-2">
-                  {quality.hallucination_rate_trend.map((day, i) => (
+                  {safeArr<any>(quality.hallucination_rate_trend).map((day: { date: string; hallucination_rate: number; avg_confidence: number }, i) => (
                     <div key={i} className="flex items-center gap-3">
                       <span className="text-[10px] font-mono text-slate-500 w-24">{day.date}</span>
                       <div className="flex-1 h-2 bg-surface-darker rounded-full overflow-hidden">
@@ -191,10 +192,10 @@ export default function AiOpsPage() {
                   </p>
                   <p className="text-[9px] font-mono text-slate-500 uppercase">Positive Outcomes</p>
                 </div>
-                {recs.best_performing_categories.length > 0 && (
+                {safeArr<any>(recs.best_performing_categories).length > 0 && (
                   <div>
                     <p className="text-[10px] font-mono text-slate-500 uppercase mb-1">Best Categories</p>
-                    {recs.best_performing_categories.slice(0, 3).map((cat, i) => (
+                    {safeArr<any>(recs.best_performing_categories).slice(0, 3).map((cat: { category: string; positive_rate: number }, i) => (
                       <div key={i} className="flex items-center justify-between text-[10px] font-mono text-slate-400 p-1">
                         <span>{cat.category}</span>
                         <span className={scoreColor(cat.positive_rate)}>{Math.round(cat.positive_rate * 100)}%</span>

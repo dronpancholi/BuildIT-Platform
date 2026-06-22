@@ -7,9 +7,10 @@ AI inference analytics, scraping telemetry, and communication telemetry.
 
 from __future__ import annotations
 
+from seo_platform.core.auth import get_validated_tenant_id
 from uuid import UUID
 
-from fastapi import APIRouter, Query
+from fastapi import Depends,  APIRouter, Query
 
 from seo_platform.services.observability_service import observability_service
 
@@ -18,7 +19,7 @@ router = APIRouter()
 
 @router.get("/traces")
 async def get_traces(
-    tenant_id: UUID = Query(..., description="Tenant UUID"),
+    tenant_id: UUID = Depends(get_validated_tenant_id),
     workflow_type: str | None = Query(None, description="Filter by workflow type"),
     status: str | None = Query(None, description="Filter by execution status"),
     time_window_hours: int = Query(24, description="Time window in hours"),
@@ -75,7 +76,7 @@ async def get_scraping_telemetry(
 
 @router.get("/communication-telemetry")
 async def get_communication_telemetry(
-    tenant_id: UUID = Query(..., description="Tenant UUID"),
+    tenant_id: UUID = Depends(get_validated_tenant_id),
     time_window_hours: int = Query(24, description="Time window in hours"),
 ) -> dict:
     """Return email communication telemetry from database."""

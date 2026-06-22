@@ -6,6 +6,7 @@ REST endpoints for analyzing real resource usage and costs.
 
 from __future__ import annotations
 
+from seo_platform.core.auth import get_validated_tenant_id
 import json
 from uuid import UUID
 

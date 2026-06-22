@@ -10,6 +10,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { formatDistanceToNow } from "date-fns";
+import { safeArr, safeUpper } from "@/lib/safe";
 
 interface ActivityTimelineProps {
   className?: string;
@@ -58,11 +59,11 @@ export function ActivityTimeline({ className }: ActivityTimelineProps) {
   });
 
   // Transform BI events to activity format
-  const events = data?.data?.events || [];
-  const activities: Activity[] = events.map((e: any) => ({
+  const events = safeArr<any>(data?.data?.events);
+  const activities: Activity[] = safeArr<any>(events).map((e: any) => ({
     id: e.id || e.event_type,
     type: mapEventType(e.event_type),
-    title: e.event_type?.replace('_', ' ').toUpperCase() || 'Event',
+    title: safeUpper(e.event_type?.replace('_', ' '), 'Event'),
     description: e.description || e.message || '',
     timestamp: e.occurred_at || e.created_at || new Date().toISOString(),
     campaign_name: e.campaign_name,

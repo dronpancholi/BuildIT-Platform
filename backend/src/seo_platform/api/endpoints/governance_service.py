@@ -1,7 +1,9 @@
 from __future__ import annotations
 
-from fastapi import APIRouter, Query
+from seo_platform.core.auth import get_validated_tenant_id
+from fastapi import APIRouter, Depends, Query
 
+from seo_platform.core.rbac import RequirePermission
 from seo_platform.services.governance_service import governance_service
 
 router = APIRouter()
@@ -11,6 +13,7 @@ router = APIRouter()
 async def export_audit_log(
     time_window_hours: int = Query(24, ge=1, le=720),
     export_format: str = Query("json", pattern="^(json|csv)$"),
+    _auth: None = Depends(RequirePermission("system:read")),
 ) -> dict:
     export = await governance_service.export_audit_log(time_window_hours, export_format)
     return {"success": True, "data": export.model_dump()}
@@ -19,6 +22,7 @@ async def export_audit_log(
 @router.get("/compliance-report")
 async def generate_compliance_report(
     standards: str | None = Query(None, description="Comma-separated standards"),
+    _auth: None = Depends(RequirePermission("system:read")),
 ) -> dict:
     standards_list = standards.split(",") if standards else None
     report = await governance_service.generate_compliance_report(standards_list)
@@ -44,13 +48,17 @@ async def trace_operational_decision(
 
 
 @router.get("/rbac-hardening")
-async def harden_rbac() -> dict:
+async def harden_rbac(
+    _auth: None = Depends(RequirePermission("system:read")),
+) -> dict:
     report = await governance_service.harden_rbac()
     return {"success": True, "data": report.model_dump()}
 
 
 @router.get("/infra-access-control")
-async def assess_infra_access_controls() -> dict:
+async def assess_infra_access_controls(
+    _auth: None = Depends(RequirePermission("system:read")),
+) -> dict:
     control = await governance_service.assess_infra_access_controls()
     return {"success": True, "data": control.model_dump()}
 

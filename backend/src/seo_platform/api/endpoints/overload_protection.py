@@ -1,8 +1,9 @@
 from __future__ import annotations
 
+from seo_platform.core.auth import get_validated_tenant_id
 from uuid import UUID
 
-from fastapi import APIRouter, Body, Query
+from fastapi import APIRouter, Depends, Body, Query
 from pydantic import BaseModel
 
 from seo_platform.services.overload_protection import overload_protection
@@ -89,7 +90,7 @@ async def get_saturation_alerts() -> dict:
 
 
 @router.get("/tenant-usage")
-async def get_tenant_usage(tenant_id: UUID = Query(...)) -> dict:
+async def get_tenant_usage(tenant_id: UUID = Depends(get_validated_tenant_id)) -> dict:
     usage = await overload_protection.get_tenant_resource_usage(tenant_id)
     return {"success": True, "data": usage.to_dict()}
 

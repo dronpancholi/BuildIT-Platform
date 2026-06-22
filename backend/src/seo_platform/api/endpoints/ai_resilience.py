@@ -1,8 +1,9 @@
 from __future__ import annotations
 
+from seo_platform.core.auth import get_validated_tenant_id
 from uuid import UUID
 
-from fastapi import APIRouter, Query
+from fastapi import Depends,  APIRouter, Query
 
 from seo_platform.services.ai_resilience import ai_resilience
 
@@ -12,7 +13,7 @@ router = APIRouter()
 @router.get("/fallback-route")
 async def get_fallback_route(
     task_type: str = Query(..., description="Task type"),
-    tenant_id: UUID = Query(..., description="Tenant UUID"),
+    tenant_id: UUID = Depends(get_validated_tenant_id),
 ) -> dict:
     route = await ai_resilience.get_fallback_route(task_type, tenant_id)
     return {"success": True, "data": route.model_dump()}
@@ -49,7 +50,7 @@ async def get_drift_detection(
 
 @router.get("/throttle-status")
 async def get_throttle_status(
-    tenant_id: UUID = Query(..., description="Tenant UUID"),
+    tenant_id: UUID = Depends(get_validated_tenant_id),
     task_type: str = Query(..., description="Task type"),
 ) -> dict:
     result = await ai_resilience.check_ai_operational_throttle(tenant_id, task_type)

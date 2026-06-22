@@ -5,6 +5,7 @@ import { useQuery } from "@tanstack/react-query";
 import { fetchApi } from "@/lib/api";
 import { X, Search, Users, GitBranch, Mail, FileText, AlertCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { safeArr } from "@/lib/safe";
 
 interface GlobalSearchProps {
   onClose: () => void;
@@ -37,9 +38,9 @@ export function GlobalSearch({ onClose }: GlobalSearchProps) {
     enabled: debouncedQuery.length > 0,
   });
 
-  const results: SearchResult[] = data?.data || [];
+  const results: SearchResult[] = safeArr<SearchResult>(data?.data);
 
-  const hasResults = results.some((group: any) => group.items.length > 0);
+  const hasResults = safeArr<SearchResult>(results).some((group: any) => safeArr<any>(group.items).length > 0);
 
   const getTypeIcon = (type: string) => {
     switch (type) {
@@ -95,17 +96,17 @@ export function GlobalSearch({ onClose }: GlobalSearchProps) {
             </div>
           ) : (
             <div className="space-y-4">
-              {results.map(
+              {safeArr<SearchResult>(results).map(
                 (group: any) =>
-                  group.items.length > 0 && (
+                  safeArr<any>(group.items).length > 0 && (
                     <div key={group.type} className="space-y-2">
                       <div className="flex items-center gap-2 text-xs font-medium text-slate-500 uppercase">
                         {getTypeIcon(group.type)}
                         {group.type}
-                        <span className="text-slate-600">({group.items.length})</span>
+                        <span className="text-slate-600">({safeArr<any>(group.items).length})</span>
                       </div>
                       <div className="space-y-1">
-                        {group.items.slice(0, 5).map((item: any) => (
+                        {safeArr<any>(group.items).slice(0, 5).map((item: any) => (
                           <div
                             key={item.id}
                             className="p-3 rounded-lg bg-surface-darker hover:bg-platform-500/10 transition-colors cursor-pointer"

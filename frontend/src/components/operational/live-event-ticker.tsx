@@ -8,6 +8,7 @@ import {
   TrendingUp, Target, Users,
 } from "lucide-react";
 import { fetchApi } from "@/lib/api";
+import { safeDate } from "@/lib/safe";
 
 interface TickerEvent {
   id: string;
@@ -51,7 +52,7 @@ function formatTime(iso: string): string {
   if (diff < 60000) return "now";
   if (diff < 3600000) return `${Math.floor(diff / 60000)}m`;
   if (diff < 86400000) return `${Math.floor(diff / 3600000)}h`;
-  return d.toLocaleDateString();
+  return safeDate(d);
 }
 
 function getSeverityStyle(severity: string): string {

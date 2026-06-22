@@ -7,6 +7,7 @@ import {
 } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { fetchApi } from "@/lib/api";
+import { safeArr, safeStr, safeUpper, safeLower, safeFixed, safeNum, safeReplace } from "@/lib/safe";
 
 interface AuditEntry {
   id: string;
@@ -80,7 +81,7 @@ export default function GovernancePage() {
     refetchInterval: 15000,
   });
 
-  const auditEntries = auditLog || [];
+  const auditEntries = safeArr<AuditEntry>(auditLog);
 
   return (
     <div className="space-y-6">
@@ -95,7 +96,7 @@ export default function GovernancePage() {
             "bg-amber-500/10 text-amber-400 border-amber-500/20"
           }`}>
             <Shield className="w-4 h-4" />
-            {compliance.overall_status.toUpperCase()} ({Math.round(compliance.score)}%)
+            {safeUpper(compliance?.overall_status)} ({Math.round(safeNum(compliance?.score))}%)
           </span>
         )}
       </div>
@@ -123,11 +124,11 @@ export default function GovernancePage() {
                   className="p-2.5 rounded bg-surface-darker/30 border border-surface-border/30"
                 >
                   <div className="flex items-center gap-2 mb-0.5">
-                    <span className="text-[10px] font-mono text-platform-400">{entry.actor}</span>
-                    <span className="text-[10px] font-mono text-slate-500">{entry.action.replace(/_/g, " ")}</span>
-                    <span className="text-[9px] font-mono text-slate-600 ml-auto">{new Date(entry.timestamp).toLocaleTimeString()}</span>
+                    <span className="text-[10px] font-mono text-platform-400">{safeStr(entry.actor)}</span>
+                    <span className="text-[10px] font-mono text-slate-500">{safeReplace(entry.action, /_/g, " ")}</span>
+                    <span className="text-[9px] font-mono text-slate-600 ml-auto">{safeStr(entry.timestamp) ? new Date(entry.timestamp).toLocaleTimeString() : "—"}</span>
                   </div>
-                  <p className="text-[10px] font-mono text-slate-400">{entry.resource}</p>
+                  <p className="text-[10px] font-mono text-slate-400">{safeStr(entry.resource)}</p>
                   {entry.detail && <p className="text-[9px] font-mono text-slate-600">{entry.detail}</p>}
                 </motion.div>
               ))}
@@ -168,9 +169,9 @@ export default function GovernancePage() {
                     ) : (
                       <AlertTriangle className="w-4 h-4 text-amber-500" />
                     )}
-                    <span className="text-xs font-mono text-slate-300">{c.check.replace(/_/g, " ")}</span>
+                    <span className="text-xs font-mono text-slate-300">{safeReplace(c.check, /_/g, " ")}</span>
                   </div>
-                  <span className="text-[10px] font-mono text-slate-500">{c.detail}</span>
+                  <span className="text-[10px] font-mono text-slate-500">{safeStr(c.detail)}</span>
                 </motion.div>
               ))}
             </div>
@@ -200,31 +201,31 @@ export default function GovernancePage() {
                   className="p-3 rounded-md bg-surface-darker/50 border border-surface-border/50"
                 >
                   <div className="flex items-center justify-between mb-1">
-                    <span className="text-xs font-mono text-slate-300">{r.role}</span>
+                    <span className="text-xs font-mono text-slate-300">{safeStr(r.role)}</span>
                     <div className="flex items-center gap-2">
-                      <span className="text-[10px] font-mono text-slate-500">{r.user_count} users</span>
+                      <span className="text-[10px] font-mono text-slate-500">{safeNum(r.user_count)} users</span>
                       <span className={`text-[10px] font-mono px-1.5 py-0.5 rounded ${
                         r.risk_level === "high" ? "bg-red-500/10 text-red-400" :
                         r.risk_level === "medium" ? "bg-amber-500/10 text-amber-400" :
                         "bg-emerald-500/10 text-emerald-400"
-                      }`}>{r.risk_level.toUpperCase()}</span>
+                      }`}>{safeUpper(r.risk_level)}</span>
                     </div>
                   </div>
                   <div className="flex flex-wrap gap-1">
-                    {r.permissions.slice(0, 4).map(p => (
+                    {safeArr<string>(r.permissions).slice(0, 4).map(p => (
                       <span key={p} className="px-1.5 py-0.5 rounded text-[9px] font-mono bg-surface-darker text-slate-500">{p}</span>
                     ))}
-                    {r.permissions.length > 4 && (
-                      <span className="text-[9px] font-mono text-slate-600">+{r.permissions.length - 4}</span>
+                    {safeArr<string>(r.permissions).length > 4 && (
+                      <span className="text-[9px] font-mono text-slate-600">+{safeArr<string>(r.permissions).length - 4}</span>
                     )}
                   </div>
                 </motion.div>
               ))}
-              {rbac.recommendations.length > 0 && (
+              {safeArr(rbac?.recommendations).length > 0 && (
                 <div className="pt-3 border-t border-surface-border space-y-1">
                   <p className="text-[10px] font-mono text-amber-400 uppercase">Recommendations</p>
-                  {rbac.recommendations.map((r, i) => (
-                    <p key={i} className="text-[10px] font-mono text-slate-400">&gt; {r.replace(/_/g, " ")}</p>
+                  {safeArr<string>(rbac?.recommendations).map((r, i) => (
+                    <p key={i} className="text-[10px] font-mono text-slate-400">&gt; {safeReplace(r, /_/g, " ")}</p>
                   ))}
                 </div>
               )}
@@ -256,7 +257,7 @@ export default function GovernancePage() {
                         a.access_level === "admin" ? "bg-red-500/10 text-red-400" :
                         a.access_level === "write" ? "bg-amber-500/10 text-amber-400" :
                         "bg-emerald-500/10 text-emerald-400"
-                      }`}>{a.access_level.toUpperCase()}</span>
+                      }`}>{safeUpper(a.access_level)}</span>
                     </div>
                   </div>
                 ))}
@@ -275,17 +276,17 @@ export default function GovernancePage() {
               <div className="text-center py-4 text-sm font-mono text-slate-500">No workflow authorization data</div>
             ) : (
               <div className="space-y-2">
-                {workflowAuth.map((w, i) => (
+                {safeArr<WorkflowAuthorization>(workflowAuth).map((w, i) => (
                   <div key={w.workflow_type || i} className="flex items-center justify-between p-2.5 rounded bg-surface-darker/50 border border-surface-border/50">
                     <div>
-                      <span className="text-xs font-mono text-slate-300">{w.workflow_type.replace(/_/g, " ")}</span>
+                      <span className="text-xs font-mono text-slate-300">{safeReplace(w.workflow_type, /_/g, " ")}</span>
                       {w.authorization_required && (
                         <span className="text-[9px] font-mono text-amber-400 ml-2">AUTH REQUIRED</span>
                       )}
                     </div>
                     <div className="flex items-center gap-2">
-                      {w.pending_approvals > 0 && (
-                        <span className="px-1.5 py-0.5 rounded text-[9px] font-mono bg-amber-500/10 text-amber-400">{w.pending_approvals} pending</span>
+                      {safeNum(w.pending_approvals) > 0 && (
+                        <span className="px-1.5 py-0.5 rounded text-[9px] font-mono bg-amber-500/10 text-amber-400">{safeNum(w.pending_approvals)} pending</span>
                       )}
                     </div>
                   </div>

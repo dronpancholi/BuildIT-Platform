@@ -8,6 +8,7 @@ import {
 } from "lucide-react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { fetchApi } from "@/lib/api";
+import { safeArr, safeUpper, safeReplace } from "@/lib/safe";
 
 interface Incident {
   id: string;
@@ -138,7 +139,7 @@ export default function IncidentsPage() {
     },
   });
 
-  const incidentList = incidents || [];
+  const incidentList = safeArr<Incident>(incidents);
   const activeIncidents = incidentList.filter(i => i.status === "active");
   const resolvedCount = incidentList.filter(i => i.status === "resolved").length;
 
@@ -215,16 +216,16 @@ export default function IncidentsPage() {
                           <div className="flex items-center gap-2 mb-1">
                             <span className="text-xs font-mono text-slate-300 truncate">{inc.title}</span>
                             <span className={`ml-auto text-[9px] font-mono px-1.5 py-0.5 rounded border ${SEVERITY_BADGE[inc.severity]}`}>
-                              {inc.severity.toUpperCase()}
+                              {safeUpper(inc.severity)}
                             </span>
                           </div>
                           <div className="flex items-center gap-2 text-[10px] font-mono text-slate-600">
-                            <span className={`px-1 py-0.5 rounded border ${STATUS_BADGE[inc.status]}`}>{inc.status.toUpperCase()}</span>
+                            <span className={`px-1 py-0.5 rounded border ${STATUS_BADGE[inc.status]}`}>{safeUpper(inc.status)}</span>
                             <span>{new Date(inc.detected_at).toLocaleTimeString()}</span>
                           </div>
-                          {inc.affected_components.length > 0 && (
+                          {safeArr(inc.affected_components).length > 0 && (
                             <div className="flex flex-wrap gap-1 mt-1">
-                              {inc.affected_components.map(c => (
+                              {safeArr<string>(inc.affected_components).map(c => (
                                 <span key={c} className="px-1 py-0.5 rounded text-[9px] font-mono bg-slate-500/10 text-slate-500">{c}</span>
                               ))}
                             </div>
@@ -283,10 +284,10 @@ export default function IncidentsPage() {
                 <div className="relative">
                   <div className="absolute left-4 top-0 bottom-0 w-px bg-surface-border" />
                   <div className="space-y-4 relative">
-                    {incidentDetail.timeline.length === 0 ? (
+                    {safeArr(incidentDetail.timeline).length === 0 ? (
                       <div className="text-sm font-mono text-slate-500 py-8 text-center">No timeline entries yet</div>
                     ) : (
-                      incidentDetail.timeline.map((entry, i) => (
+                      safeArr<TimelineEntry>(incidentDetail.timeline).map((entry, i) => (
                         <motion.div
                           key={i}
                           initial={{ opacity: 0, x: -10 }}
@@ -300,7 +301,7 @@ export default function IncidentsPage() {
                               <span className="text-[10px] font-mono text-platform-400">{entry.actor}</span>
                               <span className="text-[9px] font-mono text-slate-600">{new Date(entry.timestamp).toLocaleTimeString()}</span>
                             </div>
-                            <p className="text-xs font-mono text-slate-300">{entry.action.replace(/_/g, " ")}</p>
+                            <p className="text-xs font-mono text-slate-300">{safeReplace(entry.action, /_/g, " ")}</p>
                             {entry.detail && (
                               <p className="text-[10px] font-mono text-slate-500 mt-1">{entry.detail}</p>
                             )}
@@ -324,7 +325,7 @@ export default function IncidentsPage() {
                   diagnostics.health_summary === "healthy" ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/20" :
                   "bg-amber-500/10 text-amber-400 border-amber-500/20"
                 }`}>
-                  {diagnostics.health_summary.toUpperCase()}
+                  {safeUpper(diagnostics.health_summary)}
                 </span>
               )}
             </div>
@@ -342,7 +343,7 @@ export default function IncidentsPage() {
                 <div>
                   <p className="text-[10px] font-mono text-slate-500 uppercase mb-2">Recent Events</p>
                   <div className="space-y-1">
-                    {diagnostics.recent_events.slice(0, 5).map((e, i) => (
+                    {safeArr<{ event: string; timestamp: string; severity: string }>(diagnostics.recent_events).slice(0, 5).map((e, i) => (
                       <div key={i} className="flex items-center gap-2 text-[10px] font-mono">
                         <span className={`w-1.5 h-1.5 rounded-full ${e.severity === "critical" ? "bg-red-500" : e.severity === "high" ? "bg-orange-500" : "bg-amber-500"}`} />
                         <span className="text-slate-400 truncate">{e.event}</span>
@@ -354,14 +355,14 @@ export default function IncidentsPage() {
                 <div>
                   <p className="text-[10px] font-mono text-slate-500 uppercase mb-2">Recommendations</p>
                   <div className="space-y-1">
-                    {diagnostics.recommendations.map((r, i) => (
+                    {safeArr<{ action: string; reason: string; priority: string }>(diagnostics.recommendations).map((r, i) => (
                       <div key={i} className="flex items-start gap-2 text-[10px] font-mono">
                         <span className={`mt-0.5 px-1 py-0.5 rounded text-[8px] font-bold ${
                           r.priority === "P0" ? "bg-red-500/10 text-red-400" : r.priority === "P1" ? "bg-amber-500/10 text-amber-400" : "bg-slate-500/10 text-slate-500"
                         }`}>{r.priority}</span>
                         <div>
-                          <span className="text-slate-300">{r.action.replace(/_/g, " ")}</span>
-                          <p className="text-slate-600">{r.reason.replace(/_/g, " ")}</p>
+                          <span className="text-slate-300">{safeReplace(r.action, /_/g, " ")}</span>
+                          <p className="text-slate-600">{safeReplace(r.reason, /_/g, " ")}</p>
                         </div>
                       </div>
                     ))}
@@ -453,7 +454,7 @@ export default function IncidentsPage() {
                             : "bg-surface-darker border-surface-border text-slate-500"
                         }`}
                       >
-                        {s.toUpperCase()}
+                        {safeUpper(s)}
                       </button>
                     ))}
                   </div>

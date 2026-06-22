@@ -7,6 +7,7 @@ import {
 } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { fetchApi } from "@/lib/api";
+import { safeArr, safeStr, safeUpper, safeFixed, safeNum, safeReplace } from "@/lib/safe";
 
 interface AntiBotAssessment {
   overall_effectiveness: number;
@@ -128,12 +129,12 @@ export default function ScrapingPage() {
         </div>
         {antiBot && (
           <span className={`px-3 py-1.5 rounded-md border text-xs font-mono flex items-center gap-2 ${
-            antiBot.overall_effectiveness >= 70 ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/20" :
-            antiBot.overall_effectiveness >= 40 ? "bg-amber-500/10 text-amber-400 border-amber-500/20" :
+            safeNum(antiBot?.overall_effectiveness) >= 70 ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/20" :
+            safeNum(antiBot?.overall_effectiveness) >= 40 ? "bg-amber-500/10 text-amber-400 border-amber-500/20" :
             "bg-red-500/10 text-red-400 border-red-500/20"
           }`}>
             <Shield className="w-4 h-4" />
-            {Math.round(antiBot.overall_effectiveness)}% EFFECTIVE
+            {Math.round(safeNum(antiBot?.overall_effectiveness))}% EFFECTIVE
           </span>
         )}
       </div>
@@ -152,26 +153,26 @@ export default function ScrapingPage() {
           ) : (
             <div className="space-y-4">
               <div className="text-center">
-                <span className={`text-4xl font-bold font-mono ${antiBot.overall_effectiveness >= 70 ? "text-emerald-400" : antiBot.overall_effectiveness >= 40 ? "text-amber-400" : "text-red-400"}`}>
-                  {Math.round(antiBot.overall_effectiveness)}%
+                <span className={`text-4xl font-bold font-mono ${safeNum(antiBot?.overall_effectiveness) >= 70 ? "text-emerald-400" : safeNum(antiBot?.overall_effectiveness) >= 40 ? "text-amber-400" : "text-red-400"}`}>
+                  {Math.round(safeNum(antiBot?.overall_effectiveness))}%
                 </span>
                 <p className="text-xs font-mono text-slate-500 mt-1">Overall Effectiveness</p>
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div className="p-3 rounded-md bg-surface-darker/50 border border-surface-border/50 text-center">
-                  <p className="text-lg font-bold font-mono text-slate-100">{Math.round(antiBot.detection_rate)}%</p>
+                  <p className="text-lg font-bold font-mono text-slate-100">{Math.round(safeNum(antiBot?.detection_rate))}%</p>
                   <p className="text-[10px] font-mono text-slate-500">Detection Rate</p>
                 </div>
                 <div className="p-3 rounded-md bg-surface-darker/50 border border-surface-border/50 text-center">
-                  <p className="text-lg font-bold font-mono text-slate-100">{Math.round(antiBot.bypass_success_rate)}%</p>
+                  <p className="text-lg font-bold font-mono text-slate-100">{Math.round(safeNum(antiBot?.bypass_success_rate))}%</p>
                   <p className="text-[10px] font-mono text-slate-500">Bypass Rate</p>
                 </div>
               </div>
-              {antiBot.recommended_actions.length > 0 && (
+              {safeArr(antiBot?.recommended_actions).length > 0 && (
                 <div className="pt-3 border-t border-surface-border space-y-1">
                   <p className="text-[10px] font-mono text-amber-400 uppercase">Actions</p>
-                  {antiBot.recommended_actions.map((a, i) => (
-                    <p key={i} className="text-[10px] font-mono text-slate-400">&gt; {a.replace(/_/g, " ")}</p>
+                  {safeArr<string>(antiBot?.recommended_actions).map((a, i) => (
+                    <p key={i} className="text-[10px] font-mono text-slate-400">&gt; {safeStr(a).replace(/_/g, " ")}</p>
                   ))}
                 </div>
               )}
@@ -192,37 +193,37 @@ export default function ScrapingPage() {
           ) : (
             <div className="space-y-4">
               <div className="flex items-center justify-between">
-                <span className="text-3xl font-bold font-mono text-slate-100">{captcha.current_rate.toFixed(1)}%</span>
+                <span className="text-3xl font-bold font-mono text-slate-100">{safeFixed(captcha?.current_rate, 1)}%</span>
                 <span className={`px-2 py-0.5 rounded text-xs font-mono ${
-                  captcha.trend === "increasing" ? "bg-red-500/10 text-red-400" :
-                  captcha.trend === "decreasing" ? "bg-emerald-500/10 text-emerald-400" :
+                  captcha?.trend === "increasing" ? "bg-red-500/10 text-red-400" :
+                  captcha?.trend === "decreasing" ? "bg-emerald-500/10 text-emerald-400" :
                   "bg-amber-500/10 text-amber-400"
-                }`}>{captcha.trend.toUpperCase()}</span>
+                }`}>{safeUpper(captcha?.trend, "STABLE")}</span>
               </div>
               <p className="text-[10px] font-mono text-slate-500">Current CAPTCHA Rate</p>
-              {captcha.daily_rates.length > 0 && (
+              {safeArr(captcha?.daily_rates).length > 0 && (
                 <div className="pt-3 border-t border-surface-border">
                   <p className="text-[10px] font-mono text-slate-500 uppercase mb-2">Recent Trend</p>
                   <div className="flex items-end gap-1 h-16">
-                    {captcha.daily_rates.slice(-7).map((d, i) => (
+                    {safeArr<{ date: string; rate: number }>(captcha?.daily_rates).slice(-7).map((d, i) => (
                       <div key={i} className="flex-1 flex flex-col items-center gap-1">
                         <motion.div
                           initial={{ height: 0 }}
-                          animate={{ height: `${d.rate}%` }}
-                          className={`w-full rounded-t ${d.rate > 50 ? "bg-red-500" : d.rate > 25 ? "bg-amber-500" : "bg-emerald-500"}`}
+                          animate={{ height: `${safeNum(d?.rate)}%` }}
+                          className={`w-full rounded-t ${safeNum(d?.rate) > 50 ? "bg-red-500" : safeNum(d?.rate) > 25 ? "bg-amber-500" : "bg-emerald-500"}`}
                           style={{ maxHeight: "60px" }}
                           transition={{ duration: 0.3, delay: i * 0.05 }}
                         />
-                        <span className="text-[7px] font-mono text-slate-600">{new Date(d.date).getDate()}</span>
+                        <span className="text-[7px] font-mono text-slate-600">{safeStr(d?.date) ? new Date(d.date).getDate() : "—"}</span>
                       </div>
                     ))}
                   </div>
                 </div>
               )}
-              {captcha.recommendations.length > 0 && (
+              {safeArr(captcha?.recommendations).length > 0 && (
                 <div className="pt-3 border-t border-surface-border space-y-1">
-                  {captcha.recommendations.map((r, i) => (
-                    <p key={i} className="text-[10px] font-mono text-slate-400">&gt; {r.replace(/_/g, " ")}</p>
+                  {safeArr<string>(captcha?.recommendations).map((r, i) => (
+                    <p key={i} className="text-[10px] font-mono text-slate-400">&gt; {safeStr(r).replace(/_/g, " ")}</p>
                   ))}
                 </div>
               )}
@@ -243,30 +244,30 @@ export default function ScrapingPage() {
           ) : (
             <div className="space-y-4">
               <div className="text-center">
-                <span className={`text-4xl font-bold font-mono ${ipBan.health_percentage >= 80 ? "text-emerald-400" : ipBan.health_percentage >= 50 ? "text-amber-400" : "text-red-400"}`}>
-                  {Math.round(ipBan.health_percentage)}%
+                <span className={`text-4xl font-bold font-mono ${safeNum(ipBan?.health_percentage) >= 80 ? "text-emerald-400" : safeNum(ipBan?.health_percentage) >= 50 ? "text-amber-400" : "text-red-400"}`}>
+                  {Math.round(safeNum(ipBan?.health_percentage))}%
                 </span>
                 <p className="text-xs font-mono text-slate-500 mt-1">Pool Health</p>
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div className="p-3 rounded-md bg-surface-darker/50 border border-surface-border/50 text-center">
-                  <p className="text-lg font-bold font-mono text-emerald-400">{ipBan.pool_size}</p>
+                  <p className="text-lg font-bold font-mono text-emerald-400">{safeNum(ipBan?.pool_size)}</p>
                   <p className="text-[10px] font-mono text-slate-500">Pool Size</p>
                 </div>
                 <div className="p-3 rounded-md bg-surface-darker/50 border border-surface-border/50 text-center">
-                  <p className="text-lg font-bold font-mono text-red-400">{ipBan.banned_count}</p>
+                  <p className="text-lg font-bold font-mono text-red-400">{safeNum(ipBan?.banned_count)}</p>
                   <p className="text-[10px] font-mono text-slate-500">Banned</p>
                 </div>
               </div>
               <div className="w-full h-3 bg-surface-darker rounded-full overflow-hidden">
                 <motion.div
                   initial={{ width: 0 }}
-                  animate={{ width: `${ipBan.health_percentage}%` }}
-                  className={`h-full rounded-full ${ipBan.health_percentage >= 80 ? "bg-emerald-500" : ipBan.health_percentage >= 50 ? "bg-amber-500" : "bg-red-500"}`}
+                  animate={{ width: `${safeNum(ipBan?.health_percentage)}%` }}
+                  className={`h-full rounded-full ${safeNum(ipBan?.health_percentage) >= 80 ? "bg-emerald-500" : safeNum(ipBan?.health_percentage) >= 50 ? "bg-amber-500" : "bg-red-500"}`}
                   transition={{ duration: 0.5 }}
                 />
               </div>
-              <p className="text-[10px] font-mono text-slate-500">Rotation: {ipBan.rotation_frequency}</p>
+              <p className="text-[10px] font-mono text-slate-500">Rotation: {safeStr(ipBan?.rotation_frequency)}</p>
             </div>
           )}
         </motion.div>
@@ -281,11 +282,11 @@ export default function ScrapingPage() {
           </div>
           {loading4 ? (
             <div className="flex items-center justify-center py-8"><Loader2 className="w-6 h-6 text-platform-500 animate-spin" /></div>
-          ) : !selectors || selectors.length === 0 ? (
+          ) : safeArr(selectors).length === 0 ? (
             <div className="text-center py-8 text-sm font-mono text-slate-500">No selector degradation data</div>
           ) : (
             <div className="space-y-3">
-              {selectors.map((s, i) => (
+              {safeArr<{ selector: string; degradation_score: number; recommended_action: string }>(selectors).map((s, i) => (
                 <motion.div
                   key={s.selector || i}
                   initial={{ opacity: 0, y: 5 }}
@@ -294,23 +295,23 @@ export default function ScrapingPage() {
                   className="p-3 rounded-md bg-surface-darker/50 border border-surface-border/50"
                 >
                   <div className="flex items-center justify-between mb-1">
-                    <span className="text-xs font-mono text-slate-300 truncate max-w-[200px]">{s.selector}</span>
+                    <span className="text-xs font-mono text-slate-300 truncate max-w-[200px]">{safeStr(s.selector)}</span>
                     <span className={`text-[10px] font-mono px-1.5 py-0.5 rounded ${
-                      s.degradation_score > 70 ? "bg-red-500/10 text-red-400" :
-                      s.degradation_score > 40 ? "bg-amber-500/10 text-amber-400" :
+                      safeNum(s.degradation_score) > 70 ? "bg-red-500/10 text-red-400" :
+                      safeNum(s.degradation_score) > 40 ? "bg-amber-500/10 text-amber-400" :
                       "bg-emerald-500/10 text-emerald-400"
-                    }`}>{Math.round(s.degradation_score)}%</span>
+                    }`}>{Math.round(safeNum(s.degradation_score))}%</span>
                   </div>
                   <div className="w-full h-1.5 bg-surface-darker rounded-full overflow-hidden">
                     <motion.div
                       initial={{ width: 0 }}
-                      animate={{ width: `${s.degradation_score}%` }}
-                      className={`h-full rounded-full ${s.degradation_score > 70 ? "bg-red-500" : s.degradation_score > 40 ? "bg-amber-500" : "bg-emerald-500"}`}
+                      animate={{ width: `${safeNum(s.degradation_score)}%` }}
+                      className={`h-full rounded-full ${safeNum(s.degradation_score) > 70 ? "bg-red-500" : safeNum(s.degradation_score) > 40 ? "bg-amber-500" : "bg-emerald-500"}`}
                       transition={{ duration: 0.5 }}
                     />
                   </div>
                   {s.recommended_action && (
-                    <p className="text-[10px] font-mono text-slate-500 mt-1">&gt; {s.recommended_action.replace(/_/g, " ")}</p>
+                    <p className="text-[10px] font-mono text-slate-500 mt-1">&gt; {safeReplace(s.recommended_action, /_/g, " ")}</p>
                   )}
                 </motion.div>
               ))}
@@ -326,14 +327,14 @@ export default function ScrapingPage() {
           </div>
           {loading5 ? (
             <div className="flex items-center justify-center py-8"><Loader2 className="w-6 h-6 text-platform-500 animate-spin" /></div>
-          ) : !serpChanges || serpChanges.length === 0 ? (
+          ) : safeArr(serpChanges).length === 0 ? (
             <div className="flex flex-col items-center py-8">
               <CheckCircle2 className="w-8 h-8 text-emerald-500 mb-2" />
               <span className="text-sm font-mono text-slate-500">NO_CHANGES_DETECTED</span>
             </div>
           ) : (
             <div className="space-y-3">
-              {serpChanges.map((c, i) => (
+              {safeArr<{ impact: string; source: string; detected_at: string; change_type: string; migration_strategy: string }>(serpChanges).map((c, i) => (
                 <motion.div
                   key={i}
                   initial={{ opacity: 0, y: 5 }}
@@ -343,16 +344,16 @@ export default function ScrapingPage() {
                 >
                   <div className="flex items-center gap-2 mb-1">
                     <span className={`text-[10px] font-mono px-1.5 py-0.5 rounded border ${
-                      c.impact === "high" ? "bg-red-500/10 text-red-400 border-red-500/20" :
-                      c.impact === "medium" ? "bg-amber-500/10 text-amber-400 border-amber-500/20" :
+                      c?.impact === "high" ? "bg-red-500/10 text-red-400 border-red-500/20" :
+                      c?.impact === "medium" ? "bg-amber-500/10 text-amber-400 border-amber-500/20" :
                       "bg-emerald-500/10 text-emerald-400 border-emerald-500/20"
-                    }`}>{c.impact.toUpperCase()}</span>
-                    <span className="text-[10px] font-mono text-slate-500">{c.source}</span>
-                    <span className="text-[9px] font-mono text-slate-600 ml-auto">{new Date(c.detected_at).toLocaleDateString()}</span>
+                    }`}>{safeUpper(c?.impact, "UNKNOWN")}</span>
+                    <span className="text-[10px] font-mono text-slate-500">{safeStr(c?.source)}</span>
+                    <span className="text-[9px] font-mono text-slate-600 ml-auto">{safeStr(c?.detected_at) ? new Date(c.detected_at).toLocaleDateString() : "—"}</span>
                   </div>
-                  <p className="text-xs font-mono text-slate-300">{c.change_type.replace(/_/g, " ")}</p>
+                  <p className="text-xs font-mono text-slate-300">{safeReplace(c?.change_type, /_/g, " ")}</p>
                   {c.migration_strategy && (
-                    <p className="text-[10px] font-mono text-amber-400 mt-1">&gt; {c.migration_strategy.replace(/_/g, " ")}</p>
+                    <p className="text-[10px] font-mono text-amber-400 mt-1">&gt; {safeReplace(c.migration_strategy, /_/g, " ")}</p>
                   )}
                 </motion.div>
               ))}
@@ -376,24 +377,24 @@ export default function ScrapingPage() {
             <div className="space-y-4">
               <div className="grid grid-cols-3 gap-3">
                 <div className="p-3 rounded-md bg-surface-darker/50 border border-surface-border/50 text-center">
-                  <p className={`text-lg font-bold font-mono ${browserHealth.crash_rate > 5 ? "text-red-400" : "text-emerald-400"}`}>
-                    {browserHealth.crash_rate.toFixed(1)}%
+                  <p className={`text-lg font-bold font-mono ${safeNum(browserHealth?.crash_rate) > 5 ? "text-red-400" : "text-emerald-400"}`}>
+                    {safeFixed(browserHealth?.crash_rate, 1)}%
                   </p>
                   <p className="text-[9px] font-mono text-slate-500">Crash Rate</p>
                 </div>
                 <div className="p-3 rounded-md bg-surface-darker/50 border border-surface-border/50 text-center">
-                  <p className="text-lg font-bold font-mono text-slate-100">{browserHealth.total_crashes}</p>
+                  <p className="text-lg font-bold font-mono text-slate-100">{safeNum(browserHealth?.total_crashes)}</p>
                   <p className="text-[9px] font-mono text-slate-500">Crashes</p>
                 </div>
                 <div className="p-3 rounded-md bg-surface-darker/50 border border-surface-border/50 text-center">
-                  <p className="text-lg font-bold font-mono text-emerald-400">{Math.round(browserHealth.auto_recovery_rate)}%</p>
+                  <p className="text-lg font-bold font-mono text-emerald-400">{Math.round(safeNum(browserHealth?.auto_recovery_rate))}%</p>
                   <p className="text-[9px] font-mono text-slate-500">Recovery</p>
                 </div>
               </div>
-              {browserHealth.recommendations.length > 0 && (
+              {safeArr(browserHealth?.recommendations).length > 0 && (
                 <div className="pt-3 border-t border-surface-border space-y-1">
-                  {browserHealth.recommendations.map((r, i) => (
-                    <p key={i} className="text-[10px] font-mono text-slate-400">&gt; {r.replace(/_/g, " ")}</p>
+                  {safeArr<string>(browserHealth?.recommendations).map((r, i) => (
+                    <p key={i} className="text-[10px] font-mono text-slate-400">&gt; {safeStr(r).replace(/_/g, " ")}</p>
                   ))}
                 </div>
               )}
@@ -414,23 +415,23 @@ export default function ScrapingPage() {
           ) : (
             <div className="space-y-4">
               <div className="flex items-center justify-between">
-                <span className="text-3xl font-bold font-mono text-slate-100">{overload.current_concurrency}</span>
-                <span className="text-sm font-mono text-slate-500">/ {overload.max_concurrency}</span>
+                <span className="text-3xl font-bold font-mono text-slate-100">{safeNum(overload?.current_concurrency)}</span>
+                <span className="text-sm font-mono text-slate-500">/ {safeNum(overload?.max_concurrency)}</span>
               </div>
               <p className="text-[10px] font-mono text-slate-500">Current / Max Concurrency</p>
               <div className="w-full h-4 bg-surface-darker rounded-full overflow-hidden">
                 <motion.div
                   initial={{ width: 0 }}
-                  animate={{ width: `${Math.min(overload.overload_pct, 100)}%` }}
-                  className={`h-full rounded-full ${overload.overload_pct > 80 ? "bg-red-500" : overload.overload_pct > 50 ? "bg-amber-500" : "bg-emerald-500"}`}
+                  animate={{ width: `${Math.min(safeNum(overload?.overload_pct), 100)}%` }}
+                  className={`h-full rounded-full ${safeNum(overload?.overload_pct) > 80 ? "bg-red-500" : safeNum(overload?.overload_pct) > 50 ? "bg-amber-500" : "bg-emerald-500"}`}
                   transition={{ duration: 0.5 }}
                 />
               </div>
-              <p className="text-[10px] font-mono text-slate-500">{Math.round(overload.overload_pct)}% loaded</p>
-              {overload.recommendations.length > 0 && (
+              <p className="text-[10px] font-mono text-slate-500">{Math.round(safeNum(overload?.overload_pct))}% loaded</p>
+              {safeArr(overload?.recommendations).length > 0 && (
                 <div className="pt-3 border-t border-surface-border space-y-1">
-                  {overload.recommendations.map((r, i) => (
-                    <p key={i} className="text-[10px] font-mono text-slate-400">&gt; {r.replace(/_/g, " ")}</p>
+                  {safeArr<string>(overload?.recommendations).map((r, i) => (
+                    <p key={i} className="text-[10px] font-mono text-slate-400">&gt; {safeStr(r).replace(/_/g, " ")}</p>
                   ))}
                 </div>
               )}
@@ -446,11 +447,11 @@ export default function ScrapingPage() {
           </div>
           {loading8 ? (
             <div className="flex items-center justify-center py-8"><Loader2 className="w-6 h-6 text-platform-500 animate-spin" /></div>
-          ) : !strategies || strategies.length === 0 ? (
+          ) : safeArr(strategies).length === 0 ? (
             <div className="text-center py-8 text-sm font-mono text-slate-500">No adaptive strategies</div>
           ) : (
             <div className="space-y-3">
-              {strategies.map((s, i) => (
+              {safeArr<{ strategy: string; status: string; effectiveness: number }>(strategies).map((s, i) => (
                 <motion.div
                   key={s.strategy || i}
                   initial={{ opacity: 0, y: 5 }}
@@ -459,20 +460,20 @@ export default function ScrapingPage() {
                   className="p-3 rounded-md bg-surface-darker/50 border border-surface-border/50"
                 >
                   <div className="flex items-center justify-between mb-1">
-                    <span className="text-xs font-mono text-slate-300 uppercase">{s.strategy.replace(/_/g, " ")}</span>
-                    <span className={`w-2 h-2 rounded-full ${s.status === "active" ? "bg-emerald-500" : s.status === "standby" ? "bg-amber-500" : "bg-slate-500"}`} />
+                    <span className="text-xs font-mono text-slate-300 uppercase">{safeReplace(s.strategy, /_/g, " ")}</span>
+                    <span className={`w-2 h-2 rounded-full ${s?.status === "active" ? "bg-emerald-500" : s?.status === "standby" ? "bg-amber-500" : "bg-slate-500"}`} />
                   </div>
                   <div className="flex items-center gap-2">
-                    <span className="text-[10px] font-mono text-slate-500">{s.status.toUpperCase()}</span>
+                    <span className="text-[10px] font-mono text-slate-500">{safeUpper(s?.status)}</span>
                     <div className="flex-1 h-1.5 bg-surface-darker rounded-full overflow-hidden">
                       <motion.div
                         initial={{ width: 0 }}
-                        animate={{ width: `${s.effectiveness}%` }}
+                        animate={{ width: `${safeNum(s.effectiveness)}%` }}
                         className="h-full rounded-full bg-platform-500"
                         transition={{ duration: 0.5 }}
                       />
                     </div>
-                    <span className="text-[10px] font-mono text-slate-500">{Math.round(s.effectiveness)}%</span>
+                    <span className="text-[10px] font-mono text-slate-500">{Math.round(safeNum(s.effectiveness))}%</span>
                   </div>
                 </motion.div>
               ))}

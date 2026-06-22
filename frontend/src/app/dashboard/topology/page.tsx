@@ -8,6 +8,7 @@ import {
 } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { fetchApi, MOCK_TENANT_ID } from "@/lib/api";
+import { safeArr, safeStr, safeNum, safeUpper, safeLower, safeFixed, safeLocale, safePct, safeDate, safeDateTime, safeTime, safeReplace, safeSplit, safeSlice, safeStartsWith, safeFind, safeIncludes, safeSort, safeObj, safeKeys, safeValues, safeEntries, safeInitials } from "@/lib/safe";
 
 interface Phase {
   name: string;
@@ -136,7 +137,7 @@ export default function TopologyPage() {
     const defaultPhases = def ? def.phases.map((p) => ({ name: p, status: "waiting" as const })) : [];
     if (!stateData?.workflows) return defaultPhases;
     const match = stateData.workflows.find((w) => w.type === type);
-    if (match && match.phases && match.phases.length > 0) return match.phases;
+    if (match && safeArr<Phase>(match.phases).length > 0) return match.phases;
     return defaultPhases;
   };
 
@@ -299,11 +300,11 @@ export default function TopologyPage() {
                 </button>
               </div>
               <div className="p-6 overflow-y-auto flex-1">
-                {!historyData || historyData.length === 0 ? (
+                {!historyData || safeArr<WorkflowHistoryEntry>(historyData).length === 0 ? (
                   <div className="text-center py-12 text-slate-500 font-mono">No execution history available</div>
                 ) : (
                   <div className="space-y-3">
-                    {historyData.map((entry) => (
+                    {safeArr<WorkflowHistoryEntry>(historyData).map((entry) => (
                       <div key={entry.workflow_id} className="p-4 bg-surface-darker/50 rounded-lg border border-surface-border flex items-center justify-between">
                         <div>
                           <div className="text-sm font-mono text-slate-200">{entry.workflow_id.slice(0, 12)}...</div>
@@ -340,7 +341,7 @@ function WorkflowNodeCard({
   layer: number;
 }) {
   const colors = STATUS_COLORS[status] || STATUS_COLORS.waiting;
-  const completedCount = phases.filter((p) => p.status === "completed").length;
+  const completedCount = safeArr<Phase>(phases).filter((p) => p.status === "completed").length;
 
   return (
     <motion.div
@@ -368,8 +369,8 @@ function WorkflowNodeCard({
 
       {/* Phase progression */}
       <div className="space-y-1.5 mb-3">
-        {phases.length > 0 ? (
-          phases.map((phase) => {
+        {safeArr<Phase>(phases).length > 0 ? (
+          safeArr<Phase>(phases).map((phase) => {
             const phaseColors = STATUS_COLORS[phase.status] || STATUS_COLORS.waiting;
             return (
               <div key={phase.name} className="flex items-center gap-3 text-xs">
@@ -389,16 +390,16 @@ function WorkflowNodeCard({
         <div className="flex-1 h-1.5 bg-surface-darker rounded-full overflow-hidden">
           <motion.div
             initial={{ width: 0 }}
-            animate={{ width: `${phases.length > 0 ? (completedCount / phases.length) * 100 : 0}%` }}
+            animate={{ width: `${safeArr<Phase>(phases).length > 0 ? (completedCount / safeArr<Phase>(phases).length) * 100 : 0}%` }}
             className={`h-full rounded-full ${status === "failed" ? "bg-red-500" : status === "completed" ? "bg-emerald-500" : status === "running" ? "bg-blue-500" : "bg-amber-500/50"}`}
             transition={{ duration: 0.5 }}
           />
         </div>
-        <span className="text-xs font-mono text-slate-500">{completedCount}/{phases.length}</span>
+        <span className="text-xs font-mono text-slate-500">{completedCount}/{safeArr<Phase>(phases).length}</span>
       </div>
 
       {/* Dependencies */}
-      {def.dependencies.length > 0 && (
+      {safeArr<string>(def.dependencies).length > 0 && (
         <div className="mt-3 pt-3 border-t border-surface-border flex items-center gap-2 text-[10px] text-slate-600 font-mono">
           <Layers className="w-3 h-3" />
           <span>Depends on: {def.dependencies.map(d => WORKFLOW_DEFS.find(w => w.type === d)?.label || d).join(", ")}</span>

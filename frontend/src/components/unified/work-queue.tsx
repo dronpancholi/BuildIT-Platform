@@ -11,6 +11,7 @@ import { useQuery } from "@tanstack/react-query";
 import { fetchApi, MOCK_TENANT_ID } from "@/lib/api";
 import { useCommandCenter } from "@/hooks/use-command-center";
 import { ErrorState, LoadingState } from "@/components/ui/error-state";
+import { safeArr, safeUpper, safeLower, safeFixed, safeNum } from "@/lib/safe";
 // Types removed - using inline types below
 
 type QueueItemType = "approval" | "follow_up" | "reply" | "campaign_alert";
@@ -86,13 +87,13 @@ export function WorkQueue() {
     const items: QueueItem[] = [];
 
     // Add approvals
-    approvals.forEach(approval => {
+    safeArr<any>(approvals).forEach(approval => {
       items.push({
         id: `approval-${approval.id}`,
         type: "approval",
-        priority: approval.risk_level === "critical" ? "critical" : 
+        priority: approval.risk_level === "critical" ? "critical" :
                   approval.risk_level === "high" ? "high" : "medium",
-        title: `${approval.category.replace("_", " ").toUpperCase()} Approval`,
+        title: `${safeUpper(approval.category?.replace("_", " "), "APPROVAL")} Approval`,
         description: approval.summary || "Pending approval decision",
         customer: approval.customer_name || "Unknown",
         customerId: approval.customer_id,
@@ -103,14 +104,14 @@ export function WorkQueue() {
     });
 
     // Add campaign alerts
-    campaigns.forEach(campaign => {
+    safeArr<any>(campaigns).forEach(campaign => {
       if (campaign.health_score < 0.5 || campaign.status === "stalled") {
         items.push({
           id: `alert-${campaign.id}`,
           type: "campaign_alert",
           priority: campaign.health_score < 0.3 ? "critical" : "high",
           title: `Campaign: ${campaign.name}`,
-          description: `Health: ${(campaign.health_score * 100).toFixed(0)}% - Needs attention`,
+          description: `Health: ${safeFixed(safeNum(campaign.health_score) * 100, 0)}% - Needs attention`,
           customer: campaign.client_name || "Unknown",
           customerId: campaign.client_id,
           createdAt: campaign.updated_at,
@@ -124,10 +125,11 @@ export function WorkQueue() {
 
   // Filter items
   const filteredItems = useMemo(() => {
-    return queueItems.filter(item => {
-      const matchesSearch = !searchQuery || 
-        item.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        item.customer.toLowerCase().includes(searchQuery.toLowerCase());
+    return safeArr<QueueItem>(queueItems).filter(item => {
+      const lowerSearch = safeLower(searchQuery, "");
+      const matchesSearch = !searchQuery ||
+        safeLower(item.title).includes(lowerSearch) ||
+        safeLower(item.customer).includes(lowerSearch);
       const matchesType = filterType === "all" || item.type === filterType;
       const matchesPriority = filterPriority === "all" || item.priority === filterPriority;
       return matchesSearch && matchesType && matchesPriority;
@@ -404,7 +406,7 @@ function QueueItemRow({
           <div className="flex items-center gap-2 mb-1">
             <span className={`px-1.5 py-0.5 text-[8px] font-mono rounded border flex items-center gap-1 ${priorityColor}`}>
               {getPriorityIcon(item.priority)}
-              {item.priority.toUpperCase()}
+              {safeUpper(item.priority)}
             </span>
             <span className="px-1.5 py-0.5 text-[8px] font-mono rounded border border-surface-border bg-surface-darker text-slate-500 flex items-center gap-1">
               {getTypeIcon(item.type)}

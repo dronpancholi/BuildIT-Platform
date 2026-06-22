@@ -1,9 +1,10 @@
 from __future__ import annotations
 
+from seo_platform.core.auth import get_validated_tenant_id
 from typing import Any
 from uuid import UUID
 
-from fastapi import APIRouter, Body, Query
+from fastapi import Depends,  APIRouter, Body, Query
 
 from seo_platform.services.ai_quality import ai_quality_service
 
@@ -55,7 +56,7 @@ async def score_outreach_quality(
 
 @router.get("/dashboard")
 async def get_ai_quality_dashboard(
-    tenant_id: UUID = Query(..., description="Tenant UUID"),
+    tenant_id: UUID = Depends(get_validated_tenant_id),
 ) -> dict:
     result = await ai_quality_service.get_ai_quality_dashboard(tenant_id)
     return {"success": True, "data": result.model_dump()}

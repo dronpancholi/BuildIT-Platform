@@ -9,6 +9,7 @@ import {
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { fetchApi, MOCK_TENANT_ID } from "@/lib/api";
 import { useState } from "react";
+import { safeArr, safeReplace } from "@/lib/safe";
 
 interface WorkflowHealthEntry {
   workflow_id: string;
@@ -114,10 +115,12 @@ export default function OperationsPage() {
     },
   });
 
-  const healthList = healthData || [];
-  const orphanList = orphans || [];
-  const deadLetterList = deadLetters || [];
-  const incidentList = incidentsDashboard ? [...(incidentsDashboard.active_incidents ?? []), ...(incidentsDashboard.recent_resolutions ?? [])] : [];
+  const healthList = safeArr<WorkflowHealthEntry>(healthData);
+  const orphanList = safeArr<OrphanWorkflow>(orphans);
+  const deadLetterList = safeArr<DeadLetterWorkflow>(deadLetters);
+  const incidentList = incidentsDashboard
+    ? [...safeArr<IncidentEntry>(incidentsDashboard.active_incidents), ...safeArr<IncidentEntry>(incidentsDashboard.recent_resolutions)]
+    : [];
   const mttd = incidentsDashboard?.mttd_minutes ?? 0;
   const mttr = incidentsDashboard?.mttr_minutes ?? 0;
 
@@ -341,7 +344,7 @@ export default function OperationsPage() {
                     <div className="p-3 rounded-md bg-surface-darker/50 border border-surface-border/50">
                       <p className="text-[10px] font-mono text-slate-500 uppercase mb-1">Healthy Systems</p>
                       <div className="flex flex-wrap gap-1">
-                        {degradation.healthy_systems.map(s => (
+                        {safeArr<string>(degradation.healthy_systems).map(s => (
                           <span key={s} className="px-2 py-0.5 rounded text-[10px] font-mono bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
                             {s}
                           </span>
@@ -351,7 +354,7 @@ export default function OperationsPage() {
                     <div className="p-3 rounded-md bg-surface-darker/50 border border-surface-border/50">
                       <p className="text-[10px] font-mono text-slate-500 uppercase mb-1">Affected Systems</p>
                       <div className="flex flex-wrap gap-1">
-                        {degradation.affected_systems.length > 0 ? degradation.affected_systems.map(s => (
+                        {safeArr<string>(degradation.affected_systems).length > 0 ? safeArr<string>(degradation.affected_systems).map(s => (
                           <span key={s} className="px-2 py-0.5 rounded text-[10px] font-mono bg-red-500/10 text-red-400 border border-red-500/20">
                             {s}
                           </span>
@@ -359,14 +362,14 @@ export default function OperationsPage() {
                       </div>
                     </div>
                   </div>
-                  {degradation.recommended_actions.length > 0 && (
+                  {safeArr<{ action: string; reason: string }>(degradation.recommended_actions).length > 0 && (
                     <div className="p-3 rounded-md bg-amber-500/5 border border-amber-500/10">
                       <p className="text-[10px] font-mono text-amber-400 uppercase mb-2">Recommended Actions</p>
-                      {degradation.recommended_actions.map((a, i) => (
+                      {safeArr<{ action: string; reason: string }>(degradation.recommended_actions).map((a, i) => (
                         <div key={i} className="flex items-center gap-2 text-xs font-mono text-slate-300 mb-1">
                           <span className="text-amber-400">&gt;</span>
-                          <span>{a.action.replace(/_/g, " ")}</span>
-                          <span className="text-slate-500">({a.reason.replace(/_/g, " ")})</span>
+                          <span>{safeReplace(a.action, /_/g, " ")}</span>
+                          <span className="text-slate-500">({safeReplace(a.reason, /_/g, " ")})</span>
                         </div>
                       ))}
                     </div>

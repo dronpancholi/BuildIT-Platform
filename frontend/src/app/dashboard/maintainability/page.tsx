@@ -7,6 +7,7 @@ import {
 } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { fetchApi } from "@/lib/api";
+import { safeArr, safeUpper, safeStr, safeReplace, safeNum } from "@/lib/safe";
 
 interface SchemaEvolution {
   schema_name: string;
@@ -96,11 +97,11 @@ export default function MaintainabilityPage() {
     refetchInterval: 15000,
   });
 
-  const schemas = schemaEvolution || [];
-  const temporalVersionsList = temporalVersions || [];
-  const replayList = replayCompat || [];
-  const depsList = dependencies || [];
-  const lifecycleList = lifecycle || [];
+  const schemas = safeArr<SchemaEvolution>(schemaEvolution);
+  const temporalVersionsList = safeArr<TemporalVersion>(temporalVersions);
+  const replayList = safeArr<ReplayCompatibility>(replayCompat);
+  const depsList = safeArr<ServiceDependency>(dependencies);
+  const lifecycleList = safeArr<PlatformLifecycle>(lifecycle);
 
   return (
     <div className="space-y-6">
@@ -143,16 +144,16 @@ export default function MaintainabilityPage() {
                   className="p-3 rounded-md bg-surface-darker/50 border border-surface-border/50"
                 >
                   <div className="flex items-center justify-between mb-1">
-                    <span className="text-xs font-mono text-slate-300 uppercase">{s.schema_name.replace(/_/g, " ")}</span>
+                    <span className="text-xs font-mono text-slate-300 uppercase">{safeReplace(s.schema_name, /_/g, " ")}</span>
                     <span className={`text-[10px] font-mono px-1.5 py-0.5 rounded ${
                       s.status === "active" ? "bg-emerald-500/10 text-emerald-400" :
                       s.status === "deprecated" ? "bg-amber-500/10 text-amber-400" :
                       "bg-red-500/10 text-red-400"
-                    }`}>{s.status.toUpperCase()}</span>
+                    }`}>{safeUpper(s.status)}</span>
                   </div>
                   <div className="flex items-center gap-3 text-[10px] font-mono text-slate-500">
-                    <span>v{s.current_version}/{s.total_versions}</span>
-                    <span>Last: {new Date(s.last_migration).toLocaleDateString()}</span>
+                    <span>v{safeNum(s.current_version)}/{safeNum(s.total_versions)}</span>
+                    <span>Last: {safeStr(s.last_migration) ? new Date(s.last_migration).toLocaleDateString() : "—"}</span>
                   </div>
                 </motion.div>
               ))}
@@ -181,15 +182,15 @@ export default function MaintainabilityPage() {
                   className="flex items-center justify-between p-2.5 rounded bg-surface-darker/50 border border-surface-border/50"
                 >
                   <div>
-                    <span className="text-xs font-mono text-slate-300">{v.workflow_type.replace(/_/g, " ")}</span>
-                    <span className="text-[9px] font-mono text-slate-600 ml-2">v{v.version}</span>
+                    <span className="text-xs font-mono text-slate-300">{safeReplace(v.workflow_type, /_/g, " ")}</span>
+                    <span className="text-[9px] font-mono text-slate-600 ml-2">v{safeNum(v.version)}</span>
                   </div>
                   <div className="flex items-center gap-2">
                     <span className={`text-[10px] font-mono ${
                       v.compatibility === "compatible" ? "text-emerald-400" :
                       v.compatibility === "deprecated" ? "text-amber-400" :
                       "text-red-400"
-                    }`}>{v.compatibility.toUpperCase()}</span>
+                    }`}>{safeUpper(v.compatibility)}</span>
                   </div>
                 </motion.div>
               ))}
@@ -218,16 +219,16 @@ export default function MaintainabilityPage() {
                   className="p-3 rounded-md bg-surface-darker/50 border border-surface-border/50"
                 >
                   <div className="flex items-center justify-between mb-1">
-                    <span className="text-xs font-mono text-slate-300">{r.workflow_type.replace(/_/g, " ")}</span>
-                    <span className={`text-xs font-mono font-bold ${r.replay_success_rate >= 95 ? "text-emerald-400" : r.replay_success_rate >= 80 ? "text-amber-400" : "text-red-400"}`}>
-                      {Math.round(r.replay_success_rate)}%
+                    <span className="text-xs font-mono text-slate-300">{safeReplace(r.workflow_type, /_/g, " ")}</span>
+                    <span className={`text-xs font-mono font-bold ${safeNum(r.replay_success_rate) >= 95 ? "text-emerald-400" : safeNum(r.replay_success_rate) >= 80 ? "text-amber-400" : "text-red-400"}`}>
+                      {Math.round(safeNum(r.replay_success_rate))}%
                     </span>
                   </div>
                   <div className="w-full h-2 bg-surface-darker rounded-full overflow-hidden">
                     <motion.div
                       initial={{ width: 0 }}
-                      animate={{ width: `${r.replay_success_rate}%` }}
-                      className={`h-full rounded-full ${r.replay_success_rate >= 95 ? "bg-emerald-500" : r.replay_success_rate >= 80 ? "bg-amber-500" : "bg-red-500"}`}
+                      animate={{ width: `${safeNum(r.replay_success_rate)}%` }}
+                      className={`h-full rounded-full ${safeNum(r.replay_success_rate) >= 95 ? "bg-emerald-500" : safeNum(r.replay_success_rate) >= 80 ? "bg-amber-500" : "bg-red-500"}`}
                       transition={{ duration: 0.5 }}
                     />
                   </div>
@@ -280,11 +281,11 @@ export default function MaintainabilityPage() {
                   </div>
                 </div>
               )}
-              {longTerm.recommendations.length > 0 && (
+              {safeArr(longTerm?.recommendations).length > 0 && (
                 <div className="pt-3 border-t border-surface-border space-y-1">
                   <p className="text-[10px] font-mono text-platform-400 uppercase">Recommendations</p>
-                  {longTerm.recommendations.map((r, i) => (
-                    <p key={i} className="text-[10px] font-mono text-slate-400">&gt; {r.replace(/_/g, " ")}</p>
+                  {safeArr<string>(longTerm?.recommendations).map((r, i) => (
+                    <p key={i} className="text-[10px] font-mono text-slate-400">&gt; {safeReplace(r, /_/g, " ")}</p>
                   ))}
                 </div>
               )}
@@ -366,13 +367,13 @@ export default function MaintainabilityPage() {
                     <td className="px-4 py-3 text-xs text-slate-300">{c.component}</td>
                     <td className="px-4 py-3 text-xs text-slate-400">{c.version}</td>
                     <td className="px-4 py-3 text-xs text-slate-500">{new Date(c.release_date).toLocaleDateString()}</td>
-                    <td className="px-4 py-3 text-xs text-slate-500">{new Date(c.end_of_life).toLocaleDateString()}</td>
+                    <td className="px-4 py-3 text-xs text-slate-500">{safeStr(c.end_of_life) ? new Date(c.end_of_life).toLocaleDateString() : "—"}</td>
                     <td className="px-4 py-3">
                       <span className={`text-[10px] font-mono px-2 py-0.5 rounded ${
                         c.status === "supported" ? "bg-emerald-500/10 text-emerald-400" :
                         c.status === "deprecated" ? "bg-amber-500/10 text-amber-400" :
                         "bg-red-500/10 text-red-400"
-                      }`}>{c.status.toUpperCase()}</span>
+                      }`}>{safeUpper(c.status)}</span>
                     </td>
                   </motion.tr>
                 ))}

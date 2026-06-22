@@ -9,6 +9,7 @@ import {
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { fetchApi, MOCK_TENANT_ID } from "@/lib/api";
 import type { ThreadData } from "@/components/operational/email-thread-viewer";
+import { safeArr, safeStr, safeNum, safeUpper, safeLower, safeFixed, safeLocale, safePct, safeDate, safeDateTime, safeTime, safeReplace, safeSplit, safeSlice, safeStartsWith, safeFind, safeIncludes, safeSort, safeObj, safeKeys, safeValues, safeEntries, safeInitials } from "@/lib/safe";
 
 function statusColor(s: string): string {
   const map: Record<string, string> = {
@@ -44,10 +45,10 @@ export default function OutboxPage() {
 
   const filtered = threads.filter((t) =>
     !searchQuery ||
-    t.subject.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    t.prospect_domain.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    (t.to_email && t.to_email.toLowerCase().includes(searchQuery.toLowerCase())) ||
-    (t.campaign_name && t.campaign_name.toLowerCase().includes(searchQuery.toLowerCase()))
+    safeLower(t.subject, "").includes(safeLower(searchQuery, "")) ||
+    safeLower(t.prospect_domain, "").includes(safeLower(searchQuery, "")) ||
+    safeLower(t.to_email, "").includes(safeLower(searchQuery, "")) ||
+    safeLower(t.campaign_name, "").includes(safeLower(searchQuery, ""))
   );
 
   const selectedThread = threads.find(t => t.id === selectedThreadId) || filtered[0];
@@ -164,7 +165,7 @@ export default function OutboxPage() {
           <p className="text-slate-400 mt-1">Global view of all generated and sent outreach emails.</p>
         </div>
         <div className="px-3 py-1.5 rounded-md bg-surface-darker border border-surface-border text-xs font-mono text-slate-400">
-          {threads.length} THREADS
+          {safeArr(threads).length} THREADS
         </div>
       </div>
 
@@ -193,14 +194,14 @@ export default function OutboxPage() {
               <div className="p-4 text-center text-red-400 text-xs">
                 Failed to load threads
               </div>
-            ) : filtered.length === 0 ? (
+            ) : safeArr(filtered).length === 0 ? (
               <div className="p-8 text-center">
                 <Mail className="w-8 h-8 text-slate-600 mx-auto mb-2" />
                 <p className="text-xs font-mono text-slate-500">No emails found. Emails appear here when campaigns generate outreach.</p>
               </div>
             ) : (
               <div className="divide-y divide-surface-border">
-                {filtered.map((t) => (
+                {safeArr<ThreadData>(filtered).map((t) => (
                   <button
                     key={t.id}
                     onClick={() => { setSelectedThreadId(t.id); setEditing(false); setShowFollowUp(false); setShowLinkAcquired(false); }}
@@ -446,7 +447,7 @@ export default function OutboxPage() {
                       dangerouslySetInnerHTML={{ __html: selectedThread.body_html }}
                     />
 
-                    {selectedThread.ai_personalization && Object.keys(selectedThread.ai_personalization).length > 0 && (
+                    {selectedThread.ai_personalization && safeKeys(selectedThread.ai_personalization).length > 0 && (
                       <div className="mt-8 max-w-3xl">
                         <h3 className="text-[10px] font-mono text-slate-500 uppercase tracking-wider mb-3 flex items-center gap-2">
                           <CheckCircle2 className="w-3 h-3 text-platform-500" />

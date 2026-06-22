@@ -11,6 +11,7 @@ import { fetchApi, MOCK_TENANT_ID } from "@/lib/api";
 import { useRouter } from "next/navigation";
 import { ErrorState, LoadingState } from "@/components/ui/error-state";
 import type { ClientInfo } from "@/hooks/use-client";
+import { safeArr, safeFixed, safeNum, safeInitials } from "@/lib/safe";
 
 interface CustomerHealthData {
   id: string;
@@ -63,20 +64,20 @@ export function CustomerHealthOverview() {
     queryFn: async () => {
       // Fetch clients
       const clientsResponse = await fetchApi<any>(`/clients?tenant_id=${MOCK_TENANT_ID}`);
-      const clients = clientsResponse?.data || [];
-      
+      const clients = safeArr<any>(clientsResponse?.data);
+
       // Fetch campaign data for each client
       const campaignsResponse = await fetchApi<any>(`/business-intelligence/intelligence/campaigns?tenant_id=${MOCK_TENANT_ID}`);
-      const campaigns = campaignsResponse?.data?.campaigns || [];
-      
+      const campaigns = safeArr<any>(campaignsResponse?.data?.campaigns);
+
       // Merge data
-      return clients.map((client: any) => {
-        const clientCampaigns = campaigns.filter((c: any) => c.client_id === client.id);
+      return safeArr<any>(clients).map((client: any) => {
+        const clientCampaigns = safeArr<any>(campaigns).filter((c: any) => c.client_id === client.id);
         const activeCampaigns = clientCampaigns.filter((c: any) => c.status === "active" || c.status === "monitoring");
-        const avgHealth = clientCampaigns.length > 0 
-          ? clientCampaigns.reduce((sum: number, c: any) => sum + c.health_score, 0) / clientCampaigns.length
+        const avgHealth = clientCampaigns.length > 0
+          ? clientCampaigns.reduce((sum: number, c: any) => sum + safeNum(c.health_score), 0) / clientCampaigns.length
           : 0;
-        
+
         return {
           id: client.id,
           name: client.name,
@@ -85,7 +86,7 @@ export function CustomerHealthOverview() {
           health_score: avgHealth,
           active_campaigns: activeCampaigns.length,
           total_keywords: client.keyword_count || 0,
-          links_acquired: clientCampaigns.reduce((sum: number, c: any) => sum + c.acquired_link_count, 0),
+          links_acquired: clientCampaigns.reduce((sum: number, c: any) => sum + safeNum(c.acquired_link_count), 0),
           reply_rate: 0.18, // Placeholder - would come from threads data
           status: getHealthStatus(avgHealth),
           recent_activity: [],
@@ -96,14 +97,14 @@ export function CustomerHealthOverview() {
   });
 
   const stats = useMemo(() => {
-    const total = customers.length;
-    const healthy = customers.filter(c => c.status === "healthy").length;
-    const atRisk = customers.filter(c => c.status === "at_risk").length;
-    const critical = customers.filter(c => c.status === "critical").length;
-    const avgHealth = total > 0 
-      ? customers.reduce((sum, c) => sum + c.health_score, 0) / total 
+    const total = safeArr<CustomerHealthData>(customers).length;
+    const healthy = safeArr<CustomerHealthData>(customers).filter(c => c.status === "healthy").length;
+    const atRisk = safeArr<CustomerHealthData>(customers).filter(c => c.status === "at_risk").length;
+    const critical = safeArr<CustomerHealthData>(customers).filter(c => c.status === "critical").length;
+    const avgHealth = total > 0
+      ? safeArr<CustomerHealthData>(customers).reduce((sum, c) => sum + safeNum(c.health_score), 0) / total
       : 0;
-    
+
     return { total, healthy, atRisk, critical, avgHealth };
   }, [customers]);
 
@@ -174,7 +175,7 @@ export function CustomerHealthOverview() {
         <div className="px-4 py-2 border-b border-surface-border bg-surface-darker/50 flex items-center justify-between">
           <span className="text-[9px] font-mono text-slate-500 uppercase">Portfolio Health</span>
           <span className="text-[9px] font-mono text-slate-600">
-            Avg Health: <span className={getHealthColor(stats.avgHealth)}>{(stats.avgHealth * 100).toFixed(0)}%</span>
+            Avg Health: <span className={getHealthColor(stats.avgHealth)}>{safeFixed(safeNum(stats.avgHealth) * 100, 0)}%</span>
           </span>
         </div>
 
@@ -185,7 +186,7 @@ export function CustomerHealthOverview() {
           </div>
         ) : (
           <div className="divide-y divide-surface-border">
-            {customers.map((customer, i) => (
+            {safeArr<CustomerHealthData>(customers).map((customer, i) => (
               <motion.div
                 key={customer.id}
                 initial={{ opacity: 0, x: -5 }}
@@ -196,7 +197,7 @@ export function CustomerHealthOverview() {
               >
                 <div className="flex items-center gap-3">
                   <div className="w-8 h-8 rounded-lg bg-platform-600/20 border border-platform-500/20 flex items-center justify-center text-platform-400 font-bold text-xs flex-shrink-0">
-                    {customer.name.split(" ").map((w: string) => w[0]).join("").slice(0, 2).toUpperCase()}
+                    {safeInitials(customer.name, 2, "?")}
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 mb-1">
@@ -214,12 +215,12 @@ export function CustomerHealthOverview() {
                         <div className="w-12 h-1.5 bg-surface-darker rounded-full overflow-hidden">
                           <motion.div
                             initial={{ width: 0 }}
-                            animate={{ width: `${customer.health_score * 100}%` }}
+                            animate={{ width: `${safeNum(customer.health_score) * 100}%` }}
                             className={`h-full rounded-full ${getHealthBg(customer.health_score)}`}
                           />
                         </div>
                         <span className={`text-[10px] font-mono font-bold ${getHealthColor(customer.health_score)}`}>
-                          {(customer.health_score * 100).toFixed(0)}%
+                          {safeFixed(safeNum(customer.health_score) * 100, 0)}%
                         </span>
                       </div>
                     </div>
@@ -242,7 +243,7 @@ export function CustomerHealthOverview() {
                   </div>
                   <div className="flex items-center gap-1.5 text-[9px] font-mono text-slate-600">
                     <Mail className="w-3 h-3 text-blue-500" />
-                    <span>{(customer.reply_rate * 100).toFixed(1)}% reply</span>
+                    <span>{safeFixed(safeNum(customer.reply_rate) * 100, 1)}% reply</span>
                   </div>
                 </div>
               </motion.div>

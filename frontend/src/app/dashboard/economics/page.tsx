@@ -7,6 +7,7 @@ import {
 } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { fetchApi } from "@/lib/api";
+import { safeArr, safeNum, safeStr, safeUpper, safeFixed, safeReplace } from "@/lib/safe";
 
 interface AICosts {
   total_cost: number;
@@ -89,7 +90,7 @@ function CardSkeleton() {
 }
 
 function formatCurrency(n: number): string {
-  return `$${n.toFixed(2)}`;
+  return `$${safeFixed(n, 2)}`;
 }
 
 export default function EconomicsPage() {
@@ -141,8 +142,8 @@ export default function EconomicsPage() {
     refetchInterval: 15000,
   });
 
-  const recommendations = optimization?.recommendations || [];
-  const utilList = utilization || [];
+  const recommendations = safeArr<OptimizationRecommendation>(optimization?.recommendations);
+  const utilList = safeArr<UtilizationEntry>(utilization);
 
   return (
     <div className="space-y-6">
@@ -154,7 +155,7 @@ export default function EconomicsPage() {
         {roi && (
           <div className="px-3 py-1.5 rounded-md bg-emerald-500/10 border border-emerald-500/20 text-xs font-mono text-emerald-400 flex items-center gap-2">
             <TrendingUp className="w-4 h-4" />
-            ROI: {roi.roi_score.toFixed(1)}x
+            ROI: {safeFixed(roi.roi_score, 1)}x
           </div>
         )}
       </div>
@@ -319,24 +320,24 @@ export default function EconomicsPage() {
           ) : !throughput ? (
             <div className="text-center py-8 text-sm font-mono text-slate-500">No throughput data</div>
           ) : (
-            <div className="grid grid-cols-2 gap-4">
-              <div className="p-4 rounded-md bg-surface-darker/50 border border-surface-border/50">
-                <p className="text-[10px] font-mono text-slate-500 uppercase">Total Events</p>
-                <p className="text-xl font-bold font-mono text-slate-100">{throughput.total_events.toLocaleString()}</p>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="p-4 rounded-md bg-surface-darker/50 border border-surface-border/50">
+                  <p className="text-[10px] font-mono text-slate-500 uppercase">Total Events</p>
+                  <p className="text-xl font-bold font-mono text-slate-100">{safeStr(throughput.total_events)}</p>
+                </div>
+                <div className="p-4 rounded-md bg-surface-darker/50 border border-surface-border/50">
+                  <p className="text-[10px] font-mono text-slate-500 uppercase">Events/sec</p>
+                  <p className="text-xl font-bold font-mono text-slate-100">{safeFixed(throughput.events_per_second, 1)}</p>
+                </div>
+                <div className="p-4 rounded-md bg-surface-darker/50 border border-surface-border/50">
+                  <p className="text-[10px] font-mono text-slate-500 uppercase">Cost/Event</p>
+                  <p className="text-xl font-bold font-mono text-slate-100">{formatCurrency(safeNum(throughput.cost_per_event))}</p>
+                </div>
+                <div className="p-4 rounded-md bg-surface-darker/50 border border-surface-border/50">
+                  <p className="text-[10px] font-mono text-slate-500 uppercase">Daily Est.</p>
+                  <p className="text-xl font-bold font-mono text-slate-100">{formatCurrency(safeNum(throughput.estimated_daily_cost))}</p>
+                </div>
               </div>
-              <div className="p-4 rounded-md bg-surface-darker/50 border border-surface-border/50">
-                <p className="text-[10px] font-mono text-slate-500 uppercase">Events/sec</p>
-                <p className="text-xl font-bold font-mono text-slate-100">{throughput.events_per_second.toFixed(1)}</p>
-              </div>
-              <div className="p-4 rounded-md bg-surface-darker/50 border border-surface-border/50">
-                <p className="text-[10px] font-mono text-slate-500 uppercase">Cost/Event</p>
-                <p className="text-xl font-bold font-mono text-slate-100">{formatCurrency(throughput.cost_per_event)}</p>
-              </div>
-              <div className="p-4 rounded-md bg-surface-darker/50 border border-surface-border/50">
-                <p className="text-[10px] font-mono text-slate-500 uppercase">Daily Est.</p>
-                <p className="text-xl font-bold font-mono text-slate-100">{formatCurrency(throughput.estimated_daily_cost)}</p>
-              </div>
-            </div>
           )}
         </motion.div>
 
@@ -346,8 +347,8 @@ export default function EconomicsPage() {
             <TrendingUp className="w-5 h-5 text-emerald-500" />
             <h3 className="text-lg font-medium text-slate-200 font-mono">OPERATIONAL_ROI</h3>
             {roi && (
-              <span className={`ml-auto text-lg font-bold font-mono ${roi.roi_score >= 2 ? "text-emerald-400" : roi.roi_score >= 1 ? "text-amber-400" : "text-red-400"}`}>
-                {roi.roi_score.toFixed(1)}x
+              <span className={`ml-auto text-lg font-bold font-mono ${safeNum(roi.roi_score) >= 2 ? "text-emerald-400" : safeNum(roi.roi_score) >= 1 ? "text-amber-400" : "text-red-400"}`}>
+                {safeFixed(roi.roi_score, 1)}x
               </span>
             )}
           </div>
@@ -370,7 +371,7 @@ export default function EconomicsPage() {
               <div className="w-full h-3 bg-surface-darker rounded-full overflow-hidden">
                 <motion.div
                   initial={{ width: 0 }}
-                  animate={{ width: `${Math.min((roi.total_value / Math.max(roi.total_cost, 1)) * 50, 100)}%` }}
+                  animate={{ width: `${Math.min((safeNum(roi.total_value) / Math.max(safeNum(roi.total_cost), 1)) * 50, 100)}%` }}
                   className="h-full rounded-full bg-emerald-500"
                   transition={{ duration: 0.5 }}
                 />
@@ -380,7 +381,7 @@ export default function EconomicsPage() {
                   <p className="text-[10px] font-mono text-slate-500 uppercase mb-2">Cost Breakdown</p>
                   {Object.entries(roi.cost_breakdown).map(([k, v]) => (
                     <div key={k} className="flex justify-between text-[10px] font-mono text-slate-500">
-                      <span>{k.replace(/_/g, " ")}</span>
+                      <span>{safeReplace(k, /_/g, " ")}</span>
                       <span>{formatCurrency(v)}</span>
                     </div>
                   ))}
@@ -419,11 +420,11 @@ export default function EconomicsPage() {
                     r.effort === "low" ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/20" :
                     r.effort === "medium" ? "bg-amber-500/10 text-amber-400 border-amber-500/20" :
                     "bg-red-500/10 text-red-400 border-red-500/20"
-                  }`}>{r.effort.toUpperCase()}</span>
+                  }`}>{safeUpper(r.effort)}</span>
                   <span className="text-[10px] font-mono text-slate-500">{r.category}</span>
                 </div>
-                <p className="text-xs font-mono text-slate-300 mb-2">{r.action.replace(/_/g, " ")}</p>
-                <p className="text-[10px] font-mono text-emerald-400">Save {formatCurrency(r.expected_savings)}</p>
+                <p className="text-xs font-mono text-slate-300 mb-2">{safeReplace(r.action, /_/g, " ")}</p>
+                <p className="text-[10px] font-mono text-emerald-400">Save {formatCurrency(safeNum(r.expected_savings))}</p>
               </motion.div>
             ))}
           </div>

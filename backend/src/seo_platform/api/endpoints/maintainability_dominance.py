@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from seo_platform.core.auth import get_validated_tenant_id
 from fastapi import APIRouter, Query
 
 from seo_platform.services.maintainability_dominance import maintainability_dominance

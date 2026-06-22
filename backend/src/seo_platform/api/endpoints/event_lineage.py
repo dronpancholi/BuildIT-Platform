@@ -6,6 +6,7 @@ REST API for querying event causality chains and correlation trees.
 
 from __future__ import annotations
 
+from seo_platform.core.auth import get_validated_tenant_id
 from fastapi import APIRouter, HTTPException, Query
 
 from seo_platform.services.event_lineage import event_lineage

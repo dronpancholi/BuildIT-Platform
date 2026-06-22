@@ -1,8 +1,9 @@
 from __future__ import annotations
 
+from seo_platform.core.auth import get_validated_tenant_id
 from uuid import UUID
 
-from fastapi import APIRouter, Query
+from fastapi import APIRouter, Depends, Query
 
 from seo_platform.services.autonomy_orchestrator import autonomy_orchestrator
 
@@ -10,7 +11,7 @@ router = APIRouter()
 
 
 @router.get("/workflow-suggestions")
-async def get_workflow_suggestions(tenant_id: UUID = Query(...)) -> dict:
+async def get_workflow_suggestions(tenant_id: UUID = Depends(get_validated_tenant_id)) -> dict:
     suggestions = await autonomy_orchestrator.get_autonomous_workflow_suggestions(tenant_id)
     return {
         "success": True,
@@ -36,7 +37,7 @@ async def run_self_analysis() -> dict:
 
 
 @router.get("/optimization-intelligence")
-async def get_optimization_intelligence(tenant_id: UUID = Query(...)) -> dict:
+async def get_optimization_intelligence(tenant_id: UUID = Depends(get_validated_tenant_id)) -> dict:
     suggestions = await autonomy_orchestrator.get_optimization_intelligence(tenant_id)
     return {
         "success": True,
@@ -46,6 +47,6 @@ async def get_optimization_intelligence(tenant_id: UUID = Query(...)) -> dict:
 
 
 @router.get("/strategic-guidance")
-async def get_strategic_guidance(tenant_id: UUID = Query(...)) -> dict:
+async def get_strategic_guidance(tenant_id: UUID = Depends(get_validated_tenant_id)) -> dict:
     guidance = await autonomy_orchestrator.get_strategic_guidance(tenant_id)
     return {"success": True, "data": guidance.model_dump()}

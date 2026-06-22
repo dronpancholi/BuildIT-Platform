@@ -7,6 +7,7 @@ import {
 } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { fetchApi } from "@/lib/api";
+import { safeArr, safeStr, safeNum, safeFixed, safeUpper, safeLocale } from "@/lib/safe";
 
 interface RegionDeployment {
   region: string;
@@ -76,9 +77,9 @@ export default function GlobalInfraPage() {
     refetchInterval: 15000,
   });
 
-  const regionList = regions || [];
-  const routeList = geoRoutes || [];
-  const drList = drStatus || [];
+  const regionList = safeArr<RegionDeployment>(regions);
+  const routeList = safeArr<GeoRoute>(geoRoutes);
+  const drList = safeArr<DisasterRecovery>(drStatus);
 
   return (
     <div className="space-y-6">

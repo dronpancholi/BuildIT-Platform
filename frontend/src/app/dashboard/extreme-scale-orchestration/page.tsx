@@ -6,6 +6,7 @@ import {
 } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { fetchApi } from "@/lib/api";
+import { safeArr, safeStr, safeNum, safeUpper, safeLower, safeFixed, safeLocale, safePct, safeDate, safeDateTime, safeTime, safeReplace, safeSplit, safeSlice, safeStartsWith, safeFind, safeIncludes, safeSort, safeObj, safeKeys, safeValues, safeEntries, safeInitials } from "@/lib/safe";
 
 interface OrchestrationFederationPlan {
   region: string;
@@ -85,7 +86,7 @@ export default function ExtremeScaleOrchestrationPage() {
                 )}
               </div>
               <div className="text-xs text-slate-500 mb-2">Consistency: {federation.consistency_model}</div>
-              {federation.federation_topology.map((p, i) => (
+              {safeArr<{ peer: string; connection_type: string; latency_ms: number }>(federation.federation_topology).map((p, i) => (
                 <div key={i} className="flex items-center justify-between text-xs p-2 rounded bg-slate-800/30">
                   <span className="text-slate-300">{p.peer}</span>
                   <div className="flex items-center gap-2">
@@ -111,7 +112,7 @@ export default function ExtremeScaleOrchestrationPage() {
               </div>
               <div className="grid grid-cols-2 gap-2 text-sm">
                 <div className="text-slate-400">Current: <span className="text-slate-200">{sharding.total_shards}</span></div>
-                <div className="text-slate-400">Throughput: <span className="text-slate-200">{sharding.estimated_throughput.toLocaleString()}/s</span></div>
+                <div className="text-slate-400">Throughput: <span className="text-slate-200">{safeLocale(sharding.estimated_throughput)}/s</span></div>
               </div>
               <div className="text-xs text-slate-400">{sharding.workflow_type}</div>
             </div>
@@ -134,7 +135,7 @@ export default function ExtremeScaleOrchestrationPage() {
                   Skew detected — rebalancing recommended
                 </div>
               )}
-              {execution.execution_nodes.map((n, i) => (
+              {safeArr<{ node: string; tasks: number; load_pct: number }>(execution.execution_nodes).map((n, i) => (
                 <div key={i} className="flex items-center gap-2 text-xs">
                   <span className="w-20 text-slate-400">{n.node}</span>
                   <div className="flex-1 bg-surface-border rounded-full h-1.5">
