@@ -5,6 +5,7 @@ import { useQuery } from "@tanstack/react-query";
 import { fetchApi, MOCK_TENANT_ID } from "@/lib/api";
 import { PageGuide } from "@/components/ui/page-guide";
 import { useCommandCenter } from "@/hooks/use-command-center";
+import { safeArr, safeStr, safeNum, safeUpper, safeLower, safeFixed, safeLocale, safePct, safeDate, safeDateTime, safeTime, safeReplace, safeSplit, safeSlice, safeStartsWith, safeFind, safeIncludes, safeSort, safeObj, safeKeys, safeValues, safeEntries, safeInitials } from "@/lib/safe";
 
 interface OpportunityScore {
   keyword: string;
@@ -112,7 +113,7 @@ export default function SEOIntelligencePage() {
         </div>
         <div className="px-3 py-1.5 rounded-md bg-surface-darker border border-surface-border text-xs font-mono text-slate-400 flex items-center gap-2">
           <Search className="w-4 h-4" />
-          {opps.length} KEYWORDS TRACKED
+          {safeArr<OpportunityScore>(opps).length} KEYWORDS TRACKED
         </div>
       </div>
 
@@ -134,14 +135,14 @@ export default function SEOIntelligencePage() {
               <div className="flex items-center justify-center py-16">
                 <Loader2 className="w-8 h-8 text-platform-500 animate-spin" />
               </div>
-            ) : opps.length === 0 ? (
+            ) : safeArr<OpportunityScore>(opps).length === 0 ? (
               <div className="text-center py-16">
                 <Search className="w-8 h-8 text-slate-600 mx-auto mb-2" />
                 <p className="text-xs font-mono text-slate-500">No keyword data yet. Run keyword discovery to identify opportunities.</p>
               </div>
             ) : (
               <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-2">
-                {opps.slice(0, 30).map((kw, i) => (
+                {safeArr<OpportunityScore>(opps).slice(0, 30).map((kw, i) => (
                   <div
                     key={i}
                     className={`p-3 rounded-lg border ${opportunityColor(kw.opportunity_score)} transition-all hover:scale-105`}
@@ -173,13 +174,13 @@ export default function SEOIntelligencePage() {
               <div className="flex items-center justify-center py-12">
                 <Loader2 className="w-8 h-8 text-platform-500 animate-spin" />
               </div>
-            ) : serp.length === 0 ? (
+            ) : safeArr<SERPFeature>(serp).length === 0 ? (
               <div className="text-center py-12">
                 <BarChart3 className="w-6 h-6 text-slate-600 mx-auto mb-2" />
                 <p className="text-xs font-mono text-slate-500">No SERP data yet. SERP features populate after keyword research is completed.</p>
               </div>
             ) : (
-              serp.map((f, i) => (
+              safeArr<SERPFeature>(serp).map((f, i) => (
                 <div key={i} className="p-3 rounded-md bg-surface-darker/50 border border-surface-border/50">
                   <div className="flex items-center justify-between mb-1">
                     <span className="text-xs font-mono text-slate-300 uppercase">{f.feature_type.replace(/_/g, " ")}</span>
@@ -211,14 +212,14 @@ export default function SEOIntelligencePage() {
               <div className="flex items-center justify-center py-16">
                 <Loader2 className="w-8 h-8 text-platform-500 animate-spin" />
               </div>
-            ) : tree.length === 0 ? (
+            ) : safeArr<TopicalNode>(tree).length === 0 ? (
               <div className="text-center py-16">
                 <GitBranch className="w-8 h-8 text-slate-600 mx-auto mb-2" />
                 <p className="text-xs font-mono text-slate-500">No topical data yet. The topical authority tree builds as keywords are researched and clustered.</p>
               </div>
             ) : (
               <div className="space-y-2">
-                {tree.map((node, i) => (
+                {safeArr<TopicalNode>(tree).map((node, i) => (
                   <TopicalTreeNode key={node.id || i} node={node} depth={0} />
                 ))}
               </div>
@@ -281,14 +282,14 @@ export default function SEOIntelligencePage() {
               <div className="flex justify-center py-8">
                 <Loader2 className="w-6 h-6 text-platform-500 animate-spin" />
               </div>
-            ) : local.length === 0 ? (
+            ) : safeArr<LocalIntent>(local).length === 0 ? (
               <div className="text-center py-8">
                 <MapPin className="w-6 h-6 text-slate-600 mx-auto mb-2" />
                 <p className="text-xs font-mono text-slate-500">No local intent data yet. Local intent analysis requires geo-targeted keyword data.</p>
               </div>
             ) : (
               <div className="space-y-2 max-h-[200px] overflow-auto">
-                {local.map((li, i) => (
+                {safeArr<LocalIntent>(local).map((li, i) => (
                   <div key={i} className="flex items-center justify-between p-2 rounded bg-surface-darker/50 border border-surface-border/50">
                     <span className="text-xs font-mono text-slate-300 truncate max-w-[140px]">{li.keyword}</span>
                     <div className="flex items-center gap-2">
@@ -309,7 +310,7 @@ export default function SEOIntelligencePage() {
 }
 
 function TopicalTreeNode({ node, depth }: { node: TopicalNode; depth: number }) {
-  const hasChildren = node.children && node.children.length > 0;
+  const hasChildren = safeArr<TopicalNode>(node.children).length > 0;
   return (
     <div className="select-none">
       <div
@@ -323,12 +324,12 @@ function TopicalTreeNode({ node, depth }: { node: TopicalNode; depth: number }) 
         )}
         <span className="text-xs font-mono text-slate-300 truncate">{node.name}</span>
         {node.volume !== undefined && (
-          <span className="text-[10px] font-mono text-slate-600 ml-auto">{node.volume.toLocaleString()}</span>
+          <span className="text-[10px] font-mono text-slate-600 ml-auto">{safeLocale(node.volume)}</span>
         )}
       </div>
       {hasChildren && (
         <div>
-          {node.children!.map((child, i) => (
+          {safeArr<TopicalNode>(node.children).map((child, i) => (
             <TopicalTreeNode key={child.id || i} node={child} depth={depth + 1} />
           ))}
         </div>

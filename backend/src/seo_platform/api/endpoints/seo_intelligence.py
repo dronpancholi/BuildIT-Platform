@@ -7,10 +7,11 @@ search intent analysis, topical authority mapping, and SERP feature analysis.
 
 from __future__ import annotations
 
+from seo_platform.core.auth import get_validated_tenant_id
 from typing import Any
 from uuid import UUID  # noqa: TC003
 
-from fastapi import APIRouter, Query
+from fastapi import Depends,  APIRouter, Query
 from pydantic import BaseModel, Field
 
 from seo_platform.schemas import APIResponse
@@ -42,7 +43,7 @@ class LocalOpportunityRequest(BaseModel):
 @router.get("/opportunity", response_model=APIResponse[dict])
 async def get_keyword_opportunity(
     keyword: str = Query(..., min_length=1, description="Target keyword"),
-    tenant_id: UUID = Query(..., description="Tenant UUID"),  # noqa: B008
+    tenant_id: UUID = Depends(get_validated_tenant_id),  # noqa: B008
 ) -> APIResponse[dict]:
     """Score keyword opportunity (0-100) based on volume, difficulty, CPC, intent, SERP features, and trend."""
     from sqlalchemy import select
@@ -116,7 +117,7 @@ async def analyze_search_intent(
 @router.get("/topical-map/{client_id}", response_model=APIResponse[dict])
 async def get_topical_map(
     client_id: UUID,
-    tenant_id: UUID = Query(..., description="Tenant UUID"),  # noqa: B008
+    tenant_id: UUID = Depends(get_validated_tenant_id),  # noqa: B008
 ) -> APIResponse[dict]:
     """Build a topical authority hierarchy from keyword clusters."""
     from seo_platform.services.seo_intelligence.intelligence import advanced_seo_intelligence
@@ -217,7 +218,7 @@ async def build_keyword_graph(
 @keyword_intelligence_router.get("/related-keywords", response_model=APIResponse[list[dict]])
 async def get_related_keywords(
     keyword: str = Query(..., min_length=1, description="Target keyword"),
-    tenant_id: UUID = Query(..., description="Tenant UUID"),
+    tenant_id: UUID = Depends(get_validated_tenant_id),
     max_results: int = Query(20, ge=1, le=100, description="Max related keywords"),
 ) -> APIResponse[list[dict]]:
     """Find semantically related keywords from the cached graph."""
@@ -302,7 +303,7 @@ async def map_local_intent(
 # ---------------------------------------------------------------------------
 @router.get("/opportunities", response_model=APIResponse[list[dict]])
 async def list_keyword_opportunities(
-    tenant_id: UUID = Query(...),
+    tenant_id: UUID = Depends(get_validated_tenant_id),
 ) -> APIResponse[list[dict]]:
     """List all keyword opportunities for a tenant."""
     from seo_platform.core.database import get_tenant_session
@@ -335,7 +336,7 @@ async def list_keyword_opportunities(
 
 @router.get("/topical-map", response_model=APIResponse[dict])
 async def get_topical_map(
-    tenant_id: UUID = Query(...),
+    tenant_id: UUID = Depends(get_validated_tenant_id),
 ) -> APIResponse[dict]:
     """Get topical authority map from keyword clusters."""
     from seo_platform.core.database import get_tenant_session
@@ -366,7 +367,7 @@ async def get_topical_map(
 
 @router.get("/local-intent", response_model=APIResponse[list[dict]])
 async def get_local_intent(
-    tenant_id: UUID = Query(...),
+    tenant_id: UUID = Depends(get_validated_tenant_id),
 ) -> APIResponse[list[dict]]:
     """Classify tenant's keywords by local intent."""
     from seo_platform.core.database import get_tenant_session

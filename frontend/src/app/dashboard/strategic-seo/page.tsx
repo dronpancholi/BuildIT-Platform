@@ -6,6 +6,7 @@ import {
 } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { fetchApi, MOCK_TENANT_ID } from "@/lib/api";
+import { safeArr, safeStr, safeNum, safeUpper, safeLower, safeFixed, safeLocale, safePct, safeDate, safeDateTime, safeTime, safeReplace, safeSplit, safeSlice, safeStartsWith, safeFind, safeIncludes, safeSort, safeObj, safeKeys, safeValues, safeEntries, safeInitials } from "@/lib/safe";
 
 interface SEOStrategyArea {
   area: string;
@@ -76,10 +77,10 @@ export default function StrategicSEOPage() {
     refetchInterval: 15000,
   });
 
-  const areas = strategy?.strategy_areas || [];
-  const segments = marketIntel?.market_segments || [];
-  const serpList = serpTrends || [];
-  const opportunities = backlinkMap?.opportunities || [];
+  const areas = safeArr<SEOStrategyArea>(strategy?.strategy_areas);
+  const segments = safeArr<MarketSegment>(marketIntel?.market_segments);
+  const serpList = safeArr<SERPTrend>(serpTrends);
+  const opportunities = safeArr<BacklinkOpportunity>(backlinkMap?.opportunities);
 
   return (
     <div className="space-y-6">
@@ -90,7 +91,7 @@ export default function StrategicSEOPage() {
         </div>
         <div className="px-3 py-1.5 rounded-md bg-surface-darker border border-surface-border text-xs font-mono text-slate-400 flex items-center gap-2">
           <Search className="w-4 h-4" />
-          {areas.length} STRATEGY AREAS
+          {safeArr(areas).length} STRATEGY AREAS
         </div>
       </div>
 
@@ -103,11 +104,11 @@ export default function StrategicSEOPage() {
           </div>
           {loadingStrategy ? (
             <div className="flex items-center justify-center py-8"><Loader2 className="w-6 h-6 text-platform-500 animate-spin" /></div>
-          ) : areas.length === 0 ? (
+          ) : safeArr<SEOStrategyArea>(areas).length === 0 ? (
             <div className="text-sm text-slate-500 font-mono py-8 text-center">No strategy data</div>
           ) : (
             <div className="space-y-3">
-              {areas.map((a, i) => (
+              {safeArr<SEOStrategyArea>(areas).map((a, i) => (
                 <motion.div
                   key={a.area || i}
                   initial={{ opacity: 0, y: 5 }}
@@ -138,11 +139,11 @@ export default function StrategicSEOPage() {
           </div>
           {loadingMarket ? (
             <div className="flex items-center justify-center py-8"><Loader2 className="w-6 h-6 text-platform-500 animate-spin" /></div>
-          ) : segments.length === 0 ? (
+          ) : safeArr<MarketSegment>(segments).length === 0 ? (
             <div className="text-sm text-slate-500 font-mono py-8 text-center">No market intelligence data</div>
           ) : (
             <div className="space-y-3">
-              {segments.map((s, i) => (
+              {safeArr<MarketSegment>(segments).map((s, i) => (
                 <motion.div
                   key={s.segment || i}
                   initial={{ opacity: 0, y: 5 }}
@@ -164,9 +165,9 @@ export default function StrategicSEOPage() {
                       transition={{ duration: 0.5 }}
                     />
                   </div>
-                  {s.trending_topics.length > 0 && (
+                  {safeArr<string>(s.trending_topics).length > 0 && (
                     <div className="flex flex-wrap gap-1">
-                      {s.trending_topics.map((topic, j) => (
+                      {safeArr<string>(s.trending_topics).map((topic, j) => (
                         <span key={j} className="px-1.5 py-0.5 rounded text-[9px] font-mono bg-platform-500/10 text-platform-400 border border-platform-500/20">{topic}</span>
                       ))}
                     </div>
@@ -187,11 +188,11 @@ export default function StrategicSEOPage() {
           </div>
           {loadingSERP ? (
             <div className="flex items-center justify-center py-8"><Loader2 className="w-6 h-6 text-platform-500 animate-spin" /></div>
-          ) : serpList.length === 0 ? (
+          ) : safeArr<SERPTrend>(serpList).length === 0 ? (
             <div className="text-sm text-slate-500 font-mono py-8 text-center">No SERP trend data</div>
           ) : (
             <div className="space-y-3">
-              {serpList.map((s, i) => (
+              {safeArr<SERPTrend>(serpList).map((s, i) => (
                 <motion.div
                   key={s.keyword || i}
                   initial={{ opacity: 0, y: 5 }}
@@ -202,7 +203,7 @@ export default function StrategicSEOPage() {
                   <div className="flex items-center justify-between mb-1">
                     <span className="text-xs font-mono text-slate-200">{s.keyword}</span>
                     <span className={`text-[10px] font-mono ${s.trend_direction === "up" ? "text-emerald-400" : s.trend_direction === "down" ? "text-red-400" : "text-amber-400"}`}>
-                      {s.trend_direction === "up" ? "↑" : s.trend_direction === "down" ? "↓" : "→"} {s.trend_direction.toUpperCase()}
+                      {s.trend_direction === "up" ? "↑" : s.trend_direction === "down" ? "↓" : "→"} {safeUpper(s.trend_direction)}
                     </span>
                   </div>
                   <div className="flex items-center gap-3 text-[10px] font-mono text-slate-500">
@@ -223,11 +224,11 @@ export default function StrategicSEOPage() {
           </div>
           {loadingBacklinks ? (
             <div className="flex items-center justify-center py-8"><Loader2 className="w-6 h-6 text-platform-500 animate-spin" /></div>
-          ) : opportunities.length === 0 ? (
+          ) : safeArr<BacklinkOpportunity>(opportunities).length === 0 ? (
             <div className="text-sm text-slate-500 font-mono py-8 text-center">No backlink opportunities</div>
           ) : (
             <div className="space-y-3">
-              {opportunities.map((o, i) => (
+              {safeArr<BacklinkOpportunity>(opportunities).map((o, i) => (
                 <motion.div
                   key={o.domain || i}
                   initial={{ opacity: 0, y: 5 }}

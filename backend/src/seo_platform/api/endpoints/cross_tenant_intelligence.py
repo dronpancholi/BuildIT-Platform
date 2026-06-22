@@ -1,8 +1,9 @@
 from __future__ import annotations
 
+from seo_platform.core.auth import get_validated_tenant_id
 from uuid import UUID
 
-from fastapi import APIRouter, Query
+from fastapi import APIRouter, Depends, Query
 
 from seo_platform.services.cross_tenant_intelligence import cross_tenant_intelligence
 
@@ -41,7 +42,7 @@ async def get_workflow_baselines(
 
 @router.get("/anomaly-comparison")
 async def get_anomaly_comparison(
-    tenant_id: UUID = Query(...),
+    tenant_id: UUID = Depends(get_validated_tenant_id),
     anomaly_type: str = Query(...),
 ) -> dict:
     comparison = await cross_tenant_intelligence.compare_anomaly_to_benchmark(
@@ -73,7 +74,7 @@ async def get_operational_trends(
 
 @router.get("/tenant-benchmarks")
 async def get_tenant_benchmarks(
-    tenant_id: UUID = Query(...),
+    tenant_id: UUID = Depends(get_validated_tenant_id),
 ) -> dict:
     benchmarks = await cross_tenant_intelligence.get_tenant_operational_benchmarks(tenant_id)
     return {"success": True, "data": benchmarks}

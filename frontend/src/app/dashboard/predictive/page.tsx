@@ -7,6 +7,7 @@ import {
 } from "lucide-react";
 import { useQuery, useQueries } from "@tanstack/react-query";
 import { fetchApi, MOCK_TENANT_ID } from "@/lib/api";
+import { safeArr, safeStr, safeNum, safeUpper, safeLower, safeFixed, safeLocale, safePct, safeDate, safeDateTime, safeTime, safeReplace, safeSplit, safeSlice, safeStartsWith, safeFind, safeIncludes, safeSort, safeObj, safeKeys, safeValues, safeEntries, safeInitials } from "@/lib/safe";
 
 interface WorkflowFailurePrediction {
   workflow_id: string;
@@ -222,9 +223,9 @@ export default function PredictivePage() {
                       <span className={PROB_TEXT(pred.probability)}>{Math.round(pred.probability * 100)}%</span>
                     </div>
                     <ProbabilityBar value={pred.probability} />
-                    {pred.risk_factors && pred.risk_factors.length > 0 && (
+                    {safeArr<string>(pred.risk_factors).length > 0 && (
                       <div className="mt-2 flex flex-wrap gap-1">
-                        {pred.risk_factors.map((rf, j) => (
+                        {safeArr<string>(pred.risk_factors).map((rf, j) => (
                           <span key={j} className="px-1.5 py-0.5 rounded text-[9px] font-mono bg-red-500/10 text-red-400/80 border border-red-500/10">
                             {rf}
                           </span>
@@ -293,11 +294,11 @@ export default function PredictivePage() {
             <div className="flex items-center justify-center py-10">
               <Loader2 className="w-6 h-6 text-platform-500 animate-spin" />
             </div>
-          ) : bottlenecks.length === 0 ? (
+          ) : safeArr<InfrastructureBottleneck>(bottlenecks).length === 0 ? (
             <div className="text-xs font-mono text-slate-500 py-10 text-center">No bottlenecks predicted</div>
           ) : (
             <div className="space-y-3 max-h-[350px] overflow-auto custom-scrollbar">
-              {bottlenecks.map((b, i) => (
+              {safeArr<InfrastructureBottleneck>(bottlenecks).map((b, i) => (
                 <motion.div
                   key={b.component || i}
                   initial={{ opacity: 0, y: 5 }}
@@ -312,9 +313,9 @@ export default function PredictivePage() {
                     </span>
                   </div>
                   <ProbabilityBar value={b.probability} />
-                  {b.risk_factors && b.risk_factors.length > 0 && (
+                  {safeArr<string>(b.risk_factors).length > 0 && (
                     <div className="mt-2 flex flex-wrap gap-1">
-                      {b.risk_factors.map((rf, j) => (
+                      {safeArr<string>(b.risk_factors).map((rf, j) => (
                         <span key={j} className="px-1.5 py-0.5 rounded text-[9px] font-mono bg-amber-500/10 text-amber-400/80 border border-amber-500/10">
                           {rf}
                         </span>
@@ -350,14 +351,14 @@ export default function PredictivePage() {
                     className="p-3 rounded-md bg-surface-darker/50 border border-surface-border/50"
                   >
                     <p className="text-xs font-mono text-slate-300 mb-2">{fc.campaign_id || CAMPAIGN_IDS[i]}</p>
-                    {fc.weekly_projections && fc.weekly_projections.length > 0 ? (
+                    {safeArr<WeeklyProjection>(fc.weekly_projections).length > 0 ? (
                       <div className="space-y-2">
                         <div className="flex text-[9px] font-mono text-slate-600 px-1">
                           <span className="w-20">Week</span>
                           <span className="w-16 text-right">Predicted</span>
                           <span className="w-20 text-right">CI Range</span>
                         </div>
-                        {fc.weekly_projections.map((wp, j) => (
+                        {safeArr<WeeklyProjection>(fc.weekly_projections).map((wp, j) => (
                           <div key={j} className="flex items-center text-[10px] font-mono text-slate-300 px-1">
                             <span className="w-20">{wp.week}</span>
                             <span className="w-16 text-right text-platform-400">{wp.predicted_links}</span>

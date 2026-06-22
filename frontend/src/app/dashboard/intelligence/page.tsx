@@ -23,6 +23,7 @@ import Link from "next/link";
 import { useQuery } from "@tanstack/react-query";
 import { fetchApi } from "@/lib/api";
 import { useRealtimeStore } from "@/hooks/use-realtime";
+import { safeArr, safeNum, safeUpper, safeFixed, safeReplace, safeDateTime, safeStr } from "@/lib/safe";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -168,10 +169,10 @@ export default function IntelligencePage() {
       refetchInterval: 30000,
     });
 
-  const anomalies = anomaliesData ?? [];
-  const congestion = congestionData ?? [];
-  const recommendations = recsData ?? [];
-  const bottlenecks = bottlenecksData ?? [];
+  const anomalies = safeArr<AnomalyReport>(anomaliesData);
+  const congestion = safeArr<QueueCongestionReport>(congestionData);
+  const recommendations = safeArr<Recommendation>(recsData);
+  const bottlenecks = safeArr<BottleneckReport>(bottlenecksData);
 
   const criticalCount = anomalies.filter(
     (a) => a.severity === "critical"
@@ -181,7 +182,7 @@ export default function IntelligencePage() {
     (c) => c.congestion_level === "critical"
   ).length;
   const maxBottleneckP95 = Math.max(
-    ...bottlenecks.map((b) => b.p95),
+    ...bottlenecks.map((b) => safeNum(b.p95)),
     1
   );
   const infrastructure = useRealtimeStore((s) => s.infrastructure);
@@ -256,9 +257,7 @@ export default function IntelligencePage() {
             </h3>
             <span className="ml-auto text-xs font-mono text-slate-500">
               {anomalies.length > 0
-                ? `LAST UPDATED ${new Date(
-                    anomalies[0].timestamp
-                  ).toLocaleTimeString()}`
+                ? `LAST UPDATED ${safeStr(new Date(anomalies[0].timestamp).toLocaleTimeString())}`
                 : "REAL-TIME"}
             </span>
           </div>
@@ -304,25 +303,25 @@ export default function IntelligencePage() {
                           <span
                             className={`text-xs font-mono px-2 py-0.5 rounded border ${severityColor[a.severity] || severityColor.low}`}
                           >
-                            {a.severity.toUpperCase()}
+                            {safeUpper(a.severity)}
                           </span>
                           <span className="text-xs font-mono text-slate-500 uppercase">
                             {a.component}
                           </span>
                           <span className="text-[10px] font-mono text-slate-600 ml-auto">
-                            {new Date(a.timestamp).toLocaleString()}
+                            {safeDateTime(a.timestamp)}
                           </span>
                         </div>
                         <p className="text-sm text-slate-300 font-mono">
                           {a.message}
                         </p>
-                        {(a.metric_value > 0 || a.threshold > 0) && (
+                        {(safeNum(a.metric_value) > 0 || safeNum(a.threshold) > 0) && (
                           <div className="mt-1 flex items-center gap-3 text-[10px] font-mono text-slate-500">
                             <span>
-                              VALUE: {a.metric_value.toFixed(2)}
+                              VALUE: {safeFixed(a.metric_value, 2)}
                             </span>
                             <span>
-                              THRESHOLD: {a.threshold.toFixed(2)}
+                              THRESHOLD: {safeFixed(a.threshold, 2)}
                             </span>
                           </div>
                         )}
@@ -359,7 +358,7 @@ export default function IntelligencePage() {
                 <div key={i} className="space-y-1.5">
                   <div className="flex items-center justify-between">
                     <span className="text-xs font-mono text-slate-300 uppercase">
-                      {q.queue_name.replace(/_/g, " ")}
+                      {safeReplace(q.queue_name, /_/g, " ")}
                     </span>
                     <div className="flex items-center gap-2">
                       <span
@@ -388,7 +387,7 @@ export default function IntelligencePage() {
                       }`}
                       style={{
                         width: `${Math.min(
-                          (q.depth / Math.max(q.depth + q.worker_count * 10, 1)) *
+                          (safeNum(q.depth) / Math.max(safeNum(q.depth) + safeNum(q.worker_count) * 10, 1)) *
                             100,
                           100
                         )}%`,
@@ -396,9 +395,9 @@ export default function IntelligencePage() {
                     />
                   </div>
                   <div className="flex justify-between text-[10px] font-mono text-slate-600">
-                    <span>DEPTH: {q.depth}</span>
-                    <span>WORKERS: {q.worker_count}</span>
-                    <span>RATE: {q.backlog_rate.toFixed(1)}/s</span>
+                    <span>DEPTH: {safeStr(q.depth)}</span>
+                    <span>WORKERS: {safeStr(q.worker_count)}</span>
+                    <span>RATE: {safeFixed(q.backlog_rate, 1)}/s</span>
                   </div>
                 </div>
               ))
@@ -429,41 +428,41 @@ export default function IntelligencePage() {
                 </p>
               </div>
             ) : (
-              bottlenecks
-                .sort((a, b) => b.p95 - a.p95)
+              safeArr<BottleneckReport>(bottlenecks)
+                .sort((a, b) => safeNum(b.p95) - safeNum(a.p95))
                 .map((b, i) => (
                   <div key={i} className="space-y-1.5">
                     <div className="flex items-center justify-between">
                       <span className="text-xs font-mono text-slate-300 uppercase">
-                        {b.phase.replace(/_/g, " ")}
+                        {safeReplace(b.phase, /_/g, " ")}
                       </span>
                       <span className="text-xs font-mono text-slate-400">
-                        {b.avg_duration_ms.toFixed(0)}ms
+                        {safeFixed(b.avg_duration_ms, 0)}ms
                       </span>
                     </div>
                     <div className="w-full h-3 bg-surface-darker rounded-full overflow-hidden flex">
                       <div
                         className="h-full bg-emerald-500/60 rounded-l-full"
                         style={{
-                          width: bottleneckBarWidth(b.p50, maxBottleneckP95),
+                          width: bottleneckBarWidth(safeNum(b.p50), maxBottleneckP95),
                         }}
-                        title={`P50: ${b.p50.toFixed(0)}ms`}
+                        title={`P50: ${safeFixed(b.p50, 0)}ms`}
                       />
                       <div
                         className="h-full bg-amber-500/60 rounded-r-full"
                         style={{
                           width: bottleneckBarWidth(
-                            b.p95 - b.p50,
+                            safeNum(b.p95) - safeNum(b.p50),
                             maxBottleneckP95
                           ),
                         }}
-                        title={`P95: ${b.p95.toFixed(0)}ms`}
+                        title={`P95: ${safeFixed(b.p95, 0)}ms`}
                       />
                     </div>
                     <div className="flex justify-between text-[10px] font-mono text-slate-600">
-                      <span>P50: {b.p50.toFixed(0)}ms</span>
-                      <span>P95: {b.p95.toFixed(0)}ms</span>
-                      <span>SAMPLES: {b.sample_count}</span>
+                      <span>P50: {safeFixed(b.p50, 0)}ms</span>
+                      <span>P95: {safeFixed(b.p95, 0)}ms</span>
+                      <span>SAMPLES: {safeStr(b.sample_count)}</span>
                     </div>
                   </div>
                 ))

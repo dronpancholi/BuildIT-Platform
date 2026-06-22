@@ -11,10 +11,11 @@ NOT execution decisions.
 
 from __future__ import annotations
 
+from seo_platform.core.auth import get_validated_tenant_id
 from typing import Any
 from uuid import UUID  # noqa: TC003
 
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import Depends,  APIRouter, HTTPException, Query
 
 from seo_platform.services.seo_strategic_intelligence import seo_strategic_intelligence
 
@@ -40,7 +41,7 @@ async def recommend_strategic_keywords(payload: dict) -> dict:
 
 @router.get("/authority-forecast")
 async def get_authority_forecast(
-    tenant_id: UUID = Query(..., description="Tenant UUID"),
+    tenant_id: UUID = Depends(get_validated_tenant_id),
     client_id: UUID = Query(..., description="Client UUID"),
     months: int = Query(6, ge=1, le=24, description="Forecast horizon in months"),
 ) -> dict:

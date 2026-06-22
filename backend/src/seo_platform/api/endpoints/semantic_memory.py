@@ -11,22 +11,26 @@ NOT execution decisions.
 
 from __future__ import annotations
 
+from seo_platform.core.auth import get_validated_tenant_id
 from uuid import UUID
 
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import Depends,  APIRouter, Depends, HTTPException, Query
 
+from seo_platform.core.rbac import RequirePermission
 from seo_platform.services.semantic_memory import semantic_memory
 
 router = APIRouter()
 
 
 @router.put("")
-async def store_memory(payload: dict) -> dict:
+async def store_memory(payload: dict, user = Depends(RequirePermission("memory:write"))) -> dict:
     """Store operational memory in Redis."""
-    namespace = payload.get("namespace", "")
-    key = payload.get("key", "")
-    content = payload.get("content", {})
-    metadata = payload.get("metadata", {})
+    from seo_platform.core.sanitization import sanitize_string, sanitize_dict
+
+    namespace = sanitize_string(payload.get("namespace", ""))
+    key = sanitize_string(payload.get("key", ""))
+    content = sanitize_dict(payload.get("content", {})) if isinstance(payload.get("content"), dict) else payload.get("content", {})
+    metadata = sanitize_dict(payload.get("metadata", {})) if isinstance(payload.get("metadata"), dict) else payload.get("metadata", {})
     ttl_days = payload.get("ttl_days", 90)
 
     if not namespace or not key:
@@ -47,7 +51,7 @@ async def store_memory(payload: dict) -> dict:
 
 
 @router.get("/{namespace}/{key}")
-async def get_memory(namespace: str, key: str) -> dict:
+async def get_memory(namespace: str, key: str, user = Depends(RequirePermission("memory:read"))) -> dict:
     """Retrieve a stored memory entry."""
     try:
         entry = await semantic_memory.get_memory(namespace, key)
@@ -65,6 +69,7 @@ async def search_memories(
     namespace: str = Query(..., description="Memory namespace"),
     tags: str = Query("", description="Comma-separated tag filter"),
     limit: int = Query(20, description="Max results"),
+    user = Depends(RequirePermission("memory:read")),
 ) -> dict:
     """Search memories by namespace and tags."""
     query_tags = [t.strip() for t in tags.split(",") if t.strip()] if tags else None
@@ -76,7 +81,7 @@ async def search_memories(
 
 
 @router.get("/lineage/{key}")
-async def get_memory_lineage(key: str) -> dict:
+async def get_memory_lineage(key: str, user = Depends(RequirePermission("memory:read"))) -> dict:
     """Trace memory change history."""
     try:
         lineage = await semantic_memory.get_memory_lineage(key)
@@ -86,11 +91,13 @@ async def get_memory_lineage(key: str) -> dict:
 
 
 @router.post("/link")
-async def link_memories(payload: dict) -> dict:
+async def link_memories(payload: dict, user = Depends(RequirePermission("memory:write"))) -> dict:
     """Link two memories with a typed relationship."""
-    source_key = payload.get("source_key", "")
-    target_key = payload.get("target_key", "")
-    relationship_type = payload.get("relationship_type", "")
+    from seo_platform.core.sanitization import sanitize_string
+
+    source_key = sanitize_string(payload.get("source_key", ""))
+    target_key = sanitize_string(payload.get("target_key", ""))
+    relationship_type = sanitize_string(payload.get("relationship_type", ""))
 
     if not source_key or not target_key or not relationship_type:
         raise HTTPException(status_code=400, detail="source_key, target_key, and relationship_type are required")
@@ -107,7 +114,8 @@ async def link_memories(payload: dict) -> dict:
 @router.get("/context/{workflow_run_id}")
 async def reconstruct_operational_context(
     workflow_run_id: str,
-    tenant_id: UUID = Query(..., description="Tenant ID"),
+    tenant_id: UUID = Depends(get_validated_tenant_id),
+    user = Depends(RequirePermission("memory:read")),
 ) -> dict:
     """Reconstruct full operational context for a workflow execution."""
     try:
@@ -120,7 +128,8 @@ async def reconstruct_operational_context(
 @router.get("/prospect/{prospect_domain}")
 async def get_prospect_history(
     prospect_domain: str,
-    tenant_id: UUID = Query(..., description="Tenant ID"),
+    tenant_id: UUID = Depends(get_validated_tenant_id),
+    user = Depends(RequirePermission("memory:read")),
 ) -> dict:
     """Get full interaction timeline for a prospect."""
     try:
@@ -131,7 +140,7 @@ async def get_prospect_history(
 
 
 @router.get("/campaign/{campaign_id}")
-async def get_campaign_timeline(campaign_id: UUID) -> dict:
+async def get_campaign_timeline(campaign_id: UUID, user = Depends(RequirePermission("memory:read"))) -> dict:
     """Get full campaign execution timeline."""
     try:
         timeline = await semantic_memory.get_campaign_timeline(campaign_id)
@@ -146,11 +155,13 @@ async def get_campaign_timeline(campaign_id: UUID) -> dict:
 
 
 @router.post("/long-term-workflow")
-async def store_long_term_workflow_memory(payload: dict) -> dict:
+async def store_long_term_workflow_memory(payload: dict, user = Depends(RequirePermission("memory:write"))) -> dict:
     """Store enriched long-term workflow memory with LLM summarization."""
-    workflow_id = payload.get("workflow_id", "")
-    workflow_type = payload.get("workflow_type", "")
-    execution_data = payload.get("execution_data", {})
+    from seo_platform.core.sanitization import sanitize_string, sanitize_dict
+
+    workflow_id = sanitize_string(payload.get("workflow_id", ""))
+    workflow_type = sanitize_string(payload.get("workflow_type", ""))
+    execution_data = sanitize_dict(payload.get("execution_data", {})) if isinstance(payload.get("execution_data"), dict) else payload.get("execution_data", {})
 
     if not workflow_id or not workflow_type:
         raise HTTPException(status_code=400, detail="workflow_id and workflow_type are required")
@@ -167,6 +178,7 @@ async def store_long_term_workflow_memory(payload: dict) -> dict:
 @router.get("/organizational-memory")
 async def get_organizational_memory(
     org_id: str = Query(..., description="Organization identifier"),
+    user = Depends(RequirePermission("memory:read")),
 ) -> dict:
     """Reconstruct organization-level operational memory."""
     try:
@@ -177,10 +189,12 @@ async def get_organizational_memory(
 
 
 @router.post("/infrastructure-history")
-async def store_infrastructure_history(payload: dict) -> dict:
+async def store_infrastructure_history(payload: dict, user = Depends(RequirePermission("memory:write"))) -> dict:
     """Store infrastructure history event in memory."""
-    component = payload.get("component", "")
-    event_data = payload.get("event_data", {})
+    from seo_platform.core.sanitization import sanitize_string, sanitize_dict
+
+    component = sanitize_string(payload.get("component", ""))
+    event_data = sanitize_dict(payload.get("event_data", {})) if isinstance(payload.get("event_data"), dict) else payload.get("event_data", {})
 
     if not component or not event_data:
         raise HTTPException(status_code=400, detail="component and event_data are required")
@@ -195,6 +209,7 @@ async def store_infrastructure_history(payload: dict) -> dict:
 @router.get("/incident-memory")
 async def reconstruct_incident_memory(
     incident_id: str = Query(..., description="Incident identifier"),
+    user = Depends(RequirePermission("memory:read")),
 ) -> dict:
     """Reconstruct incident from memory entries across all namespaces."""
     try:
@@ -207,6 +222,7 @@ async def reconstruct_incident_memory(
 @router.get("/replay-cognition")
 async def replay_operational_cognition(
     workflow_id: str = Query(..., description="Workflow identifier"),
+    user = Depends(RequirePermission("memory:read")),
 ) -> dict:
     """Replay operational cognition from memory."""
     try:
@@ -217,7 +233,7 @@ async def replay_operational_cognition(
 
 
 @router.get("/historical-learnings")
-async def get_historical_optimization_learnings() -> dict:
+async def get_historical_optimization_learnings(user = Depends(RequirePermission("memory:read"))) -> dict:
     """Analyze optimization history and extract learning patterns."""
     try:
         report = await semantic_memory.learn_from_historical_optimizations()
