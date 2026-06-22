@@ -4,6 +4,7 @@ import { useQuery } from "@tanstack/react-query";
 import { fetchApi } from "@/lib/api";
 import { GitBranch, TrendingUp, AlertTriangle, CheckCircle2, Play, Pause, FileText } from "lucide-react";
 import { useRouter } from "next/navigation";
+import { safeArr, safeStr, safeNum, safeUpper, safeLower, safeFixed, safeLocale, safePct, safeDate, safeDateTime, safeTime, safeReplace, safeSplit, safeSlice, safeStartsWith, safeFind, safeIncludes, safeSort, safeObj, safeKeys, safeValues, safeEntries, safeInitials } from "@/lib/safe";
 
 interface Campaign {
   id: string;
@@ -67,10 +68,10 @@ export function CampaignManagementTab({ customerId }: { customerId: string }) {
   });
 
   const stats = {
-    total: campaigns.length,
-    active: campaigns.filter((c) => c.status === "active" || c.status === "monitoring").length,
-    draft: campaigns.filter((c) => c.status === "draft").length,
-    complete: campaigns.filter((c) => c.status === "complete").length,
+    total: safeArr<Campaign>(campaigns).length,
+    active: safeArr<Campaign>(campaigns).filter((c) => c.status === "active" || c.status === "monitoring").length,
+    draft: safeArr<Campaign>(campaigns).filter((c) => c.status === "draft").length,
+    complete: safeArr<Campaign>(campaigns).filter((c) => c.status === "complete").length,
   };
 
   if (error) {
@@ -133,7 +134,7 @@ export function CampaignManagementTab({ customerId }: { customerId: string }) {
       </div>
 
       {/* Campaigns List */}
-      {campaigns.length === 0 ? (
+      {safeArr<Campaign>(campaigns).length === 0 ? (
         <div className="glass-panel p-8 text-center">
           <GitBranch className="w-12 h-12 text-slate-700 mx-auto mb-3" />
           <h3 className="text-sm font-bold font-mono text-slate-300 mb-2">No Campaigns Yet</h3>
@@ -145,7 +146,7 @@ export function CampaignManagementTab({ customerId }: { customerId: string }) {
       ) : (
         <div className="glass-panel overflow-hidden">
           <div className="divide-y divide-surface-border">
-            {campaigns.map((campaign) => (
+            {safeArr<Campaign>(campaigns).map((campaign) => (
               <div 
                 key={campaign.id}
                 className="p-4 hover:bg-surface-border/20 transition-colors cursor-pointer"

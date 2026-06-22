@@ -3,6 +3,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { fetchApi } from "@/lib/api";
 import { TrendingUp, GitBranch, Mail, Users, AlertTriangle, CheckCircle2, FileText, Lightbulb } from "lucide-react";
+import { safeArr, safeStr, safeNum, safeUpper, safeLower, safeFixed, safeLocale, safePct, safeDate, safeDateTime, safeTime, safeReplace, safeSplit, safeSlice, safeStartsWith, safeFind, safeIncludes, safeSort, safeObj, safeKeys, safeValues, safeEntries, safeInitials } from "@/lib/safe";
 
 interface ActivityEvent {
   id: string;
@@ -70,16 +71,16 @@ export function ActivityTimelineTab({ customerId }: { customerId: string }) {
     },
   });
 
-  const campaignIds = new Set(campaigns.map((c: any) => c.id));
-  const filteredEvents = events.filter((e: ActivityEvent) => 
+  const campaignIds = new Set(safeArr<any>(campaigns).map((c: any) => c.id));
+  const filteredEvents = safeArr<ActivityEvent>(events).filter((e: ActivityEvent) =>
     !e.entity_id || campaignIds.has(e.entity_id)
   );
 
   const stats = {
-    total: filteredEvents.length,
-    critical: filteredEvents.filter((e) => e.severity === "critical").length,
-    high: filteredEvents.filter((e) => e.severity === "high").length,
-    actionsRequired: filteredEvents.filter((e) => e.action_required).length,
+    total: safeArr<ActivityEvent>(filteredEvents).length,
+    critical: safeArr<ActivityEvent>(filteredEvents).filter((e) => e.severity === "critical").length,
+    high: safeArr<ActivityEvent>(filteredEvents).filter((e) => e.severity === "high").length,
+    actionsRequired: safeArr<ActivityEvent>(filteredEvents).filter((e) => e.action_required).length,
   };
 
   if (error) {
@@ -150,7 +151,7 @@ export function ActivityTimelineTab({ customerId }: { customerId: string }) {
           </div>
         </div>
 
-        {filteredEvents.length === 0 ? (
+        {safeArr<ActivityEvent>(filteredEvents).length === 0 ? (
           <div className="p-8 text-center">
             <TrendingUp className="w-12 h-12 text-slate-700 mx-auto mb-3" />
             <h3 className="text-sm font-bold font-mono text-slate-300 mb-2">No Activity Yet</h3>
@@ -162,7 +163,7 @@ export function ActivityTimelineTab({ customerId }: { customerId: string }) {
             <div className="absolute left-8 top-0 bottom-0 w-0.5 bg-surface-border" />
             
             <div className="divide-y divide-surface-border/50">
-              {filteredEvents.map((event, index) => {
+              {safeArr<ActivityEvent>(filteredEvents).map((event, index) => {
                 const Icon = getEventIcon(event.event_type);
                 const severityColor = getSeverityColor(event.severity);
                 
@@ -179,7 +180,7 @@ export function ActivityTimelineTab({ customerId }: { customerId: string }) {
                         <div className="flex items-center gap-2 mb-1">
                           <h4 className="text-sm font-bold font-mono text-slate-200">{event.title}</h4>
                           <span className={`px-1.5 py-0.5 text-[8px] font-mono rounded border ${severityColor}`}>
-                            {event.severity.toUpperCase()}
+                            {safeUpper(event.severity)}
                           </span>
                           {event.action_required && (
                             <span className="px-1.5 py-0.5 text-[8px] font-mono rounded border bg-amber-500/10 text-amber-400 border-amber-500/20">
@@ -189,7 +190,7 @@ export function ActivityTimelineTab({ customerId }: { customerId: string }) {
                         </div>
                         <p className="text-[10px] text-slate-500 mb-2">{event.description}</p>
                         <div className="flex items-center gap-3 text-[9px] font-mono text-slate-600">
-                          <span>{event.domain.toUpperCase()}</span>
+                          <span>{safeUpper(event.domain)}</span>
                           <span>•</span>
                           <span>{new Date(event.occurred_at).toLocaleString()}</span>
                           {event.entity_type && (

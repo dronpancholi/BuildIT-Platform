@@ -3,6 +3,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { fetchApi } from "@/lib/api";
 import { Mail, CheckCircle2, AlertTriangle, Clock, FileText, Users } from "lucide-react";
+import { safeArr, safeStr, safeNum, safeUpper, safeLower, safeFixed, safeLocale, safePct, safeDate, safeDateTime, safeTime, safeReplace, safeSplit, safeSlice, safeStartsWith, safeFind, safeIncludes, safeSort, safeObj, safeKeys, safeValues, safeEntries, safeInitials } from "@/lib/safe";
 
 interface Thread {
   id: string;
@@ -55,20 +56,20 @@ export function CommunicationsTab({ customerId }: { customerId: string }) {
       const campaignsResponse = await fetchApi<any>(`/business-intelligence/intelligence/campaigns?tenant_id=${tenantId}`);
       const campaigns = campaignsResponse?.data?.campaigns || [];
       const clientCampaignIds = new Set(
-        campaigns.filter((c: any) => c.client_id === customerId).map((c: any) => c.id)
+        safeArr<any>(campaigns).filter((c: any) => c.client_id === customerId).map((c: any) => c.id)
       );
-      
-      return allThreads.filter((t: Thread) => clientCampaignIds.has(t.campaign_id));
+
+      return safeArr<Thread>(allThreads).filter((t: Thread) => clientCampaignIds.has(t.campaign_id));
     },
     refetchInterval: 30000,
   });
 
   const stats = {
-    total: threads.length,
-    draft: threads.filter((t) => t.status === "draft").length,
-    sent: threads.filter((t) => ["sent", "delivered", "opened"].includes(t.status)).length,
-    replied: threads.filter((t) => t.status === "replied").length,
-    linkAcquired: threads.filter((t) => t.status === "link_acquired").length,
+    total: safeArr<Thread>(threads).length,
+    draft: safeArr<Thread>(threads).filter((t) => t.status === "draft").length,
+    sent: safeArr<Thread>(threads).filter((t) => ["sent", "delivered", "opened"].includes(t.status)).length,
+    replied: safeArr<Thread>(threads).filter((t) => t.status === "replied").length,
+    linkAcquired: safeArr<Thread>(threads).filter((t) => t.status === "link_acquired").length,
   };
 
   if (error) {
@@ -152,7 +153,7 @@ export function CommunicationsTab({ customerId }: { customerId: string }) {
       )}
 
       {/* Threads List */}
-      {threads.length === 0 ? (
+      {safeArr<Thread>(threads).length === 0 ? (
         <div className="glass-panel p-8 text-center">
           <Mail className="w-12 h-12 text-slate-700 mx-auto mb-3" />
           <h3 className="text-sm font-bold font-mono text-slate-300 mb-2">No Communications Yet</h3>
@@ -161,7 +162,7 @@ export function CommunicationsTab({ customerId }: { customerId: string }) {
       ) : (
         <div className="glass-panel overflow-hidden">
           <div className="divide-y divide-surface-border">
-            {threads.map((thread) => (
+            {safeArr<Thread>(threads).map((thread) => (
               <div key={thread.id} className="p-4 hover:bg-surface-border/20 transition-colors">
                 <div className="flex items-start justify-between mb-2">
                   <div className="flex-1 min-w-0">

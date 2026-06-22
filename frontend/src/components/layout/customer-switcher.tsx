@@ -5,6 +5,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
 import { fetchApi } from "@/lib/api";
 import { Search, Users, ChevronDown, ArrowLeft } from "lucide-react";
+import { safeArr, safeLower } from "@/lib/safe";
 
 interface Client {
   id: string;
@@ -29,9 +30,9 @@ export function CustomerSwitcher() {
     },
   });
 
-  const filteredClients = clients.filter(client =>
-    client.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    client.domain.toLowerCase().includes(searchQuery.toLowerCase())
+  const filteredClients = safeArr<Client>(clients).filter(client =>
+    safeLower(client.name, "").includes(safeLower(searchQuery, "")) ||
+    safeLower(client.domain, "").includes(safeLower(searchQuery, ""))
   );
 
   const handleSelectClient = (clientId: string) => {

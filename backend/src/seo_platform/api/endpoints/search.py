@@ -5,11 +5,12 @@ Searches across: customers, campaigns, keywords, approvals, emails, prospects, r
 
 from __future__ import annotations
 
+from seo_platform.core.auth import get_validated_tenant_id
 from datetime import datetime, timezone
 from typing import Any
 from uuid import UUID
 
-from fastapi import APIRouter, Query
+from fastapi import APIRouter, Depends, Query
 from pydantic import BaseModel
 
 from seo_platform.core.logging import get_logger
@@ -24,7 +25,7 @@ TENANT_ID = UUID("00000000-0000-0000-0000-000000000001")
 @router.get("", response_model=dict[str, Any])
 async def unified_search(
     q: str = Query(..., description="Search query"),
-    tenant_id: UUID = Query(...),
+    tenant_id: UUID = Depends(get_validated_tenant_id),
     limit: int = Query(default=20, ge=1, le=100),
 ) -> dict[str, Any]:
     """Unified search across all entities."""

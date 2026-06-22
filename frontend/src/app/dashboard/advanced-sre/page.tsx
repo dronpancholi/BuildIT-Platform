@@ -6,6 +6,7 @@ import {
 } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { fetchApi } from "@/lib/api";
+import { safeArr, safeStr, safeNum, safeUpper, safeLower, safeFixed, safeLocale, safePct, safeDate, safeDateTime, safeTime, safeReplace, safeSplit, safeSlice, safeStartsWith, safeFind, safeIncludes, safeSort, safeObj, safeKeys, safeValues, safeEntries, safeInitials } from "@/lib/safe";
 
 interface IncidentPrediction {
   type: string;
@@ -79,9 +80,9 @@ export default function AdvancedSREPage() {
     refetchInterval: 15000,
   });
 
-  const predList = predictions || [];
-  const findings = diagnostics?.findings || [];
-  const components = pressure?.components || [];
+  const predList = safeArr<IncidentPrediction>(predictions);
+  const findings = safeArr<DiagnosticFinding>(diagnostics?.findings);
+  const components = safeArr<ComponentPressure>(pressure?.components);
 
   return (
     <div className="space-y-6">
@@ -132,7 +133,7 @@ export default function AdvancedSREPage() {
                     >
                       <div className="flex items-center gap-2 mb-2">
                         <span className={`text-[10px] font-mono px-1.5 py-0.5 rounded border font-bold ${SEVERITY_BADGE[p.severity] || SEVERITY_BADGE.low}`}>
-                          {p.severity.toUpperCase()}
+                          {safeUpper(p.severity)}
                         </span>
                         <span className="text-[10px] font-mono text-slate-500 uppercase">{p.component}</span>
                       </div>

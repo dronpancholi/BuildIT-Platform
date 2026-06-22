@@ -3,6 +3,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { fetchApi } from "@/lib/api";
 import { CheckCircle2, XCircle, AlertTriangle, Clock, FileText, TrendingUp } from "lucide-react";
+import { safeArr, safeStr, safeNum, safeUpper, safeLower, safeFixed, safeLocale, safePct, safeDate, safeDateTime, safeTime, safeReplace, safeSplit, safeSlice, safeStartsWith, safeFind, safeIncludes, safeSort, safeObj, safeKeys, safeValues, safeEntries, safeInitials } from "@/lib/safe";
 
 interface ApprovalRequest {
   id: string;
@@ -49,7 +50,7 @@ function getCategoryBadge(category: string) {
   return (
     <span className={`px-2 py-1 text-[10px] font-mono rounded border ${color} flex items-center gap-1`}>
       <Icon className="w-3 h-3" />
-      {category.replace("_", " ").toUpperCase()}
+      {safeUpper(safeReplace(category, "_", " "))}
     </span>
   );
 }
@@ -75,17 +76,17 @@ export function ApprovalsTab({ customerId }: { customerId: string }) {
     },
   });
 
-  const campaignIds = new Set(campaigns.map((c: any) => c.id));
-  const filteredApprovals = approvals.filter((a: ApprovalRequest) => {
+  const campaignIds = new Set(safeArr<any>(campaigns).map((c: any) => c.id));
+  const filteredApprovals = safeArr<ApprovalRequest>(approvals).filter((a: ApprovalRequest) => {
     const ctx = a.context_snapshot || {};
     return !ctx.campaign_id || campaignIds.has(ctx.campaign_id);
   });
 
   const stats = {
-    total: filteredApprovals.length,
-    critical: filteredApprovals.filter((a) => a.risk_level === "critical").length,
-    high: filteredApprovals.filter((a) => a.risk_level === "high").length,
-    pending: filteredApprovals.filter((a) => a.status === "pending").length,
+    total: safeArr<ApprovalRequest>(filteredApprovals).length,
+    critical: safeArr<ApprovalRequest>(filteredApprovals).filter((a) => a.risk_level === "critical").length,
+    high: safeArr<ApprovalRequest>(filteredApprovals).filter((a) => a.risk_level === "high").length,
+    pending: safeArr<ApprovalRequest>(filteredApprovals).filter((a) => a.status === "pending").length,
   };
 
   if (error) {
@@ -148,7 +149,7 @@ export function ApprovalsTab({ customerId }: { customerId: string }) {
       </div>
 
       {/* Approvals List */}
-      {filteredApprovals.length === 0 ? (
+      {safeArr<ApprovalRequest>(filteredApprovals).length === 0 ? (
         <div className="glass-panel p-8 text-center">
           <CheckCircle2 className="w-12 h-12 text-slate-700 mx-auto mb-3" />
           <h3 className="text-sm font-bold font-mono text-slate-300 mb-2">No Pending Approvals</h3>
@@ -157,7 +158,7 @@ export function ApprovalsTab({ customerId }: { customerId: string }) {
       ) : (
         <div className="glass-panel overflow-hidden">
           <div className="divide-y divide-surface-border">
-            {filteredApprovals.map((approval) => (
+            {safeArr<ApprovalRequest>(filteredApprovals).map((approval) => (
               <div key={approval.id} className="p-4 hover:bg-surface-border/20 transition-colors">
                 <div className="flex items-start justify-between mb-3">
                   <div className="flex-1">
@@ -180,7 +181,7 @@ export function ApprovalsTab({ customerId }: { customerId: string }) {
                 {/* Details */}
                 <div className="flex items-center justify-between text-[10px] font-mono text-slate-600">
                   <div className="flex items-center gap-4">
-                    <span>Workflow: {approval.workflow_run_id.slice(0, 8)}...</span>
+                    <span>Workflow: {safeSlice(approval.workflow_run_id, 0, 8)}...</span>
                     {approval.sla_deadline && (
                       <span className="flex items-center gap-1 text-amber-500">
                         <Clock className="w-3 h-3" />
