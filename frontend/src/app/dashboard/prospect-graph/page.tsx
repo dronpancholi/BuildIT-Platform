@@ -5,6 +5,7 @@ import { Network, Search, GitBranch, Target, Loader2, Activity, Users, Link2, Ar
 import { useQuery } from "@tanstack/react-query";
 import { fetchApi, MOCK_TENANT_ID } from "@/lib/api";
 import { PageGuide } from "@/components/ui/page-guide";
+import { safeArr, safeStr, safeNum, safeUpper, safeLower, safeFixed, safeLocale, safePct, safeDate, safeDateTime, safeTime, safeReplace, safeSplit, safeSlice, safeStartsWith, safeFind, safeIncludes, safeSort, safeObj, safeKeys, safeValues, safeEntries, safeInitials } from "@/lib/safe";
 
 interface GraphNode {
   id: string;
@@ -63,7 +64,7 @@ export default function ProspectGraphPage() {
   const searchedDomain = searchDomain.trim().toLowerCase();
   const connectedDomains = searchedDomain
     ? edges
-        .filter((e) => e.source.toLowerCase().includes(searchedDomain) || e.target.toLowerCase().includes(searchedDomain))
+        .filter((e) => safeLower(e.source, "").includes(searchedDomain) || safeLower(e.target, "").includes(searchedDomain))
         .slice(0, 20)
     : [];
 

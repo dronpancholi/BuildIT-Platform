@@ -4,6 +4,7 @@ import { useState, useMemo } from "react";
 import { Lightbulb, CheckCircle2, ChevronDown, ChevronRight, Loader2, ArrowUpDown, Link2, Search, MapPin, Target, GitBranch } from "lucide-react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { fetchApi, MOCK_TENANT_ID } from "@/lib/api";
+import { safeArr, safeStr, safeNum, safeUpper, safeLower, safeFixed, safeLocale, safePct, safeDate, safeDateTime, safeTime, safeReplace, safeSplit, safeSlice, safeStartsWith, safeFind, safeIncludes, safeSort, safeObj, safeKeys, safeValues, safeEntries, safeInitials } from "@/lib/safe";
 
 interface Recommendation {
   id: string;
@@ -52,14 +53,14 @@ function confidenceBarColor(score: number): string {
 }
 
 function impactColor(impact: string): string {
-  const i = impact.toLowerCase();
+  const i = safeLower(impact, "");
   if (i.includes("high")) return "bg-emerald-500/10 text-emerald-400 border-emerald-500/20";
   if (i.includes("medium")) return "bg-amber-500/10 text-amber-400 border-amber-500/20";
   return "bg-slate-500/10 text-slate-400 border-slate-500/20";
 }
 
 function effortColor(effort: string): string {
-  const e = effort.toLowerCase();
+  const e = safeLower(effort, "");
   if (e.includes("low")) return "bg-emerald-500/10 text-emerald-400 border-emerald-500/20";
   if (e.includes("medium")) return "bg-amber-500/10 text-amber-400 border-amber-500/20";
   return "bg-red-500/10 text-red-400 border-red-500/20";
@@ -177,7 +178,7 @@ export default function RecommendationsPage() {
                   : "bg-surface-darker border-surface-border text-slate-500 hover:text-slate-300"
               }`}
             >
-              {cat === "all" ? "ALL" : cat.toUpperCase()}
+              {cat === "all" ? "ALL" : safeUpper(cat)}
             </button>
           ))}
         </div>
@@ -210,7 +211,7 @@ export default function RecommendationsPage() {
                     : "bg-surface-darker border-surface-border text-slate-500 hover:text-slate-300"
                 }`}
               >
-                {s === "all" ? "ALL" : s.toUpperCase()}
+                {s === "all" ? "ALL" : safeUpper(s)}
               </button>
             ))}
           </div>
@@ -287,10 +288,10 @@ export default function RecommendationsPage() {
                             {description && <p className="text-xs text-slate-400 mt-1 line-clamp-2">{description}</p>}
                             <div className="flex items-center gap-3 mt-2">
                               <span className={`text-[10px] font-mono px-1.5 py-0.5 rounded border ${impactColor(rec.impact)}`}>
-                                IMPACT: {rec.impact.toUpperCase()}
+                                IMPACT: {safeUpper(rec.impact)}
                               </span>
                               <span className={`text-[10px] font-mono px-1.5 py-0.5 rounded border ${effortColor(rec.effort)}`}>
-                                EFFORT: {rec.effort.toUpperCase()}
+                                EFFORT: {safeUpper(rec.effort)}
                               </span>
                               <span className={`text-[10px] font-mono ${confidenceColor(rec.confidence)}`}>
                                 CONF: {Math.round(rec.confidence * 100)}%

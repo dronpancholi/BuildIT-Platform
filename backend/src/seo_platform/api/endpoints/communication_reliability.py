@@ -1,8 +1,9 @@
 from __future__ import annotations
 
+from seo_platform.core.auth import get_validated_tenant_id
 from uuid import UUID
 
-from fastapi import APIRouter, Body, Query
+from fastapi import Depends,  APIRouter, Body, Query
 
 from seo_platform.services.communication_reliability import communication_reliability
 
@@ -23,7 +24,7 @@ async def orchestrate_retry(
 
 @router.get("/delivery-analytics")
 async def get_delivery_analytics(
-    tenant_id: UUID = Query(..., description="Tenant UUID"),
+    tenant_id: UUID = Depends(get_validated_tenant_id),
     time_window_hours: int = Query(168, description="Time window in hours"),
 ) -> dict:
     analytics = await communication_reliability.get_delivery_analytics(tenant_id, time_window_hours)
@@ -41,7 +42,7 @@ async def sync_responses(
 
 @router.get("/replay-safety")
 async def get_replay_safety(
-    tenant_id: UUID = Query(..., description="Tenant UUID"),
+    tenant_id: UUID = Depends(get_validated_tenant_id),
     campaign_id: UUID = Query(..., description="Campaign UUID"),
 ) -> dict:
     report = await communication_reliability.validate_communication_replay_safety(tenant_id, campaign_id)
@@ -68,7 +69,7 @@ async def failover_provider(
 
 @router.get("/bounce-intelligence")
 async def get_bounce_intelligence(
-    tenant_id: UUID = Query(..., description="Tenant UUID"),
+    tenant_id: UUID = Depends(get_validated_tenant_id),
     time_window_hours: int = Query(168, description="Time window in hours"),
 ) -> dict:
     intelligence = await communication_reliability.analyze_bounces(tenant_id, time_window_hours)

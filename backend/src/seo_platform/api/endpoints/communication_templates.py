@@ -5,10 +5,12 @@ Categories: outreach, guest_post, link_insertion, partnership, followup, report
 """
 
 from __future__ import annotations
+from seo_platform.core.auth import get_validated_tenant_id
 from datetime import datetime, timezone
+import json
 from typing import Any, List
 from uuid import UUID
-from fastapi import APIRouter, Query, HTTPException
+from fastapi import APIRouter, Depends, Query, HTTPException
 from pydantic import BaseModel, Field
 
 router = APIRouter()
@@ -33,7 +35,7 @@ class TemplateResponse(BaseModel):
 
 @router.get("", response_model=dict)
 async def list_templates(
-    tenant_id: UUID = Query(...),
+    tenant_id: UUID = Depends(get_validated_tenant_id),
     category: str | None = None,
     include_archived: bool = False,
 ):
@@ -63,7 +65,7 @@ async def list_templates(
                 "category": row[2],
                 "subject": row[3],
                 "body": row[4],
-                "variables": row[5] or [],
+                "variables": json.loads(row[5]) if isinstance(row[5], str) else (row[5] or []),
                 "is_archived": row[6],
                 "created_at": row[7].isoformat() if row[7] else None,
                 "updated_at": row[8].isoformat() if row[8] else None,
@@ -73,7 +75,7 @@ async def list_templates(
 
 @router.post("", response_model=dict)
 async def create_template(
-    tenant_id: UUID = Query(...),
+    tenant_id: UUID = Depends(get_validated_tenant_id),
     template: TemplateCreate = None,
 ):
     """Create a new communication template."""
@@ -94,7 +96,7 @@ async def create_template(
             "category": template.category,
             "subject": template.subject,
             "body": template.body,
-            "variables": template.variables,
+            "variables": json.dumps(template.variables),
             "created_at": datetime.now(timezone.utc),
             "updated_at": datetime.now(timezone.utc),
         })
@@ -105,7 +107,7 @@ async def create_template(
 @router.post("/{template_id}/duplicate", response_model=dict)
 async def duplicate_template(
     template_id: str,
-    tenant_id: UUID = Query(...),
+    tenant_id: UUID = Depends(get_validated_tenant_id),
 ):
     """Duplicate an existing template."""
     from seo_platform.core.database import get_session
@@ -134,7 +136,7 @@ async def duplicate_template(
             "category": original[1],
             "subject": original[2],
             "body": original[3],
-            "variables": original[4],
+            "variables": json.dumps(original[4]) if isinstance(original[4], (list, dict)) else original[4],
             "created_at": datetime.now(timezone.utc),
             "updated_at": datetime.now(timezone.utc),
         })
@@ -145,7 +147,7 @@ async def duplicate_template(
 @router.delete("/{template_id}", response_model=dict)
 async def delete_template(
     template_id: str,
-    tenant_id: UUID = Query(...),
+    tenant_id: UUID = Depends(get_validated_tenant_id),
 ):
     """Archive (soft delete) a template."""
     from seo_platform.core.database import get_session

@@ -8,6 +8,7 @@ import {
   Eye, Edit2, Trash2, Plus, ArrowRight
 } from "lucide-react";
 import { fetchApi, MOCK_TENANT_ID } from "@/lib/api";
+import { safeArr, safeNum, safeLower, safeFixed } from "@/lib/safe";
 
 interface Prospect {
   id: string;
@@ -44,14 +45,15 @@ export default function ProspectListPage() {
 
   const filteredProspects = useMemo(() => {
     return prospects.filter((p) => {
-      const matchesSearch = !searchQuery || 
-        p.domain.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        p.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        p.company.toLowerCase().includes(searchQuery.toLowerCase());
-      
+      const lowerSearch = safeLower(searchQuery, "");
+      const matchesSearch = !searchQuery ||
+        safeLower(p.domain, "").includes(lowerSearch) ||
+        safeLower(p.name, "").includes(lowerSearch) ||
+        safeLower(p.company, "").includes(lowerSearch);
+
       const matchesStatus = statusFilter === "all" || p.status === statusFilter;
-      const matchesDA = p.domain_authority >= minDA;
-      
+      const matchesDA = safeNum(p.domain_authority) >= minDA;
+
       return matchesSearch && matchesStatus && matchesDA;
     });
   }, [prospects, searchQuery, statusFilter, minDA]);
@@ -139,8 +141,8 @@ export default function ProspectListPage() {
             <TrendingUp className="w-3.5 h-3.5" /> Avg DA
           </div>
           <p className="text-2xl font-bold font-mono text-purple-400">
-            {prospects.length > 0 
-              ? Math.round(prospects.reduce((sum, p) => sum + p.domain_authority, 0) / prospects.length)
+            {prospects.length > 0
+              ? Math.round(prospects.reduce((sum, p) => sum + safeNum(p.domain_authority), 0) / prospects.length)
               : 0}
           </p>
         </div>
@@ -264,10 +266,10 @@ export default function ProspectListPage() {
                     <td className="px-4 py-3 text-right font-mono text-sm">{prospect.domain_authority}</td>
                     <td className="px-4 py-3 text-right font-mono text-sm">{prospect.page_authority}</td>
                     <td className="px-4 py-3 text-right font-mono text-sm">
-                      {(prospect.relevance_score * 100).toFixed(0)}%
+                      {safeFixed(safeNum(prospect.relevance_score) * 100, 0)}
                     </td>
                     <td className="px-4 py-3 text-right font-mono text-sm font-bold text-emerald-400">
-                      {(prospect.composite_score * 100).toFixed(0)}%
+                      {safeFixed(safeNum(prospect.composite_score) * 100, 0)}
                     </td>
                     <td className="px-4 py-3">
                       <span className={`px-2 py-0.5 text-[9px] font-mono rounded-full border uppercase ${getStatusColor(prospect.status)}`}>
@@ -276,14 +278,14 @@ export default function ProspectListPage() {
                     </td>
                     <td className="px-4 py-3">
                       <div className="flex flex-wrap gap-1">
-                        {prospect.tags.slice(0, 2).map((tag) => (
+                        {safeArr<string>(prospect.tags).slice(0, 2).map((tag) => (
                           <span key={tag} className="px-1.5 py-0.5 bg-slate-800 text-slate-400 rounded text-[9px] font-mono">
                             {tag}
                           </span>
                         ))}
-                        {prospect.tags.length > 2 && (
+                        {safeArr<string>(prospect.tags).length > 2 && (
                           <span className="px-1.5 py-0.5 bg-slate-800 text-slate-500 rounded text-[9px] font-mono">
-                            +{prospect.tags.length - 2}
+                            +{safeArr<string>(prospect.tags).length - 2}
                           </span>
                         )}
                       </div>
@@ -337,13 +339,13 @@ export default function ProspectListPage() {
                 <div className="glass-panel p-4">
                   <div className="text-[10px] font-mono text-slate-500 uppercase mb-1">Relevance Score</div>
                   <p className="text-2xl font-bold font-mono text-amber-400">
-                    {(selectedProspect.relevance_score * 100).toFixed(1)}%
+                    {safeFixed(safeNum(selectedProspect.relevance_score) * 100, 1)}
                   </p>
                 </div>
                 <div className="glass-panel p-4 border-emerald-500/20">
                   <div className="text-[10px] font-mono text-emerald-500 uppercase mb-1">Composite Score</div>
                   <p className="text-2xl font-bold font-mono text-emerald-400">
-                    {(selectedProspect.composite_score * 100).toFixed(1)}%
+                    {safeFixed(safeNum(selectedProspect.composite_score) * 100, 1)}
                   </p>
                 </div>
               </div>
@@ -372,7 +374,7 @@ export default function ProspectListPage() {
               <div className="glass-panel p-4">
                 <h4 className="text-xs font-mono text-slate-400 uppercase mb-2">Tags</h4>
                 <div className="flex flex-wrap gap-1">
-                  {selectedProspect.tags.map((tag) => (
+                  {safeArr<string>(selectedProspect.tags).map((tag) => (
                     <span key={tag} className="px-2 py-1 bg-slate-800 text-slate-400 rounded text-xs font-mono">
                       {tag}
                     </span>

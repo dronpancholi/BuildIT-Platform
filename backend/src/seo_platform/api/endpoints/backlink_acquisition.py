@@ -12,9 +12,10 @@ NOT execution decisions.
 
 from __future__ import annotations
 
+from seo_platform.core.auth import get_validated_tenant_id
 from uuid import UUID  # noqa: TC003
 
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import Depends,  APIRouter, HTTPException, Query
 
 from seo_platform.services.backlink_acquisition_intelligence import (
     backlink_acquisition_intelligence,
@@ -25,7 +26,7 @@ router = APIRouter()
 
 @router.get("/opportunities")
 async def predict_backlink_opportunities(
-    tenant_id: UUID = Query(..., description="Tenant UUID"),
+    tenant_id: UUID = Depends(get_validated_tenant_id),
     campaign_id: UUID = Query(..., description="Campaign UUID"),
 ) -> dict:
     """Predict best backlink opportunities from prospect graph, broken links, and content gaps."""
@@ -41,7 +42,7 @@ async def predict_backlink_opportunities(
 
 @router.get("/relationship-network")
 async def analyze_relationship_network(
-    tenant_id: UUID = Query(..., description="Tenant UUID"),
+    tenant_id: UUID = Depends(get_validated_tenant_id),
     campaign_id: UUID = Query(..., description="Campaign UUID"),
 ) -> dict:
     """Analyze prospect relationship network for connections, clusters, and centrality."""
@@ -57,7 +58,7 @@ async def analyze_relationship_network(
 
 @router.get("/introductions")
 async def recommend_introductions(
-    tenant_id: UUID = Query(..., description="Tenant UUID"),
+    tenant_id: UUID = Depends(get_validated_tenant_id),
     campaign_id: UUID = Query(..., description="Campaign UUID"),
 ) -> dict:
     """Suggest warm introduction opportunities from prospect relationships."""
@@ -73,7 +74,7 @@ async def recommend_introductions(
 
 @router.get("/authority-propagation")
 async def analyze_authority_propagation_paths(
-    tenant_id: UUID = Query(..., description="Tenant UUID"),
+    tenant_id: UUID = Depends(get_validated_tenant_id),
     domain: str = Query(..., min_length=1, description="Domain to analyze"),
 ) -> dict:
     """Map authority flow through the network to identify high-value additions."""
@@ -89,7 +90,7 @@ async def analyze_authority_propagation_paths(
 
 @router.get("/outreach-forecast")
 async def forecast_outreach_success(
-    tenant_id: UUID = Query(..., description="Tenant UUID"),
+    tenant_id: UUID = Depends(get_validated_tenant_id),
     campaign_id: UUID = Query(..., description="Campaign UUID"),
     weeks: int = Query(4, ge=1, le=12, description="Forecast horizon in weeks"),
 ) -> dict:
@@ -122,7 +123,7 @@ async def analyze_prospect_intent(payload: dict) -> dict:
 
 @router.get("/campaign-optimization")
 async def analyze_campaign_optimization(
-    tenant_id: UUID = Query(..., description="Tenant UUID"),
+    tenant_id: UUID = Depends(get_validated_tenant_id),
     campaign_id: UUID = Query(..., description="Campaign UUID"),
 ) -> dict:
     """Comprehensive campaign optimization analysis across multiple dimensions."""

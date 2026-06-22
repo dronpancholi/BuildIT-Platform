@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { FileText, Search, ChevronDown, ChevronUp, Plus, Archive } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { safeArr, safeLower } from "@/lib/safe";
 
 interface Template {
   id: string;
@@ -58,9 +59,9 @@ export function TemplatePicker({ onSelect, onCreateNew }: TemplatePickerProps) {
 
   const templates: Template[] = (templatesData as any)?.data || [];
 
-  const filteredTemplates = templates.filter((tpl: Template) => {
-    const matchesSearch = tpl.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                         tpl.subject.toLowerCase().includes(searchQuery.toLowerCase());
+  const filteredTemplates = safeArr<Template>(templates).filter((tpl: Template) => {
+    const matchesSearch = safeLower(tpl.title, "").includes(safeLower(searchQuery, "")) ||
+                         safeLower(tpl.subject, "").includes(safeLower(searchQuery, ""));
     return matchesSearch;
   });
 
