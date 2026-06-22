@@ -8,6 +8,7 @@ All data is computed from real database state — no fake metrics.
 
 from __future__ import annotations
 
+from seo_platform.core.auth import get_validated_tenant_id
 from datetime import datetime, timezone, timedelta
 from typing import Any
 from uuid import UUID
