@@ -162,10 +162,15 @@ class NvidiaSettings(BaseSettings):
     api_key: str = ""
 
     # Enterprise NIM Model Fleet
-    orchestration_model: str = "DeepSeek-V4-Pro"
-    seo_model: str = "meta/llama-3.1-8b-instruct"
-    memory_model: str = "MiniMax M2.7"
-    infra_model: str = "NVIDIA-Nemotron-3-Super-120B-A12B"
+    # Phase 2.5.1: defaults updated to known-working NVIDIA NIM models.
+    # The previous defaults (DeepSeek-V4-Pro, meta/llama-3.1-8b-instruct,
+    # MiniMax M2.7) are not present on the live NIM endpoint and either
+    # 404 or time out at 45s. The chosen defaults below were verified
+    # end-to-end with real responses in 1-2s latency.
+    orchestration_model: str = "meta/llama-3.3-70b-instruct"
+    seo_model: str = "nvidia/nemotron-3-super-120b-a12b"
+    memory_model: str = "nvidia/nemotron-3-super-120b-a12b"
+    infra_model: str = "nvidia/nemotron-3-super-120b-a12b"
     embedding_model: str = "nvidia/nv-embedqa-e5-v5"
 
     # Inference defaults
@@ -176,15 +181,32 @@ class NvidiaSettings(BaseSettings):
 
 
 class AuthSettings(BaseSettings):
-    """Authentication configuration (internal — no external auth)."""
+    """
+    Authentication configuration (Phase 2.5.1 — Clerk-based).
+
+    In production, the platform verifies JWTs issued by Clerk against the
+    configured JWKS endpoint. The Clerk user is then mapped to an internal
+    user row, and the tenant_id and role come from that internal row.
+
+    Environment variables:
+        AUTH_PROVIDER          — "clerk" (default), "auth0" (future), "internal" (dev)
+        AUTH_JWKS_URL          — Clerk's JWKS endpoint, e.g. https://<your-clerk>.clerk.accounts.dev/.well-known/jwks.json
+        AUTH_PUBLISHABLE_KEY   — Clerk publishable key (used by frontend, also stored for verification)
+        AUTH_ISSUER_URL        — expected `iss` claim, e.g. https://<your-clerk>.clerk.accounts.dev
+        AUTH_AUDIENCE          — expected `aud` claim (optional but recommended)
+        AUTH_SECRET_KEY        — HMAC secret for legacy / fallback dev tokens
+    """
 
     model_config = SettingsConfigDict(env_prefix="AUTH_")
 
-    provider: str = "internal"
-    secret_key: str = "internal-dev-key"
+    provider: str = "clerk"
+    jwks_url: str = ""
+    publishable_key: str = ""
     issuer_url: str = ""
     audience: str = "seo-platform-api"
 
+    # Legacy fields, kept for backward compatibility / dev fallback
+    secret_key: str = "internal-dev-key"
     access_token_ttl_minutes: int = 15
     refresh_token_ttl_days: int = 7
     algorithm: str = "HS256"
@@ -241,6 +263,8 @@ class ResendSettings(BaseSettings):
     model_config = SettingsConfigDict(env_prefix="RESEND_")
 
     api_key: str = ""
+    sender_email: str = "noreply@seo-platform.local"
+    sender_name: str = "SEO Platform"
     webhook_signing_key: str = ""
 
 
@@ -316,9 +340,16 @@ class Settings(BaseSettings):
     # Shared webhook signing key (used by Mailgun/Resend webhook verification)
     email_webhook_signing_key: str = Field(default="", description="HMAC key for email webhook signature verification")
 
-    # --- Operational Modes (Zero-Cost / Production Toggles) ---
-    use_mock_providers: bool = Field(default=False, description="Toggle between local scrapers and paid APIs")
-    dev_auth_bypass: bool = Field(default=True, description="Bypass auth enforcement for local development")
+    # --- S3 / MinIO Storage ---
+    s3_endpoint: str = "http://localhost:9000"
+    s3_access_key: str = "minioadmin"
+    s3_secret_key: str = "minioadmin"
+    s3_bucket_name: str = "seo-platform-assets"
+    s3_region: str = "us-east-1"
+
+    # --- Operational Modes (Production-Safe Defaults) ---
+    use_mock_providers: bool = Field(default=False, description="Toggle between local scrapers and paid APIs. MUST be False in production.")
+    dev_auth_bypass: bool = Field(default=False, description="Bypass auth enforcement. MUST be False in production. Enabled only in development/testing.")
     test_mode: bool = Field(default=False, description="Enable deterministic test behaviors")
 
     @property
@@ -332,6 +363,30 @@ class Settings(BaseSettings):
     @property
     def is_testing(self) -> bool:
         return self.app_env == Environment.TESTING
+
+    @property
+    def effective_mock_mode(self) -> bool:
+        """
+        Auto-enables mock/zero-cost mode when no paid API keys are configured.
+        Explicitly setting use_mock_providers=True forces mock mode.
+        In production, this is ignored — real APIs are required.
+        """
+        if self.is_production:
+            return self.use_mock_providers
+        if self.use_mock_providers:
+            return True
+        # Auto-enable if no SEO APIs AND no email APIs configured
+        has_seo_api = bool(
+            (self.dataforseo.login and self.dataforseo.password)
+            or self.ahrefs.api_key
+            or self.hunter.api_key
+        )
+        has_email_api = bool(
+            self.resend.api_key
+            or self.sendgrid.api_key
+            or (self.mailgun.api_key and self.mailgun.domain)
+        )
+        return not (has_seo_api or has_email_api)
 
 
 @lru_cache(maxsize=1)

@@ -371,6 +371,21 @@ class ConfigurationError(PlatformError):
         )
 
 
+class ProviderUnavailableError(PlatformError):
+    """Real provider is unreachable or failed — no fabrication, no simulation fallback."""
+
+    error_code = "PROVIDER_UNAVAILABLE"
+    http_status = 502
+    retryable = True
+
+    def __init__(self, provider: str, message: str, **kwargs: Any) -> None:
+        super().__init__(
+            f"[{provider}] {message}",
+            details={"provider": provider},
+            **kwargs,
+        )
+
+
 # ---------------------------------------------------------------------------
 # Non-retryable error type names for Temporal
 # ---------------------------------------------------------------------------

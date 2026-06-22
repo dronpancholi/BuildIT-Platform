@@ -85,9 +85,9 @@ def upgrade() -> None:
     )
     op.create_index(op.f('ix_campaign_timeline_events_campaign_id'), 'campaign_timeline_events', ['campaign_id'], unique=False)
     op.create_index(op.f('ix_campaign_timeline_events_tenant_id'), 'campaign_timeline_events', ['tenant_id'], unique=False)
-    op.drop_index(op.f('ix_operational_events_created_at'), table_name='operational_events')
-    op.drop_index(op.f('ix_operational_events_type'), table_name='operational_events')
-    op.drop_table('operational_events')
+    op.execute("DROP TABLE IF EXISTS operational_events CASCADE")
+    op.execute("DROP INDEX IF EXISTS ix_operational_events_created_at")
+    op.execute("DROP INDEX IF EXISTS ix_operational_events_type")
     op.alter_column('business_intelligence_events', 'severity',
                existing_type=sa.VARCHAR(length=20),
                server_default=None,

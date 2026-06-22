@@ -4,10 +4,11 @@ Supports: schedule, cancel, reschedule, list scheduled
 """
 
 from __future__ import annotations
+from seo_platform.core.auth import get_validated_tenant_id
 from datetime import datetime, timezone
 from typing import Any, List
 from uuid import UUID
-from fastapi import APIRouter, Query, HTTPException
+from fastapi import APIRouter, Depends, Query, HTTPException
 from pydantic import BaseModel
 
 router = APIRouter()
@@ -22,7 +23,7 @@ class ScheduleEmail(BaseModel):
 
 @router.get("", response_model=dict)
 async def list_scheduled_emails(
-    tenant_id: UUID = Query(...),
+    tenant_id: UUID = Depends(get_validated_tenant_id),
     status: str = "pending",  # pending, sent, cancelled
 ):
     """List scheduled emails."""
@@ -55,7 +56,7 @@ async def list_scheduled_emails(
 
 @router.post("", response_model=dict)
 async def schedule_email(
-    tenant_id: UUID = Query(...),
+    tenant_id: UUID = Depends(get_validated_tenant_id),
     schedule: ScheduleEmail = None,
 ):
     """Schedule an email for future sending."""
@@ -92,7 +93,7 @@ async def schedule_email(
 @router.post("/{schedule_id}/cancel", response_model=dict)
 async def cancel_scheduled_email(
     schedule_id: str,
-    tenant_id: UUID = Query(...),
+    tenant_id: UUID = Depends(get_validated_tenant_id),
 ):
     """Cancel a scheduled email."""
     from seo_platform.core.database import get_session
@@ -115,7 +116,7 @@ async def cancel_scheduled_email(
 @router.post("/{schedule_id}/send", response_model=dict)
 async def send_scheduled_email(
     schedule_id: str,
-    tenant_id: UUID = Query(...),
+    tenant_id: UUID = Depends(get_validated_tenant_id),
 ):
     """Send a scheduled email immediately."""
     from seo_platform.core.database import get_session

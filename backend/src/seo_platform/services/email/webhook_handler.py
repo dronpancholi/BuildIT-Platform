@@ -3,6 +3,12 @@ SEO Platform — Webhook Event Handler
 ======================================
 Processes incoming email webhook events (delivered, bounced, opened, replied).
 Publishes domain events to Kafka and signals Temporal child workflows on reply.
+
+Idempotency: every event is deduped via
+``core.webhook_dedup.check_and_record_webhook_event`` keyed on
+``(provider, event_id)``. Provider retries that resend the same event_id
+are silently skipped, so downstream effects (Kafka emit, Temporal
+signal, status update) cannot fire twice.
 """
 
 from __future__ import annotations
@@ -11,6 +17,11 @@ import json
 from typing import Any
 
 from seo_platform.core.logging import get_logger
+from seo_platform.core.metrics import (
+    seo_webhook_events_total,
+    seo_webhook_duplicates_total,
+)
+from seo_platform.core.webhook_dedup import check_and_record_webhook_event
 
 logger = get_logger(__name__)
 
@@ -30,12 +41,35 @@ def _emit_kafka_event(topic: str, tenant_id: str, payload: dict) -> None:
         logger.warning("kafka_emit_failed", topic=topic, error=str(e))
 
 
+def _extract_event_id(payload: dict, provider: str) -> str:
+    """Pull a stable per-provider event id from the payload.
+
+    Returns an empty string if no id is present, in which case the
+    caller will treat the event as non-idempotent and let it through.
+    """
+    if provider == "mailgun":
+        event_data = payload.get("event-data") or {}
+        return (
+            event_data.get("id")
+            or event_data.get("message", {}).get("headers", {}).get("message-id")
+            or ""
+        )
+    if provider == "resend":
+        return payload.get("id") or payload.get("svix-id") or ""
+    return payload.get("event_id") or payload.get("id") or ""
+
+
 async def process_webhook_event(payload: dict, provider: str) -> dict[str, Any]:
     """
     Process an incoming email webhook event.
 
     Supported event types: delivered, bounced, opened, replied.
     On 'replied', signals the corresponding OutreachThreadWorkflow child.
+
+    Idempotency: a unique (provider, event_id) constraint ensures that
+    provider retries of the same event are skipped. The same event id
+    arriving via the format-agnostic /webhooks/inbound/email surface
+    is deduped separately by AuditLog.metadata_.message_id.
     """
     event_type = _detect_event_type(payload, provider)
     metadata = _extract_metadata(payload, provider)
@@ -44,6 +78,26 @@ async def process_webhook_event(payload: dict, provider: str) -> dict[str, Any]:
     campaign_id = metadata.get("campaign_id", "")
     prospect_domain = metadata.get("prospect_domain", "")
     thread_id = metadata.get("thread_id", "")
+
+    event_id = _extract_event_id(payload, provider)
+    proceed = await check_and_record_webhook_event(
+        provider=provider,
+        event_id=event_id,
+        tenant_id=tenant_id or None,
+        thread_id=thread_id or None,
+        event_type=event_type,
+    )
+    if not proceed:
+        seo_webhook_duplicates_total.labels(provider=provider).inc()
+        seo_webhook_events_total.labels(
+            provider=provider, event_type=event_type or "unknown", outcome="duplicate",
+        ).inc()
+        return {
+            "status": "duplicate",
+            "provider": provider,
+            "event_type": event_type,
+            "thread_id": thread_id,
+        }
 
     logger.info(
         "webhook_event_received",
@@ -80,6 +134,10 @@ async def process_webhook_event(payload: dict, provider: str) -> dict[str, Any]:
             logger.info("temporal_signal_sent", thread_id=thread_id, signal="reply_received")
         except Exception as e:
             logger.warning("temporal_signal_failed", thread_id=thread_id, error=str(e))
+
+    seo_webhook_events_total.labels(
+        provider=provider, event_type=event_type or "unknown", outcome="accepted",
+    ).inc()
 
     return {
         "status": "accepted",

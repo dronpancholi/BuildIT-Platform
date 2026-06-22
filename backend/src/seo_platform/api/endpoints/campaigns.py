@@ -1,3 +1,4 @@
+# PHASE 1.2 — Simulation removed: simulate_thread_reply and mark_link_acquired endpoints
 """
 SEO Platform — Campaign Endpoints
 =====================================
@@ -9,10 +10,15 @@ from __future__ import annotations
 from datetime import datetime
 from uuid import UUID
 
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel, Field
+from sqlalchemy.exc import IntegrityError
 
+from seo_platform.core.auth import CurrentUser, get_validated_tenant_id, validate_tenant_id
+from seo_platform.core.rbac import RequirePermission
+from seo_platform.models.backlink import CampaignStatus
 from seo_platform.schemas import APIResponse, ResponseMeta
+from seo_platform.models.backlink import CampaignStatus
 
 router = APIRouter()
 
@@ -61,9 +67,10 @@ class CampaignLaunchResponse(BaseModel):
 
 @router.get("", response_model=APIResponse[list[CampaignResponse]])
 async def list_campaigns(
-    tenant_id: UUID = Query(...),
+    tenant_id: UUID = Depends(get_validated_tenant_id),
     offset: int = Query(default=0, ge=0),
     limit: int = Query(default=50, ge=1, le=200),
+    _auth: None = Depends(RequirePermission("campaigns:read")),
 ) -> APIResponse[list[CampaignResponse]]:
     """List all backlink campaigns for a tenant."""
     from sqlalchemy import func, select
@@ -111,10 +118,17 @@ async def list_campaigns(
 
 
 @router.post("", response_model=APIResponse[CampaignResponse], status_code=201)
-async def create_campaign(request: CreateCampaignRequest) -> APIResponse[CampaignResponse]:
+async def create_campaign(
+    request: CreateCampaignRequest,
+    _auth: CurrentUser = Depends(RequirePermission("campaigns:write")),
+) -> APIResponse[CampaignResponse]:
     """Create a new backlink campaign (draft status)."""
     from seo_platform.core.database import get_tenant_session
     from seo_platform.models.backlink import BacklinkCampaign, CampaignType
+    from seo_platform.services.audit_logger import audit_logger
+
+    # Validate tenant_id matches authenticated user
+    await validate_tenant_id(request.tenant_id, user=_auth)
 
     async with get_tenant_session(request.tenant_id) as session:
         campaign = BacklinkCampaign(
@@ -130,8 +144,25 @@ async def create_campaign(request: CreateCampaignRequest) -> APIResponse[Campaig
             },
         )
         session.add(campaign)
-        await session.flush()
+        try:
+            await session.flush()
+        except IntegrityError as e:
+            await session.rollback()
+            if "foreign key" in str(e.orig).lower() or "referential integrity" in str(e.orig).lower():
+                raise HTTPException(status_code=400, detail=f"Client with ID '{request.client_id}' does not exist for this tenant")
+            raise HTTPException(status_code=400, detail=f"Invalid request data: {e.orig}")
         await session.refresh(campaign)
+
+        # Audit log
+        user_id = str(_auth.id) if hasattr(_auth, "id") else "system"
+        await audit_logger.log(
+            tenant_id=str(request.tenant_id),
+            user_id=user_id,
+            action="campaign.create",
+            entity_type="campaign",
+            entity_id=str(campaign.id),
+            after={"name": campaign.name, "type": campaign.campaign_type.value, "status": campaign.status.value},
+        )
 
         return APIResponse(
             data=CampaignResponse(
@@ -172,7 +203,8 @@ class ThreadResponse(BaseModel):
 
 @router.get("/threads/all", response_model=APIResponse[list[ThreadResponse]])
 async def list_all_threads(
-    tenant_id: UUID = Query(...),
+    tenant_id: UUID = Depends(get_validated_tenant_id),
+    _auth: None = Depends(RequirePermission("campaigns:read")),
 ) -> APIResponse[list[ThreadResponse]]:
     """List all outreach threads across all campaigns for a tenant (Outbox view)."""
     from sqlalchemy import select
@@ -223,7 +255,8 @@ async def list_all_threads(
 @router.get("/{campaign_id}/threads", response_model=APIResponse[list[ThreadResponse]])
 async def list_campaign_threads(
     campaign_id: UUID,
-    tenant_id: UUID = Query(...),
+    tenant_id: UUID = Depends(get_validated_tenant_id),
+    _auth: None = Depends(RequirePermission("campaigns:read")),
 ) -> APIResponse[list[ThreadResponse]]:
     """List outreach threads with composed emails for a campaign."""
     from sqlalchemy import select
@@ -289,7 +322,8 @@ class ThreadUpdateResponse(BaseModel):
 async def update_thread(
     thread_id: UUID,
     request: UpdateThreadRequest,
-    tenant_id: UUID = Query(...),
+    tenant_id: UUID = Depends(get_validated_tenant_id),
+    _auth: None = Depends(RequirePermission("campaigns:write")),
 ) -> APIResponse[ThreadUpdateResponse]:
     """Update a thread's subject or body (for editing drafts)."""
     from datetime import datetime, timezone
@@ -334,14 +368,15 @@ class SendThreadResponse(BaseModel):
 async def send_thread_email(
     thread_id: UUID,
     request: SendThreadRequest,
-    tenant_id: UUID = Query(...),
+    tenant_id: UUID = Depends(get_validated_tenant_id),
+    _auth: None = Depends(RequirePermission("campaigns:write")),
 ) -> APIResponse[SendThreadResponse]:
     """Send a draft email thread via MailHog SMTP."""
     from datetime import datetime, timezone
 
     from seo_platform.core.database import get_tenant_session
     from seo_platform.models.backlink import OutreachThread, ThreadStatus
-    from seo_platform.services.email_provider import MailhogProvider
+    from seo_platform.services.email_provider import get_email_provider
 
     async with get_tenant_session(tenant_id) as session:
         thread = await session.get(OutreachThread, thread_id)
@@ -351,7 +386,7 @@ async def send_thread_email(
         if thread.status not in (ThreadStatus.DRAFT, ThreadStatus.QUEUED):
             raise HTTPException(status_code=400, detail=f"Cannot send thread in {thread.status} status")
 
-        provider = MailhogProvider()
+        provider = get_email_provider()
         result = await provider.send_email(
             to_email=thread.to_email,
             subject=thread.subject,
@@ -379,55 +414,6 @@ async def send_thread_email(
         )
 
 
-class SimulateReplyRequest(BaseModel):
-    reply_body: str = "Thank you for reaching out. I'd be happy to discuss this further."
-
-
-class SimulateReplyResponse(BaseModel):
-    id: UUID
-    status: str
-    replied_at: str
-
-
-@router.post("/threads/{thread_id}/simulate-reply", response_model=APIResponse[SimulateReplyResponse])
-async def simulate_thread_reply(
-    thread_id: UUID,
-    request: SimulateReplyRequest,
-    tenant_id: UUID = Query(...),
-) -> APIResponse[SimulateReplyResponse]:
-    """Simulate a reply to a sent thread for testing purposes."""
-    from datetime import datetime, timezone
-
-    from seo_platform.core.database import get_tenant_session
-    from seo_platform.models.backlink import OutreachThread, ThreadStatus
-
-    async with get_tenant_session(tenant_id) as session:
-        thread = await session.get(OutreachThread, thread_id)
-        if not thread or thread.tenant_id != tenant_id:
-            raise HTTPException(status_code=404, detail="Thread not found")
-
-        if thread.status != ThreadStatus.SENT:
-            raise HTTPException(status_code=400, detail=f"Cannot simulate reply to thread in {thread.status} status")
-
-        thread.status = ThreadStatus.REPLIED
-        thread.replied_at = datetime.now(timezone.utc)
-        thread.updated_at = datetime.now(timezone.utc)
-        thread.ai_personalization = {
-            **(thread.ai_personalization or {}),
-            "reply_body": request.reply_body,
-            "reply_simulated": True,
-        }
-        await session.flush()
-
-        return APIResponse(
-            data=SimulateReplyResponse(
-                id=thread.id,
-                status=thread.status.value,
-                replied_at=thread.replied_at.isoformat(),
-            )
-        )
-
-
 class ScheduleFollowUpRequest(BaseModel):
     follow_up_body: str
     follow_up_subject: str | None = None
@@ -443,14 +429,15 @@ class ScheduleFollowUpResponse(BaseModel):
 async def schedule_thread_follow_up(
     thread_id: UUID,
     request: ScheduleFollowUpRequest,
-    tenant_id: UUID = Query(...),
+    tenant_id: UUID = Depends(get_validated_tenant_id),
+    _auth: None = Depends(RequirePermission("campaigns:write")),
 ) -> APIResponse[ScheduleFollowUpResponse]:
     """Schedule and send a follow-up email for a thread."""
     from datetime import datetime, timezone
 
     from seo_platform.core.database import get_tenant_session
     from seo_platform.models.backlink import OutreachThread, ThreadStatus
-    from seo_platform.services.email_provider import MailhogProvider
+    from seo_platform.services.email_provider import get_email_provider
 
     async with get_tenant_session(tenant_id) as session:
         thread = await session.get(OutreachThread, thread_id)
@@ -461,7 +448,7 @@ async def schedule_thread_follow_up(
             raise HTTPException(status_code=400, detail=f"Cannot follow up thread in {thread.status} status")
 
         follow_up_subject = request.follow_up_subject or f"Re: {thread.subject}"
-        provider = MailhogProvider()
+        provider = get_email_provider()
         result = await provider.send_email(
             to_email=thread.to_email,
             subject=follow_up_subject,
@@ -489,92 +476,57 @@ async def schedule_thread_follow_up(
         )
 
 
-class MarkLinkAcquiredRequest(BaseModel):
-    acquired_url: str
-    anchor_text: str = ""
-
-
-class MarkLinkAcquiredResponse(BaseModel):
-    thread_id: UUID
-    prospect_domain: str
-    acquired_url: str
-    status: str
-
-
-@router.post("/threads/{thread_id}/mark-link-acquired", response_model=APIResponse[MarkLinkAcquiredResponse])
-async def mark_thread_link_acquired(
-    thread_id: UUID,
-    request: MarkLinkAcquiredRequest,
-    tenant_id: UUID = Query(...),
-) -> APIResponse[MarkLinkAcquiredResponse]:
-    """Mark a thread as having acquired a backlink and update campaign metrics."""
+@router.post("/{campaign_id}/cancel", response_model=APIResponse[CampaignResponse])
+async def cancel_campaign(
+    campaign_id: UUID,
+    tenant_id: UUID = Depends(get_validated_tenant_id),
+    _auth: None = Depends(RequirePermission("campaigns:write")),
+) -> APIResponse[CampaignResponse]:
+    """Cancel a backlink campaign."""
     from datetime import datetime, timezone
 
     from sqlalchemy import select
-    from sqlalchemy.orm import selectinload
+    from sqlalchemy.orm import joinedload
 
     from seo_platform.core.database import get_tenant_session
-    from seo_platform.models.backlink import (
-        AcquiredLink,
-        BacklinkCampaign,
-        BacklinkProspect,
-        LinkStatus,
-        OutreachThread,
-        ThreadStatus,
-    )
+    from seo_platform.models.backlink import BacklinkCampaign
 
     async with get_tenant_session(tenant_id) as session:
         result = await session.execute(
-            select(OutreachThread)
-            .where(OutreachThread.id == thread_id, OutreachThread.tenant_id == tenant_id)
-            .options(selectinload(OutreachThread.prospect))
+            select(BacklinkCampaign)
+            .where(
+                BacklinkCampaign.id == campaign_id,
+                BacklinkCampaign.tenant_id == tenant_id,
+            )
+            .options(joinedload(BacklinkCampaign.client))
         )
-        thread = result.scalar_one_or_none()
-        if not thread:
-            raise HTTPException(status_code=404, detail="Thread not found")
+        campaign = result.unique().scalar_one_or_none()
 
-        prospect_domain = thread.prospect.domain if thread.prospect else "unknown"
-        prospect_da = thread.prospect.domain_authority if thread.prospect else 0
+        if not campaign:
+            raise HTTPException(status_code=404, detail="Campaign not found")
 
-        thread.status = ThreadStatus.LINK_ACQUIRED
-        thread.updated_at = datetime.now(timezone.utc)
-        thread.ai_personalization = {
-            **(thread.ai_personalization or {}),
-            "acquired_url": request.acquired_url,
-            "anchor_text": request.anchor_text,
-            "link_acquired_at": datetime.now(timezone.utc).isoformat(),
-        }
-
-        acquired = AcquiredLink(
-            tenant_id=tenant_id,
-            campaign_id=thread.campaign_id,
-            prospect_id=thread.prospect_id,
-            source_url=request.acquired_url,
-            target_url=f"https://{prospect_domain}",
-            anchor_text=request.anchor_text,
-            link_type="dofollow",
-            status=LinkStatus.VERIFIED_LIVE,
-            domain_authority_at_acquisition=prospect_da,
-            first_verified_at=datetime.now(timezone.utc),
-        )
-        session.add(acquired)
-
-        campaign = await session.get(BacklinkCampaign, thread.campaign_id)
-        if campaign:
-            campaign.acquired_link_count += 1
-            if campaign.target_link_count > 0:
-                campaign.acquisition_rate = round(
-                    campaign.acquired_link_count / campaign.target_link_count, 4
-                )
-
+        campaign.status = CampaignStatus.CANCELLED
+        campaign.updated_at = datetime.now(timezone.utc)
         await session.flush()
+        await session.refresh(campaign)
+
+        client_name = campaign.client.name if campaign.client else None
 
         return APIResponse(
-            data=MarkLinkAcquiredResponse(
-                thread_id=thread.id,
-                prospect_domain=prospect_domain,
-                acquired_url=request.acquired_url,
-                status=thread.status.value,
+            data=CampaignResponse(
+                id=campaign.id,
+                tenant_id=campaign.tenant_id,
+                client_id=campaign.client_id,
+                client_name=client_name,
+                name=campaign.name,
+                campaign_type=campaign.campaign_type.value,
+                status=campaign.status.value,
+                target_link_count=campaign.target_link_count,
+                acquired_link_count=campaign.acquired_link_count,
+                health_score=campaign.health_score,
+                workflow_run_id=campaign.workflow_run_id,
+                created_at=campaign.created_at.isoformat() if campaign.created_at else None,
+                updated_at=campaign.updated_at.isoformat() if campaign.updated_at else None,
             )
         )
 
@@ -582,7 +534,8 @@ async def mark_thread_link_acquired(
 @router.get("/{campaign_id}", response_model=APIResponse[CampaignResponse])
 async def get_campaign(
     campaign_id: UUID,
-    tenant_id: UUID = Query(...),
+    tenant_id: UUID = Depends(get_validated_tenant_id),
+    _auth: None = Depends(RequirePermission("campaigns:read")),
 ) -> APIResponse[CampaignResponse]:
     """Get a single campaign by ID."""
     from sqlalchemy import select
@@ -630,7 +583,8 @@ async def get_campaign(
 async def update_campaign(
     campaign_id: UUID,
     request: UpdateCampaignRequest,
-    tenant_id: UUID = Query(...),
+    tenant_id: UUID = Depends(get_validated_tenant_id),
+    _auth: None = Depends(RequirePermission("campaigns:write")),
 ) -> APIResponse[CampaignResponse]:
     """Update an existing campaign."""
     from sqlalchemy import select
@@ -654,7 +608,8 @@ async def update_campaign(
             raise HTTPException(status_code=404, detail="Campaign not found")
 
         if request.name is not None:
-            campaign.name = request.name
+            from seo_platform.core.sanitization import sanitize_string
+            campaign.name = sanitize_string(request.name)
         if request.campaign_type is not None:
             campaign.campaign_type = CampaignType(request.campaign_type)
         if request.target_link_count is not None:
@@ -696,8 +651,51 @@ async def update_campaign(
         )
 
 
+@router.delete("/{campaign_id}", response_model=APIResponse)
+async def delete_campaign(
+    campaign_id: UUID,
+    tenant_id: UUID = Depends(get_validated_tenant_id),
+    _auth: None = Depends(RequirePermission("campaigns:write")),
+) -> APIResponse:
+    """Delete a backlink campaign and its associated prospects/threads."""
+    from sqlalchemy import select
+
+    from seo_platform.core.database import get_tenant_session
+    from seo_platform.models.backlink import BacklinkCampaign
+    from seo_platform.services.audit_logger import audit_logger
+
+    async with get_tenant_session(tenant_id) as session:
+        result = await session.execute(
+            select(BacklinkCampaign).where(
+                BacklinkCampaign.id == campaign_id,
+                BacklinkCampaign.tenant_id == tenant_id,
+            )
+        )
+        campaign = result.scalar_one_or_none()
+
+        if not campaign:
+            raise HTTPException(status_code=404, detail="Campaign not found")
+
+        before = {"name": campaign.name, "status": campaign.status.value}
+        await session.delete(campaign)
+        await session.flush()
+
+        # Audit log
+        user_id = str(_auth.id) if hasattr(_auth, "id") else "system"
+        await audit_logger.log(
+            tenant_id=str(tenant_id),
+            user_id=user_id,
+            action="campaign.delete",
+            entity_type="campaign",
+            entity_id=str(campaign_id),
+            before=before,
+        )
+
+        return APIResponse(data={"deleted": True, "campaign_id": str(campaign_id)})
+
+
 class GenerateEmailRequest(BaseModel):
-    tenant_id: UUID
+    tenant_id: UUID | None = None
 
 
 class GenerateEmailResponse(BaseModel):
@@ -714,6 +712,8 @@ class GenerateEmailResponse(BaseModel):
 async def generate_campaign_emails(
     campaign_id: UUID,
     request: GenerateEmailRequest,
+    _auth: CurrentUser = Depends(RequirePermission("campaigns:write")),
+    validated_tenant_id: UUID = Depends(get_validated_tenant_id),
 ) -> APIResponse[list[GenerateEmailResponse]]:
     """Generate personalized outreach emails for all prospects in a campaign.
     Uses NVIDIA NIM LLM when API key is configured, falls back to
@@ -730,10 +730,16 @@ async def generate_campaign_emails(
     )
     from seo_platform.services.compliance_scorer import compliance_scorer
 
+    # Validate tenant_id matches authenticated user; fall back to
+    # the validated tenant from the auth context if the caller did
+    # not include tenant_id in the body.
+    effective_tenant_id = request.tenant_id or validated_tenant_id
+    await validate_tenant_id(effective_tenant_id, user=_auth)
+
     settings = get_settings()
     use_nim = settings.nvidia.api_key and "mock" not in settings.nvidia.api_key.lower()
 
-    async with get_tenant_session(request.tenant_id) as session:
+    async with get_tenant_session(effective_tenant_id) as session:
         campaign = await session.get(BacklinkCampaign, campaign_id)
         if not campaign:
             raise HTTPException(status_code=404, detail="Campaign not found")
@@ -743,7 +749,7 @@ async def generate_campaign_emails(
                 select(BacklinkProspect)
                 .where(
                     BacklinkProspect.campaign_id == campaign_id,
-                    BacklinkProspect.tenant_id == request.tenant_id,
+                    BacklinkProspect.tenant_id == effective_tenant_id,
                 )
                 .options(joinedload(BacklinkProspect.threads))
             )
@@ -817,18 +823,18 @@ async def generate_campaign_emails(
                     get_logger(__name__).warning("nim_email_generation_failed", error=str(e))
 
             compliance = await compliance_scorer.score_email_pitch(
-                tenant_id=request.tenant_id,
+                tenant_id=effective_tenant_id,
                 email_body=body,
                 entity_id=prospect.id,
                 entity_type="email_pitch",
             )
 
             thread = OutreachThread(
-                tenant_id=request.tenant_id,
+                tenant_id=effective_tenant_id,
                 campaign_id=campaign_id,
                 prospect_id=prospect.id,
                 status=ThreadStatus.DRAFT,
-                from_email="demo@buildit.local",
+                from_email=f"outreach@{campaign.target_domain or 'yourdomain.com'}",
                 to_email=prospect.contact_email or f"contact@{domain}",
                 subject=subj,
                 body_html=body,
@@ -856,7 +862,7 @@ async def generate_campaign_emails(
 
 
 class DiscoveryRequest(BaseModel):
-    tenant_id: UUID
+    tenant_id: UUID | None = None
     max_prospects: int = Field(default=30, ge=1, le=100)
 
 
@@ -879,6 +885,8 @@ class DiscoveryResponse(BaseModel):
 async def discover_prospects_sync(
     campaign_id: UUID,
     request: DiscoveryRequest,
+    _auth: CurrentUser = Depends(RequirePermission("campaigns:write")),
+    validated_tenant_id: UUID = Depends(get_validated_tenant_id),
 ) -> APIResponse[DiscoveryResponse]:
     """Synchronous backlink prospect discovery fallback when Temporal is unavailable.
     Uses SearXNG to find real domains mentioning competitor domains,
@@ -897,17 +905,27 @@ async def discover_prospects_sync(
         calculate_local_authority,
     )
 
-    async with get_tenant_session(request.tenant_id) as session:
+    # Validate tenant_id matches authenticated user; fall back to
+    # the validated tenant from the auth context if the caller did
+    # not include tenant_id in the body.
+    effective_tenant_id = request.tenant_id or validated_tenant_id
+    await validate_tenant_id(effective_tenant_id, user=_auth)
+
+    async with get_tenant_session(effective_tenant_id) as session:
         campaign = await session.get(BacklinkCampaign, campaign_id)
         if not campaign:
             raise HTTPException(status_code=404, detail="Campaign not found")
 
         competitor_domains = campaign.config.get("competitor_domains", [])
         if not competitor_domains:
-            raise HTTPException(
-                status_code=400,
-                detail="Campaign has no competitor_domains configured",
-            )
+            # Use the client's own domain as fallback
+            if campaign.client and campaign.client.domain:
+                competitor_domains = [campaign.client.domain]
+            else:
+                raise HTTPException(
+                    status_code=400,
+                    detail="Campaign has no competitor_domains configured and no client domain available",
+                )
 
         min_da = campaign.config.get("min_domain_authority", 30.0)
         max_prospects = request.max_prospects
@@ -1148,7 +1166,7 @@ async def discover_prospects_sync(
             existing = (
                 await session.execute(
                     select(BacklinkProspect).where(
-                        BacklinkProspect.tenant_id == request.tenant_id,
+                        BacklinkProspect.tenant_id == effective_tenant_id,
                         BacklinkProspect.campaign_id == campaign_id,
                         BacklinkProspect.domain == item["domain"],
                     )
@@ -1167,7 +1185,7 @@ async def discover_prospects_sync(
                 continue
 
             prospect = BacklinkProspect(
-                tenant_id=request.tenant_id,
+                tenant_id=effective_tenant_id,
                 campaign_id=campaign_id,
                 domain=item["domain"],
                 url=item["url"],
@@ -1205,6 +1223,12 @@ async def discover_prospects_sync(
             )
         ).scalars().all().__len__()
 
+        try:
+            from seo_platform.core.metrics import prospects_discovered as _pd
+            _pd.labels(tenant_id=str(effective_tenant_id)).inc(len(persisted))
+        except Exception:
+            pass
+
         return APIResponse(
             data=DiscoveryResponse(
                 campaign_id=str(campaign_id),
@@ -1215,7 +1239,11 @@ async def discover_prospects_sync(
 
 
 @router.post("/{campaign_id}/launch", response_model=APIResponse[CampaignLaunchResponse])
-async def launch_campaign(campaign_id: UUID, tenant_id: UUID = Query(...)) -> APIResponse[CampaignLaunchResponse]:
+async def launch_campaign(
+    campaign_id: UUID,
+    tenant_id: UUID = Depends(get_validated_tenant_id),
+    _auth: None = Depends(RequirePermission("campaigns:write")),
+) -> APIResponse[CampaignLaunchResponse]:
     """Launch a campaign by starting the Temporal workflow."""
     from sqlalchemy import select
 
@@ -1223,6 +1251,7 @@ async def launch_campaign(campaign_id: UUID, tenant_id: UUID = Query(...)) -> AP
     from seo_platform.core.kill_switch import kill_switch_service
     from seo_platform.core.temporal_client import get_temporal_client
     from seo_platform.models.backlink import BacklinkCampaign
+    from seo_platform.services.audit_logger import audit_logger
     from seo_platform.workflows.backlink_campaign import BacklinkCampaignInput
 
     kill_check = await kill_switch_service.is_blocked("all_outreach", tenant_id=tenant_id)
@@ -1266,10 +1295,282 @@ async def launch_campaign(campaign_id: UUID, tenant_id: UUID = Query(...)) -> AP
         campaign.workflow_run_id = handle.id
         campaign.status = "active"
 
+        # Audit log
+        user_id = str(_auth.id) if hasattr(_auth, "id") else "system"
+        await audit_logger.log(
+            tenant_id=str(tenant_id),
+            user_id=user_id,
+            action="campaign.launch",
+            entity_type="campaign",
+            entity_id=str(campaign_id),
+            after={"status": "active", "workflow_run_id": handle.id},
+        )
+
         return APIResponse(
             data=CampaignLaunchResponse(
                 campaign_id=str(campaign_id),
                 workflow_run_id=handle.id,
                 status="started",
+            )
+        )
+
+
+# Phase 1.1 — lifecycle transitions
+# Frontend pause/resume/archive buttons POST to these endpoints.
+# PUT /campaigns/{id} ignores the status field (it only updates
+# name, type, target_link_count, config), so without these
+# dedicated routes the user clicks Pause, gets a 200 success toast,
+# and the status does not actually change. Pure silent no-op.
+_PAUSE_ALLOWED_FROM = {
+    CampaignStatus.DRAFT,
+    CampaignStatus.ACTIVE,
+    CampaignStatus.AWAITING_APPROVAL,
+    CampaignStatus.MONITORING,
+    CampaignStatus.PROSPECTING,
+    CampaignStatus.SCORING,
+    CampaignStatus.OUTREACH_PREP,
+}
+_RESUME_ALLOWED_FROM = {
+    CampaignStatus.PAUSED,
+    CampaignStatus.MONITORING,
+    CampaignStatus.PROSPECTING,
+    CampaignStatus.SCORING,
+    CampaignStatus.OUTREACH_PREP,
+}
+_ARCHIVE_ALLOWED_FROM = set(CampaignStatus)
+
+
+def _transition_campaign(
+    campaign: BacklinkCampaign,
+    target: CampaignStatus,
+    allowed_from: set[CampaignStatus],
+) -> None:
+    """Validate transition and apply. Raises 409 on invalid source state."""
+    if campaign.status not in allowed_from:
+        raise HTTPException(
+            status_code=409,
+            detail=(
+                f"Cannot transition campaign from '{campaign.status.value}' "
+                f"to '{target.value}'."
+            ),
+        )
+    campaign.status = target
+
+
+@router.post("/{campaign_id}/pause", response_model=APIResponse[CampaignResponse])
+async def pause_campaign(
+    campaign_id: UUID,
+    tenant_id: UUID = Depends(get_validated_tenant_id),
+    _auth: None = Depends(RequirePermission("campaigns:write")),
+) -> APIResponse[CampaignResponse]:
+    """Pause a running or awaiting-approval campaign."""
+    from sqlalchemy import select
+    from sqlalchemy.orm import joinedload
+
+    from seo_platform.core.database import get_tenant_session
+    from seo_platform.models.backlink import BacklinkCampaign
+    from seo_platform.services.audit_logger import audit_logger
+
+    async with get_tenant_session(tenant_id) as session:
+        result = await session.execute(
+            select(BacklinkCampaign)
+            .where(
+                BacklinkCampaign.id == campaign_id,
+                BacklinkCampaign.tenant_id == tenant_id,
+            )
+            .options(joinedload(BacklinkCampaign.client))
+        )
+        campaign = result.unique().scalar_one_or_none()
+        if not campaign:
+            raise HTTPException(status_code=404, detail="Campaign not found")
+
+        _transition_campaign(campaign, CampaignStatus.PAUSED, _PAUSE_ALLOWED_FROM)
+        await session.flush()
+        await session.refresh(campaign)
+
+        # Audit log
+        user_id = str(_auth.id) if hasattr(_auth, "id") else "system"
+        await audit_logger.log(
+            tenant_id=str(tenant_id),
+            user_id=user_id,
+            action="campaign.pause",
+            entity_type="campaign",
+            entity_id=str(campaign_id),
+            after={"status": "paused"},
+        )
+
+        return APIResponse(
+            data=CampaignResponse(
+                id=campaign.id,
+                tenant_id=campaign.tenant_id,
+                client_id=campaign.client_id,
+                client_name=campaign.client.name if campaign.client else None,
+                name=campaign.name,
+                campaign_type=campaign.campaign_type.value,
+                status=campaign.status.value,
+                target_link_count=campaign.target_link_count,
+                acquired_link_count=campaign.acquired_link_count,
+                health_score=campaign.health_score,
+                workflow_run_id=campaign.workflow_run_id,
+                created_at=campaign.created_at.isoformat() if campaign.created_at else None,
+                updated_at=campaign.updated_at.isoformat() if campaign.updated_at else None,
+            )
+        )
+
+
+@router.post("/{campaign_id}/resume", response_model=APIResponse[CampaignResponse])
+async def resume_campaign(
+    campaign_id: UUID,
+    tenant_id: UUID = Depends(get_validated_tenant_id),
+    _auth: None = Depends(RequirePermission("campaigns:write")),
+) -> APIResponse[CampaignResponse]:
+    """Resume a paused campaign back to active."""
+    from sqlalchemy import select
+    from sqlalchemy.orm import joinedload
+
+    from seo_platform.core.database import get_tenant_session
+    from seo_platform.models.backlink import BacklinkCampaign
+    from seo_platform.services.audit_logger import audit_logger
+
+    async with get_tenant_session(tenant_id) as session:
+        result = await session.execute(
+            select(BacklinkCampaign)
+            .where(
+                BacklinkCampaign.id == campaign_id,
+                BacklinkCampaign.tenant_id == tenant_id,
+            )
+            .options(joinedload(BacklinkCampaign.client))
+        )
+        campaign = result.unique().scalar_one_or_none()
+        if not campaign:
+            raise HTTPException(status_code=404, detail="Campaign not found")
+
+        _transition_campaign(campaign, CampaignStatus.ACTIVE, _RESUME_ALLOWED_FROM)
+        await session.flush()
+        await session.refresh(campaign)
+
+        # Audit log
+        user_id = str(_auth.id) if hasattr(_auth, "id") else "system"
+        await audit_logger.log(
+            tenant_id=str(tenant_id),
+            user_id=user_id,
+            action="campaign.resume",
+            entity_type="campaign",
+            entity_id=str(campaign_id),
+            after={"status": "active"},
+        )
+
+        return APIResponse(
+            data=CampaignResponse(
+                id=campaign.id,
+                tenant_id=campaign.tenant_id,
+                client_id=campaign.client_id,
+                client_name=campaign.client.name if campaign.client else None,
+                name=campaign.name,
+                campaign_type=campaign.campaign_type.value,
+                status=campaign.status.value,
+                target_link_count=campaign.target_link_count,
+                acquired_link_count=campaign.acquired_link_count,
+                health_score=campaign.health_score,
+                workflow_run_id=campaign.workflow_run_id,
+                created_at=campaign.created_at.isoformat() if campaign.created_at else None,
+                updated_at=campaign.updated_at.isoformat() if campaign.updated_at else None,
+            )
+        )
+
+
+@router.post("/{campaign_id}/archive", response_model=APIResponse[CampaignResponse])
+async def archive_campaign(
+    campaign_id: UUID,
+    tenant_id: UUID = Depends(get_validated_tenant_id),
+    _auth: None = Depends(RequirePermission("campaigns:write")),
+) -> APIResponse[CampaignResponse]:
+    """Archive a campaign. Reversible via PUT update."""
+    from sqlalchemy import text
+
+    from seo_platform.core.database import get_tenant_session
+    from seo_platform.services.audit_logger import audit_logger
+
+    # The 'archived' value was added to the campaign_status enum via
+    # `ALTER TYPE ... ADD VALUE` outside this session. asyncpg's prepared
+    # statement cache can lag the enum definition, so we bypass SQLAlchemy
+    # ORM entirely and use a raw CAST(text AS enum) which the driver
+    # accepts without consulting its cached enum array.
+    async with get_tenant_session(tenant_id) as session:
+        result = await session.execute(
+            text(
+                "UPDATE backlink_campaigns "
+                "SET status = CAST(:new_status AS campaign_status), "
+                "    updated_at = NOW() "
+                "WHERE id = :cid AND tenant_id = :tid "
+                "RETURNING id, tenant_id, client_id, name, campaign_type, "
+                "          status, target_link_count, acquired_link_count, "
+                "          health_score, workflow_run_id, created_at, updated_at"
+            ),
+            {
+                "new_status": CampaignStatus.ARCHIVED.value,
+                "cid": str(campaign_id),
+                "tid": str(tenant_id),
+            },
+        )
+        row = result.mappings().first()
+        if row is None:
+            raise HTTPException(status_code=404, detail="Campaign not found")
+
+        # Audit log
+        user_id = str(_auth.id) if hasattr(_auth, "id") else "system"
+        await audit_logger.log(
+            tenant_id=str(tenant_id),
+            user_id=user_id,
+            action="campaign.archive",
+            entity_type="campaign",
+            entity_id=str(campaign_id),
+            after={"status": "archived"},
+        )
+
+        # Look up client name separately (no ORM mapping needed).
+        client_name = None
+        if row.get("client_id"):
+            cn = await session.execute(
+                text("SELECT name FROM clients WHERE id = :cid"),
+                {"cid": str(row["client_id"])},
+            )
+            client_row = cn.mappings().first()
+            if client_row:
+                client_name = client_row["name"]
+
+        return APIResponse(
+            data=CampaignResponse(
+                id=row["id"],
+                tenant_id=row["tenant_id"],
+                client_id=row["client_id"],
+                client_name=client_name,
+                name=row["name"],
+                campaign_type=row["campaign_type"],
+                status=row["status"],
+                target_link_count=row["target_link_count"],
+                acquired_link_count=row["acquired_link_count"],
+                health_score=row["health_score"],
+                workflow_run_id=row["workflow_run_id"],
+                created_at=row["created_at"].isoformat() if row["created_at"] else None,
+                updated_at=row["updated_at"].isoformat() if row["updated_at"] else None,
+            )
+        )
+
+        return APIResponse(
+            data=CampaignResponse(
+                id=campaign.id,
+                tenant_id=campaign.tenant_id,
+                client_id=campaign.client_id,
+                client_name=campaign.client.name if campaign.client else None,
+                name=campaign.name,
+                campaign_type=campaign.campaign_type.value,
+                status=campaign.status.value,
+                target_link_count=campaign.target_link_count,
+                acquired_link_count=campaign.acquired_link_count,
+                health_score=campaign.health_score,
+                workflow_run_id=campaign.workflow_run_id,
+                created_at=campaign.created_at.isoformat() if campaign.created_at else None,
+                updated_at=campaign.updated_at.isoformat() if campaign.updated_at else None,
             )
         )

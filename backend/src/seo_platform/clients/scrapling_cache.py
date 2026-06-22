@@ -9,15 +9,15 @@ from __future__ import annotations
 
 import hashlib
 import json
-import logging
 from dataclasses import asdict, is_dataclass
 from typing import Any, Type, TypeVar
 
 from pydantic import BaseModel
 
+from seo_platform.core.logging import get_logger
 from seo_platform.core.redis import get_redis
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 T = TypeVar("T")
 

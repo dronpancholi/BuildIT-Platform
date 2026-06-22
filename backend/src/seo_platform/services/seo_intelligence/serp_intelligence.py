@@ -905,7 +905,7 @@ class SERPIntelligenceEngine:
         """
         try:
             from seo_platform.clients.dataforseo import dataforseo_client
-            return await self._fetch_serp_snapshot(keyword)
+            return await dataforseo_client.get_serp_snapshot(keyword)
         except Exception as e:
             logger.warning("dataforseo_serp_failed_trying_registry", keyword=keyword, error=str(e))
             try:

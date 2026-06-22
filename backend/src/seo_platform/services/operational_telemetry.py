@@ -5,6 +5,7 @@ Real operational metrics derived from actual execution state.
 NO fake KPIs - all metrics come from real database and runtime state.
 """
 
+import json
 from datetime import UTC, datetime
 from typing import Any
 from uuid import UUID
@@ -148,7 +149,7 @@ class OperationalTelemetry:
                         metrics["total_scrapes"] += data.get("total", 0)
                         metrics["successful_scrapes"] += data.get("success", 0)
                         metrics["failed_scrapes"] += data.get("failed", 0)
-                    except json_decode_error:
+                    except json.JSONDecodeError:
                         logger.debug("scraping_metrics_parse_failed", key=key)
                         pass
 

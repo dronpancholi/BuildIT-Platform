@@ -314,7 +314,7 @@ async def generate_keyword_ideas(tenant_id: str, seed_keywords: list[str], domai
     except Exception as e:
         logger.warning("llm_keyword_ideas_failed", domain=domain, error=str(e))
 
-    return [{"keyword": f"{s} strategy", "volume": 1200, "difficulty": 0.45, "intent": "informational"} for s in seed_keywords]
+    return [{"keyword": f"{s} strategy", "volume": None, "difficulty": None, "intent": "unknown", "source": "fallback"} for s in seed_keywords]
 
 
 # Workflow Definition
@@ -335,47 +335,70 @@ class OnboardingWorkflow:
     async def run(self, input_json: str) -> str:
         input_data = OnboardingInput.model_validate_json(input_json)
 
-        # Step 1: Validate domain
-        domain_check = await workflow.execute_activity(
-            validate_client_domain,
-            args=[input_data.domain],
-            task_queue=TaskQueue.ONBOARDING,
-            start_to_close_timeout=timedelta(seconds=30),
-            retry_policy=RetryPreset.EXTERNAL_API,
-        )
+        try:
+            # Step 1: Validate domain
+            domain_check = await workflow.execute_activity(
+                validate_client_domain,
+                args=[input_data.domain],
+                task_queue=TaskQueue.ONBOARDING,
+                start_to_close_timeout=timedelta(seconds=30),
+                retry_policy=RetryPreset.EXTERNAL_API,
+            )
 
-        if not domain_check.get("reachable"):
+            if not domain_check.get("reachable"):
+                output = OnboardingOutput(
+                    success=False,
+                    errors=[f"Domain unreachable: {input_data.domain}"],
+                    activities_executed=1,
+                )
+                return output.model_dump_json()
+
+            # Step 2: Enrich profile
+            profile = await workflow.execute_activity(
+                enrich_business_profile,
+                args=[str(input_data.tenant_id), str(input_data.client_id), input_data.domain],
+                task_queue=TaskQueue.ONBOARDING,
+                start_to_close_timeout=timedelta(minutes=2),
+                retry_policy=RetryPreset.LLM_INFERENCE,
+            )
+
+            # Step 3: Discover competitors
+            competitors = await workflow.execute_activity(
+                discover_competitors,
+                args=[str(input_data.tenant_id), input_data.domain],
+                task_queue=TaskQueue.ONBOARDING,
+                start_to_close_timeout=timedelta(minutes=5),
+                retry_policy=RetryPreset.EXTERNAL_API,
+            )
+
+            output = OnboardingOutput(
+                success=True,
+                business_profile_enriched=profile.get("enriched", False),
+                competitors_identified=len(competitors),
+                activities_executed=3,
+            )
+        except Exception as e:
+            try:
+                from seo_platform.workflows.backlink_campaign import raise_workflow_failure_alert_activity
+                await workflow.execute_activity(
+                    raise_workflow_failure_alert_activity,
+                    args=[
+                        str(input_data.tenant_id),
+                        str(input_data.client_id),
+                        "OnboardingWorkflow",
+                        str(e),
+                    ],
+                    task_queue=TaskQueue.ONBOARDING,
+                    start_to_close_timeout=timedelta(seconds=30),
+                    retry_policy=RetryPreset.DATABASE,
+                )
+            except Exception as alert_err:
+                logger.warning("failed_to_raise_workflow_failure_alert", error=str(alert_err))
             output = OnboardingOutput(
                 success=False,
-                errors=[f"Domain unreachable: {input_data.domain}"],
-                activities_executed=1,
+                errors=[str(e)],
+                activities_executed=0,
             )
-            return output.model_dump_json()
-
-        # Step 2: Enrich profile
-        profile = await workflow.execute_activity(
-            enrich_business_profile,
-            args=[str(input_data.tenant_id), str(input_data.client_id), input_data.domain],
-            task_queue=TaskQueue.ONBOARDING,
-            start_to_close_timeout=timedelta(minutes=2),
-            retry_policy=RetryPreset.LLM_INFERENCE,
-        )
-
-        # Step 3: Discover competitors
-        competitors = await workflow.execute_activity(
-            discover_competitors,
-            args=[str(input_data.tenant_id), input_data.domain],
-            task_queue=TaskQueue.ONBOARDING,
-            start_to_close_timeout=timedelta(minutes=5),
-            retry_policy=RetryPreset.EXTERNAL_API,
-        )
-
-        output = OnboardingOutput(
-            success=True,
-            business_profile_enriched=profile.get("enriched", False),
-            competitors_identified=len(competitors),
-            activities_executed=3,
-        )
         return output.model_dump_json()
 
 

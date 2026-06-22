@@ -69,6 +69,22 @@ async def run_event_consumers() -> None:
         consumer.register_handler("workflow.campaign.started", on_campaign_event)
         consumer.register_handler("workflow.campaign.completed", on_campaign_event)
         consumer.register_handler("workflow.keyword.research.completed", on_workflow_event)
+        # Register backlink reply received handler for automated acquisition
+        async def on_reply_received(event):
+            logger.info("reply_received_event", event_id=str(event.event_id))
+            payload = event.payload or {}
+            prospect_id = payload.get("prospect_id")
+            campaign_id = payload.get("campaign_id")
+            if not prospect_id or not campaign_id:
+                logger.warning("reply_received_missing_fields", payload=payload)
+                return
+            try:
+                from seo_platform.workflows.acquisition import record_acquired_link_activity
+                await record_acquired_link_activity(str(event.tenant_id), prospect_id, campaign_id)
+                logger.info("acquisition_recorded", prospect_id=prospect_id, campaign_id=campaign_id)
+            except Exception as e:
+                logger.error("acquisition_failed", error=str(e), prospect_id=prospect_id)
+        consumer.register_handler("backlink.outreach.reply_received", on_reply_received)
 
         logger.info("event_consumer_starting", group_id="workflow-workers")
         await consumer.start()
@@ -158,6 +174,7 @@ def get_workflows_and_activities(task_queue: str) -> tuple[list, list]:
         send_outreach_batch_activity,
         send_single_email_activity,
         update_campaign_status_activity,
+        raise_workflow_failure_alert_activity,
     )
     from seo_platform.workflows.citation import (
         CitationSubmissionWorkflow,
@@ -192,6 +209,7 @@ def get_workflows_and_activities(task_queue: str) -> tuple[list, list]:
             enrich_business_profile,
             discover_competitors,
             generate_keyword_ideas,
+            raise_workflow_failure_alert_activity,
         ]
 
     elif task_queue == TaskQueue.AI_ORCHESTRATION:
@@ -230,6 +248,7 @@ def get_workflows_and_activities(task_queue: str) -> tuple[list, list]:
             create_operational_event,
             scan_backlink_opportunities,
             generate_platform_recommendation,
+            raise_workflow_failure_alert_activity,
         ]
 
     elif task_queue == TaskQueue.SEO_INTELLIGENCE:
@@ -248,6 +267,7 @@ def get_workflows_and_activities(task_queue: str) -> tuple[list, list]:
             execute_directory_submission,
             verify_citation_listing,
             create_citation_approval,
+            raise_workflow_failure_alert_activity,
         ]
 
     elif task_queue == TaskQueue.BACKLINK_ENGINE:
@@ -262,6 +282,7 @@ def get_workflows_and_activities(task_queue: str) -> tuple[list, list]:
             create_approval_request_activity,
             update_campaign_status_activity,
             record_timeline_step_activity,
+            raise_workflow_failure_alert_activity,
         ]
 
     elif task_queue == TaskQueue.COMMUNICATION:

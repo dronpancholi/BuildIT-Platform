@@ -53,6 +53,7 @@ class ApprovalCategory(str, enum.Enum):
     PROSPECT_LIST = "prospect_list"
     BUDGET_OVERRIDE = "budget_override"
     RULE_CHANGE = "rule_change"
+    PLAN = "plan"
 
 
 class ApprovalRequestModel(Base, UUIDPrimaryKeyMixin, TenantMixin, TimestampMixin):

@@ -1,3 +1,4 @@
+# PHASE 1.2 — Simulation removed: hardcoded previous_position=45 and link-count-based new_position math
 """
 SEO Platform — Revenue Attribution & Campaign Evolution Engine
 =================================================================

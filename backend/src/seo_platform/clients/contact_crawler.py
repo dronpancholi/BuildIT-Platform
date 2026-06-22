@@ -6,11 +6,12 @@ Scans common resource paths for contact details, author bios, and social links.
 
 from __future__ import annotations
 
-import logging
 import re
 from typing import Any
 
-logger = logging.getLogger(__name__)
+from seo_platform.core.logging import get_logger
+
+logger = get_logger(__name__)
 
 CONTACT_PATHS = [
     "/about/",

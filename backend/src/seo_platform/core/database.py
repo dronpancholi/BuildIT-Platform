@@ -79,6 +79,10 @@ def get_engine() -> AsyncEngine:
     global _engine
     if _engine is None:
         settings = get_settings()
+        # Phase 1.1 — asyncpg's prepared-statement cache can lag behind
+        # `ALTER TYPE ... ADD VALUE` so newly-added enum values are rejected
+        # on existing connections. Disable the per-connection cache so each
+        # statement is parsed fresh against the server's current enum set.
         _engine = create_async_engine(
             settings.database.async_url,
             pool_size=POOL_SIZE,
@@ -89,7 +93,20 @@ def get_engine() -> AsyncEngine:
             pool_pre_ping=True,
             json_serializer=_orjson_serializer,
             json_deserializer=_orjson_deserializer,
+            connect_args={"statement_cache_size": 0},
         )
+        from sqlalchemy import event
+        @event.listens_for(_engine.sync_engine, "connect")
+        def register_custom_types(dbapi_connection, connection_record):
+            dbapi_connection.run_async(
+                lambda connection: connection.set_type_codec(
+                    "campaign_status",
+                    encoder=str,
+                    decoder=str,
+                    format="text",
+                    schema="public"
+                )
+            )
         logger.info(
             "database_engine_created",
             host=settings.database.host,

@@ -1,14 +1,20 @@
 """
 SEO Platform — Email Webhook Listener
 =======================================
-FastAPI router for inbound email webhooks from Mailgun and Resend.
-HMAC signature verification enforced. Events forwarded to webhook handler.
+FastAPI router for inbound email webhooks from SendGrid, Mailgun,
+Resend, and a generic test surface. HMAC signature verification
+enforced for Mailgun and Resend (where the spec mandates it). SendGrid
+Inbound Parse events are forwarded to the format-agnostic handler at
+``/webhooks/inbound/email`` which has its own ``Content-Type`` dispatch
+and does not require HMAC.
 """
 
 from __future__ import annotations
 
+from seo_platform.core.auth import get_validated_tenant_id
 import hashlib
 import hmac
+import json
 from typing import Any
 
 from fastapi import APIRouter, HTTPException, Request
@@ -86,6 +92,62 @@ async def mailgun_webhook(request: Request) -> dict[str, Any]:
 
     logger.info("mailgun_webhook_validated", event=payload.get("event-data", {}).get("event"))
     result = await process_webhook_event(payload, "mailgun")
+    return result
+
+
+@router.post("/sendgrid")
+async def sendgrid_webhook(request: Request) -> dict[str, Any]:
+    """
+    Receive SendGrid Inbound Parse webhook events.
+
+    SendGrid Inbound Parse uses ``multipart/form-data`` (not JSON), and
+    the same payload is also accepted by the format-agnostic
+    ``/webhooks/inbound/email`` endpoint. This route exists so providers
+    following the per-vendor surface convention (SendGrid, Mailgun,
+    Resend) can target a stable, well-documented URL.
+
+    The event_type is best-effort extracted from the
+    ``X-Event-Type`` header (delivered, bounced, opened, etc.) since
+    SendGrid Inbound Parse does not include a top-level event field.
+    Dedup is via the shared ``processed_webhook_events`` table.
+    """
+    content_type = (request.headers.get("content-type") or "").lower()
+    event_type = request.headers.get("X-Event-Type", "") or request.headers.get("x-event-type", "")
+    message_id = (
+        request.headers.get("X-Message-Id", "")
+        or request.headers.get("x-message-id", "")
+    )
+
+    if "multipart/form-data" in content_type or "application/x-www-form-urlencoded" in content_type:
+        form = await request.form()
+        form_data: dict[str, Any] = {}
+        for key, value in form.multi_items():
+            if isinstance(value, str):
+                form_data.setdefault(key, value)
+        envelope_raw = form_data.get("envelope", "")
+        envelope: dict[str, Any] = {}
+        if envelope_raw:
+            try:
+                envelope = json.loads(envelope_raw) if isinstance(envelope_raw, str) else dict(envelope_raw)
+            except (ValueError, TypeError):
+                envelope = {}
+        payload = {
+            "event_id": message_id or form_data.get("message-id", "") or form_data.get("Message-Id", ""),
+            "event_type": event_type,
+            "from": envelope.get("from", form_data.get("from", "")),
+            "to": envelope.get("to", form_data.get("to", "")),
+            "subject": form_data.get("subject", ""),
+            "message_id": message_id,
+        }
+    else:
+        try:
+            payload = await request.json()
+        except Exception:
+            raise HTTPException(status_code=400, detail="Invalid SendGrid payload")
+        payload.setdefault("event_id", message_id)
+        payload.setdefault("event_type", event_type)
+
+    result = await process_webhook_event(payload, "sendgrid")
     return result
 
 

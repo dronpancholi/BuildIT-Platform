@@ -11,6 +11,7 @@ Batch size: 1000 keywords per call (maximum API efficiency).
 from __future__ import annotations
 
 import base64
+import time
 from typing import Any
 
 import httpx
@@ -22,6 +23,8 @@ from seo_platform.core.reliability import CircuitBreaker
 logger = get_logger(__name__)
 
 _circuit = CircuitBreaker("dataforseo", failure_threshold=3, recovery_timeout=60)
+
+PROVIDER_SLUG = "dataforseo"
 
 
 class DataForSEOClient:
@@ -58,6 +61,40 @@ class DataForSEOClient:
             )
         return self._client
 
+    async def _record(
+        self,
+        latency_ms: float,
+        success: bool,
+        error: str | None = None,
+        tenant_id: Any | None = None,
+    ) -> None:
+        """Record this call to provider_health_center and mirror CB to Redis."""
+        from seo_platform.services.provider_health import provider_health_center
+        from seo_platform.core.redis import get_redis
+
+        cb_state = _circuit.state.value if hasattr(_circuit.state, "value") else str(_circuit.state)
+        cb_state = cb_state.upper()
+        try:
+            redis = await get_redis()
+            await redis.set(f"circuit_breaker:{PROVIDER_SLUG}", cb_state, ex=300)
+        except Exception:
+            pass
+
+        try:
+            meta: dict[str, Any] = {"endpoint": "dataforseo"}
+            if error:
+                meta["error"] = error[:200]
+            await provider_health_center.record_provider_call(
+                provider_name=PROVIDER_SLUG,
+                latency_ms=latency_ms,
+                success=success,
+                breaker_state=cb_state,
+                tenant_id=tenant_id,
+                metadata=meta,
+            )
+        except Exception as e:
+            logger.warning("dataforseo_health_record_failed", error=str(e))
+
     async def get_search_volume(
         self,
         keywords: list[str],
@@ -71,10 +108,21 @@ class DataForSEOClient:
         results = []
         for i in range(0, len(keywords), self.MAX_BATCH_SIZE):
             batch = keywords[i:i + self.MAX_BATCH_SIZE]
-            batch_result = await _circuit.call(
-                self._fetch_volume_batch, batch, location_code, language_code,
-            )
-            results.extend(batch_result)
+            t0 = time.perf_counter()
+            success = True
+            error: str | None = None
+            try:
+                batch_result = await _circuit.call(
+                    self._fetch_volume_batch, batch, location_code, language_code,
+                )
+                results.extend(batch_result)
+            except Exception as e:
+                success = False
+                error = str(e)
+                raise
+            finally:
+                latency = (time.perf_counter() - t0) * 1000.0
+                await self._record(latency, success, error=error)
         logger.info("dataforseo_volume_fetched", total_keywords=len(results))
         return results
 
@@ -116,16 +164,27 @@ class DataForSEOClient:
             "language_code": "en",
             "depth": 20,
         }]
-        response = await _circuit.call(
-            client.post, "/v3/serp/google/organic/live/regular", json=payload,
-        )
-        response.raise_for_status()
-        return response.json()
+        t0 = time.perf_counter()
+        success = True
+        error: str | None = None
+        try:
+            response = await _circuit.call(
+                client.post, "/v3/serp/google/organic/live/regular", json=payload,
+            )
+            response.raise_for_status()
+            return response.json()
+        except Exception as e:
+            success = False
+            error = str(e)
+            raise
+        finally:
+            latency = (time.perf_counter() - t0) * 1000.0
+            await self._record(latency, success, error=error)
 
     async def close(self) -> None:
         if self._client:
             await self._client.aclose()
-            self._client = None
+        self._client = None
 
 
 dataforseo_client = DataForSEOClient()

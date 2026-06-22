@@ -259,44 +259,222 @@ async def score_prospects_activity(
 async def discover_contacts_activity(
     tenant_id: str, prospects: list[dict],
 ) -> dict[str, Any]:
-    """Find contact emails for scored prospects via Hunter.io. No synthetic fallback."""
+    """Find contact emails for scored prospects via Hunter.io, then verify
+    each candidate's deliverability with the Hunter email-verifier endpoint.
+
+    Prospects whose verified email is ``undeliverable`` or ``risky`` are
+    persisted with ``status='rejected'`` and reason ``undeliverable_email``,
+    and they are excluded from the ``outreach_ready_prospects`` set that
+    downstream activities consume.
+
+    No synthetic fallback — every decision is backed by a real Hunter call
+    or a real DB write.
+    """
     logger.info("discovering_contacts", count=len(prospects))
 
+    from uuid import UUID
+
+    from sqlalchemy import select
+
     from seo_platform.clients.hunter import hunter_client
+    from seo_platform.core.database import get_tenant_session
+    from seo_platform.models.backlink import BacklinkProspect, ProspectStatus
 
     enriched = []
+    outreach_ready = []
+    rejected_undeliverable = 0
+    verified_count = 0
+
+    tenant_uuid = UUID(tenant_id)
+
     for prospect in prospects[:30]:
         domain = prospect.get("domain", "")
         if not domain:
             continue
 
+        # ------------------------------------------------------------------
+        # 1) Find candidate emails for this domain
+        # ------------------------------------------------------------------
+        candidate_emails: list[dict[str, Any]] = []
         try:
-            emails = await hunter_client.domain_search(domain, limit=3)
-            if emails:
-                primary = emails[0]
-                enriched.append({
-                    **prospect,
-                    "contact_email": primary.get("email", ""),
-                    "contact_name": f"{primary.get('first_name', '')} {primary.get('last_name', '')}".strip(),
-                    "contact_position": primary.get("position", ""),
-                    "contact_confidence": primary.get("confidence", 0),
-                    "contact_source": "hunter",
-                })
-                continue
+            candidate_emails = await hunter_client.domain_search(domain, limit=3)
         except Exception as e:
             logger.warning("hunter_search_failed", domain=domain, error=str(e))
 
-        # No verified contact found — mark as unverified, do not invent names
-        enriched.append({
-            **prospect,
-            "contact_email": None,
-            "contact_name": None,
-            "contact_position": None,
-            "contact_confidence": 0.0,
-            "contact_source": "unverified",
-        })
+        if not candidate_emails:
+            # No contact found at all — mark unverified, do not invent.
+            enriched.append({
+                **prospect,
+                "contact_email": None,
+                "contact_name": None,
+                "contact_position": None,
+                "contact_confidence": 0.0,
+                "contact_source": "unverified",
+                "email_verification_status": "unverified",
+                "email_verification_result": {},
+                "outreach_ready": False,
+            })
+            continue
 
-    return {"enriched_prospects": enriched}
+        # ------------------------------------------------------------------
+        # 2) Verify each candidate. Prefer the first deliverable/valid one.
+        # ------------------------------------------------------------------
+        chosen: dict[str, Any] | None = None
+        chosen_verification: dict[str, Any] = {}
+        chosen_status: str = "unknown"
+
+        for cand in candidate_emails:
+            email_addr = (cand.get("email") or "").strip()
+            if not email_addr:
+                continue
+            try:
+                verification = await hunter_client.verify_email(email_addr)
+            except Exception as e:
+                logger.warning(
+                    "hunter_verify_failed",
+                    domain=domain,
+                    email=email_addr,
+                    error=str(e),
+                )
+                verification = {
+                    "email": email_addr,
+                    "result": "unknown",
+                    "score": 0,
+                    "status": "unknown",
+                    "_error": str(e),
+                }
+
+            result_str = (verification.get("result") or "").lower()
+            status_str = (verification.get("status") or "").lower()
+
+            # Map Hunter's response into our internal status vocabulary.
+            if result_str in ("deliverable", "valid") or status_str == "valid":
+                internal_status = "deliverable"
+            elif result_str in ("undeliverable", "invalid") or status_str == "invalid":
+                internal_status = "undeliverable"
+            elif result_str in ("risky", "accept_all", "webmail"):
+                internal_status = "risky"
+            else:
+                internal_status = "unknown"
+
+            verification["_internal_status"] = internal_status
+            verified_count += 1
+
+            if internal_status == "deliverable" and chosen is None:
+                chosen = cand
+                chosen_verification = verification
+                chosen_status = internal_status
+                # Stop early — we found a clearly deliverable contact.
+                break
+            if chosen is None:
+                # remember the first candidate as a fallback if nothing
+                # deliverable turns up
+                chosen = cand
+                chosen_verification = verification
+                chosen_status = internal_status
+
+        if chosen is None:
+            # All candidates were empty strings — treat as unverified.
+            enriched.append({
+                **prospect,
+                "contact_email": None,
+                "contact_name": None,
+                "contact_position": None,
+                "contact_confidence": 0.0,
+                "contact_source": "unverified",
+                "email_verification_status": "unverified",
+                "email_verification_result": {},
+                "outreach_ready": False,
+            })
+            continue
+
+        # ------------------------------------------------------------------
+        # 3) Persist verification result + prospect status to the DB.
+        # ------------------------------------------------------------------
+        prospect_row: BacklinkProspect | None = None
+        campaign_id = prospect.get("campaign_id")
+        try:
+            async with get_tenant_session(tenant_uuid) as session:
+                stmt = select(BacklinkProspect).where(
+                    BacklinkProspect.tenant_id == tenant_uuid,
+                    BacklinkProspect.domain == domain,
+                )
+                if campaign_id:
+                    stmt = stmt.where(
+                        BacklinkProspect.campaign_id == UUID(str(campaign_id))
+                    )
+                result = await session.execute(stmt.limit(1))
+                prospect_row = result.scalar_one_or_none()
+
+                if prospect_row is not None:
+                    prospect_row.email_verification_status = chosen_status
+                    prospect_row.email_verification_result = chosen_verification
+                    if chosen_status in ("undeliverable", "risky"):
+                        prospect_row.status = ProspectStatus.REJECTED
+                        if not prospect_row.scoring_rationale:
+                            prospect_row.scoring_rationale = {}
+                        prospect_row.scoring_rationale["rejection_reason"] = (
+                            "undeliverable_email"
+                        )
+        except Exception as e:
+            logger.warning(
+                "persist_verification_failed",
+                domain=domain,
+                error=str(e),
+            )
+
+        # ------------------------------------------------------------------
+        # 4) Build the enriched dict for downstream consumers.
+        # ------------------------------------------------------------------
+        outreach_ready_flag = chosen_status == "deliverable"
+
+        if not outreach_ready_flag:
+            rejected_undeliverable += 1
+            logger.info(
+                "prospect_rejected_undeliverable_email",
+                domain=domain,
+                status=chosen_status,
+            )
+
+        enriched_entry = {
+            **prospect,
+            "contact_email": (
+                chosen.get("email", "")
+                if outreach_ready_flag
+                else None
+            ),
+            "contact_name": (
+                f"{chosen.get('first_name', '')} {chosen.get('last_name', '')}".strip()
+                if outreach_ready_flag
+                else None
+            ),
+            "contact_position": (
+                chosen.get("position", "")
+                if outreach_ready_flag
+                else None
+            ),
+            "contact_confidence": chosen.get("confidence", 0) if outreach_ready_flag else 0.0,
+            "contact_source": "hunter",
+            "email_verification_status": chosen_status,
+            "email_verification_result": chosen_verification,
+            "outreach_ready": outreach_ready_flag,
+        }
+        enriched.append(enriched_entry)
+
+        if outreach_ready_flag:
+            outreach_ready.append(enriched_entry)
+
+    logger.info(
+        "contacts_discovered_and_verified",
+        total=len(enriched),
+        verified=verified_count,
+        outreach_ready=len(outreach_ready),
+        rejected=rejected_undeliverable,
+    )
+    return {
+        "enriched_prospects": enriched,
+        "outreach_ready_prospects": outreach_ready,
+    }
 
 
 @activity.defn(name="generate_outreach_emails_activity")
@@ -549,7 +727,7 @@ Requirements:
                         hint = str(e).replace("Semantic grounding failure: ", "")
                         prompt = _build_prompt(
                             stage if not attempt else "rewritten",
-                            extra_instructions,
+                            "",
                             hint,
                         )
             return None
@@ -773,6 +951,32 @@ async def record_timeline_step_activity(
     return {"step_name": step_name, "status": status}
 
 
+@activity.defn(name="raise_workflow_failure_alert_activity")
+async def raise_workflow_failure_alert_activity(
+    tenant_id: str, campaign_id: str, workflow_name: str, error_message: str
+) -> dict[str, Any]:
+    """Raise a system alert for workflow failure."""
+    from seo_platform.core.alerting import alert_manager, Severity
+    try:
+        alert_manager.raise_alert(
+            alert_type="workflow_failure",
+            severity=Severity.HIGH,
+            title=f"Workflow Failed: {workflow_name}",
+            message=f"Campaign {campaign_id} failed in {workflow_name}: {error_message}",
+            source="workflow_engine",
+            tenant_id=tenant_id,
+            metadata={
+                "campaign_id": campaign_id,
+                "workflow_name": workflow_name,
+                "error": error_message,
+            }
+        )
+        logger.info("workflow_failure_alert_raised", campaign_id=campaign_id)
+    except Exception as e:
+        logger.warning("workflow_failure_alert_failed", error=str(e))
+    return {"success": True}
+
+
 @activity.defn(name="update_campaign_status_activity")
 async def update_campaign_status_activity(
     tenant_id: str, campaign_id: str, status: str, metrics: dict | None = None,
@@ -936,6 +1140,49 @@ class BacklinkCampaignWorkflow:
                 )
                 output.prospects_discovered = discovery_result["count"]
 
+            # Phase 2.5.1: Fail-loud guard. If the campaign still has zero
+            # prospects after the DB fallback, halt the workflow explicitly.
+            # Phase 2.5 silently continued and the scoring activity would
+            # produce a zero-length list; the approval gate would create an
+            # empty approval request; the outreach phase would spawn zero
+            # child workflows. The campaign would still "complete" with
+            # zero work, masking the failure.
+            if discovery_result["count"] == 0:
+                await workflow.execute_activity(
+                    record_timeline_step_activity,
+                    args=[
+                        str(input_data.tenant_id), str(input_data.campaign_id),
+                        "discovery", "failed",
+                        "0 prospects after Ahrefs discovery AND DB fallback. "
+                        "Campaign halted. Check that at least one SEO "
+                        "provider (DataForSEO/Ahrefs) is configured with "
+                        "valid credentials, and that competitor domains "
+                        "are real and reachable.",
+                    ],
+                    task_queue=TaskQueue.BACKLINK_ENGINE,
+                    start_to_close_timeout=timedelta(seconds=30),
+                    retry_policy=RetryPreset.DATABASE,
+                )
+                await workflow.execute_activity(
+                    update_campaign_status_activity,
+                    args=[
+                        str(input_data.tenant_id), str(input_data.campaign_id),
+                        "failed_no_prospects",
+                    ],
+                    task_queue=TaskQueue.BACKLINK_ENGINE,
+                    start_to_close_timeout=timedelta(seconds=30),
+                    retry_policy=RetryPreset.DATABASE,
+                )
+                output.success = False
+                output.status = "failed_no_prospects"
+                output.errors.append(
+                    "Campaign halted: 0 prospects after primary discovery "
+                    "and DB fallback. No synthetic prospects were fabricated. "
+                    "Configure DataForSEO/Ahrefs with valid credentials or "
+                    "seed the backlink_prospects table before retrying."
+                )
+                return output.model_dump_json()
+
             # --- Phase 2: Scoring & Filtering ---
             await workflow.execute_activity(
                 record_timeline_step_activity,
@@ -985,15 +1232,56 @@ class BacklinkCampaignWorkflow:
                 retry_policy=RetryPreset.EXTERNAL_API,
             )
             enriched_prospects = contacts_result["enriched_prospects"]
+            outreach_ready_prospects = contacts_result.get(
+                "outreach_ready_prospects", enriched_prospects,
+            )
 
             await workflow.execute_activity(
                 record_timeline_step_activity,
                 args=[str(input_data.tenant_id), str(input_data.campaign_id),
-                      "enrichment", "completed", f"Enriched {len(enriched_prospects)} prospects with contacts"],
+                      "enrichment", "completed",
+                      f"Enriched {len(enriched_prospects)} prospects; "
+                      f"{len(outreach_ready_prospects)} verified deliverable"],
                 task_queue=TaskQueue.BACKLINK_ENGINE,
                 start_to_close_timeout=timedelta(seconds=30),
                 retry_policy=RetryPreset.DATABASE,
             )
+
+            # Phase 2.5.1: Fail-loud guard. If enrichment yielded zero
+            # prospects, we MUST NOT create an approval request and MUST
+            # NOT proceed to outreach. An empty approval would silently
+            # auto-approve, and zero-prospect outreach would still mark
+            # the campaign as "active" while doing no work.
+            if len(enriched_prospects) == 0:
+                await workflow.execute_activity(
+                    record_timeline_step_activity,
+                    args=[
+                        str(input_data.tenant_id), str(input_data.campaign_id),
+                        "enrichment", "failed",
+                        "0 enriched prospects after contact discovery. "
+                        "Campaign halted before approval gate.",
+                    ],
+                    task_queue=TaskQueue.BACKLINK_ENGINE,
+                    start_to_close_timeout=timedelta(seconds=30),
+                    retry_policy=RetryPreset.DATABASE,
+                )
+                await workflow.execute_activity(
+                    update_campaign_status_activity,
+                    args=[
+                        str(input_data.tenant_id), str(input_data.campaign_id),
+                        "failed_no_prospects",
+                    ],
+                    task_queue=TaskQueue.BACKLINK_ENGINE,
+                    start_to_close_timeout=timedelta(seconds=30),
+                    retry_policy=RetryPreset.DATABASE,
+                )
+                output.success = False
+                output.status = "failed_no_prospects"
+                output.errors.append(
+                    "Campaign halted: 0 enriched prospects. "
+                    "Check Hunter.io / contact_crawler configuration."
+                )
+                return output.model_dump_json()
 
             # --- Phase 3.5: Human Approval Gate ---
             approval_result = await workflow.execute_activity(
@@ -1041,6 +1329,25 @@ class BacklinkCampaignWorkflow:
             approved_prospects = self._approval_data.get("prospects", enriched_prospects)
             output.prospects_approved = len(approved_prospects)
 
+            # Phase 1.2: Filter approved prospects to only those whose
+            # email was verified as deliverable. Prospects with rejected /
+            # risky / unverified emails must NOT enter outreach generation.
+            outreach_eligible = [
+                p for p in approved_prospects
+                if p.get("outreach_ready", False)
+                or (
+                    p.get("email_verification_status") == "deliverable"
+                    and p.get("contact_email")
+                )
+            ]
+            if len(outreach_eligible) < len(approved_prospects):
+                logger.info(
+                    "filtered_non_deliverable_prospects",
+                    before=len(approved_prospects),
+                    after=len(outreach_eligible),
+                )
+            approved_prospects = outreach_eligible
+
             # --- Phase 4: Outreach Email Generation (3-email sequences) ---
             await workflow.execute_activity(
                 record_timeline_step_activity,
@@ -1068,6 +1375,41 @@ class BacklinkCampaignWorkflow:
                 retry_policy=RetryPreset.LLM_INFERENCE,
             )
             output.emails_generated = emails_result["count"]
+
+            # Phase 2.5.1: Fail-loud guard. If the AI generated zero
+            # email sequences (LLM error, all prospects filtered, etc.),
+            # the workflow MUST NOT enter "active" status and spawn zero
+            # child workflows. The campaign is halted.
+            if emails_result["count"] == 0:
+                await workflow.execute_activity(
+                    record_timeline_step_activity,
+                    args=[
+                        str(input_data.tenant_id), str(input_data.campaign_id),
+                        "outreach_generation", "failed",
+                        "AI outreach generation produced 0 sequences. "
+                        "Campaign halted before launching.",
+                    ],
+                    task_queue=TaskQueue.BACKLINK_ENGINE,
+                    start_to_close_timeout=timedelta(seconds=30),
+                    retry_policy=RetryPreset.DATABASE,
+                )
+                await workflow.execute_activity(
+                    update_campaign_status_activity,
+                    args=[
+                        str(input_data.tenant_id), str(input_data.campaign_id),
+                        "failed_no_emails",
+                    ],
+                    task_queue=TaskQueue.BACKLINK_ENGINE,
+                    start_to_close_timeout=timedelta(seconds=30),
+                    retry_policy=RetryPreset.DATABASE,
+                )
+                output.success = False
+                output.status = "failed_no_emails"
+                output.errors.append(
+                    "Campaign halted: AI outreach generation produced 0 "
+                    "sequences. Check LLM gateway and prospect eligibility."
+                )
+                return output.model_dump_json()
 
             await workflow.execute_activity(
                 record_timeline_step_activity,
@@ -1129,6 +1471,42 @@ class BacklinkCampaignWorkflow:
             output.threads_completed = threads_completed
             output.emails_sent = threads_contacted
 
+            # Phase 2.5.1: Final fail-loud guard. If the child workflows
+            # all exited without sending any email, the campaign must NOT
+            # transition to "monitoring" status. Zero-work monitoring is
+            # the worst kind of silent failure.
+            if output.threads_contacted == 0:
+                await workflow.execute_activity(
+                    record_timeline_step_activity,
+                    args=[
+                        str(input_data.tenant_id), str(input_data.campaign_id),
+                        "completion", "failed",
+                        "0 emails sent across all outreach threads. "
+                        "Campaign halted before entering monitoring.",
+                    ],
+                    task_queue=TaskQueue.BACKLINK_ENGINE,
+                    start_to_close_timeout=timedelta(seconds=30),
+                    retry_policy=RetryPreset.DATABASE,
+                )
+                await workflow.execute_activity(
+                    update_campaign_status_activity,
+                    args=[
+                        str(input_data.tenant_id), str(input_data.campaign_id),
+                        "failed_no_emails_sent",
+                    ],
+                    task_queue=TaskQueue.BACKLINK_ENGINE,
+                    start_to_close_timeout=timedelta(seconds=30),
+                    retry_policy=RetryPreset.DATABASE,
+                )
+                output.success = False
+                output.status = "failed_no_emails_sent"
+                output.errors.append(
+                    "Campaign halted: 0 emails were sent. "
+                    "Check email provider (Resend/SendGrid/Mailgun) "
+                    "configuration and prospect contact_email fields."
+                )
+                return output.model_dump_json()
+
             # --- Phase 6: Complete ---
             await workflow.execute_activity(
                 record_timeline_step_activity,
@@ -1168,6 +1546,21 @@ class BacklinkCampaignWorkflow:
                 start_to_close_timeout=timedelta(seconds=30),
                 retry_policy=RetryPreset.DATABASE,
             )
+            try:
+                await workflow.execute_activity(
+                    raise_workflow_failure_alert_activity,
+                    args=[
+                        str(input_data.tenant_id),
+                        str(input_data.campaign_id),
+                        "BacklinkCampaignWorkflow",
+                        str(e),
+                    ],
+                    task_queue=TaskQueue.BACKLINK_ENGINE,
+                    start_to_close_timeout=timedelta(seconds=30),
+                    retry_policy=RetryPreset.DATABASE,
+                )
+            except Exception as alert_err:
+                logger.warning("failed_to_raise_workflow_failure_alert", error=str(alert_err))
             output.success = False
             output.status = "failed"
             output.errors.append(str(e))

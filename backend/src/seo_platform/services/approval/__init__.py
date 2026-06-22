@@ -188,7 +188,10 @@ class ApprovalService:
             async with get_tenant_session(tenant_id) as session:
                 from sqlalchemy import select
                 result = await session.execute(
-                    select(ApprovalRequestModel).where(ApprovalRequestModel.id == decision.request_id)
+                    select(ApprovalRequestModel).where(
+                        ApprovalRequestModel.id == decision.request_id,
+                        ApprovalRequestModel.tenant_id == tenant_id,
+                    )
                 )
                 db_record = result.scalar_one_or_none()
                 if db_record:

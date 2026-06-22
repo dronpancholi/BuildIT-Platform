@@ -7,17 +7,66 @@ Uses NVIDIA NIM when available, falls back to deterministic expansion.
 
 from __future__ import annotations
 
+from seo_platform.core.auth import get_validated_tenant_id
 import json
 import random
 from uuid import UUID
 
 import httpx
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel, Field
+from sqlalchemy.exc import IntegrityError
 
 from seo_platform.schemas import APIResponse
 
 router = APIRouter()
+
+
+@router.get("", response_model=APIResponse[list[dict]])
+async def list_keywords(
+    tenant_id: UUID = Depends(get_validated_tenant_id),
+    client_id: UUID | None = None,
+    offset: int = Query(default=0, ge=0),
+    limit: int = Query(default=50, ge=1, le=200),
+) -> APIResponse[list[dict]]:
+    """List keywords for a tenant with pagination."""
+    from sqlalchemy import func, select
+    from seo_platform.core.database import get_tenant_session
+    from seo_platform.models.seo import Keyword
+
+    async with get_tenant_session(tenant_id) as session:
+        stmt = select(Keyword).where(Keyword.tenant_id == tenant_id)
+        if client_id:
+            stmt = stmt.where(Keyword.client_id == client_id)
+        stmt = stmt.order_by(Keyword.created_at.desc()).offset(offset).limit(limit)
+
+        count_stmt = select(func.count()).select_from(Keyword).where(Keyword.tenant_id == tenant_id)
+        if client_id:
+            count_stmt = count_stmt.where(Keyword.client_id == client_id)
+
+        result = await session.execute(stmt)
+        keywords = result.scalars().all()
+        count_result = await session.execute(count_stmt)
+        total = count_result.scalar_one()
+
+        return APIResponse(
+            data=[
+                {
+                    "id": str(k.id),
+                    "keyword": k.keyword,
+                    "search_volume": k.search_volume,
+                    "difficulty": k.difficulty,
+                    "cpc": k.cpc,
+                    "competition": k.competition,
+                    "intent": k.intent.value if k.intent else None,
+                    "cluster_id": str(k.cluster_id) if k.cluster_id else None,
+                    "client_id": str(k.client_id) if k.client_id else None,
+                    "created_at": k.created_at.isoformat() if k.created_at else None,
+                }
+                for k in keywords
+            ],
+            meta={"total": total, "offset": offset, "limit": limit},
+        )
 
 # Deterministic keyword expansion patterns
 EXPANSION_PREFIXES = [
@@ -70,7 +119,7 @@ class KeywordResearchResult(BaseModel):
 
 @router.get("/research", response_model=APIResponse[list[dict]])
 async def list_keyword_research(
-    tenant_id: UUID = Query(...),
+    tenant_id: UUID = Depends(get_validated_tenant_id),
     client_id: UUID | None = None
 ) -> APIResponse[list[dict]]:
     """List keyword research history."""
@@ -176,7 +225,24 @@ async def start_keyword_research(request: StartResearchRequest) -> APIResponse[R
                         serp_features=[],
                         is_seed=kw_data["keyword"] in request.seed_keywords,
                     )
-                    session.add(keyword)
+                    # Use merge to handle duplicates gracefully
+                    from sqlalchemy.dialects.postgresql import insert as pg_insert
+                    keyword_data = {
+                        "tenant_id": request.tenant_id,
+                        "client_id": request.client_id,
+                        "cluster_id": cluster.id if cluster else None,
+                        "keyword": kw_data["keyword"],
+                        "search_volume": kw_data["search_volume"],
+                        "difficulty": kw_data["difficulty"],
+                        "cpc": kw_data["cpc"],
+                        "competition": kw_data["competition"],
+                        "intent": kw_data["intent"],
+                        "serp_features": [],
+                        "is_seed": kw_data["keyword"] in request.seed_keywords,
+                    }
+                    stmt = pg_insert(Keyword.__table__).values(**keyword_data)
+                    stmt = stmt.on_conflict_do_nothing(index_elements=["tenant_id", "client_id", "keyword"])
+                    await session.execute(stmt)
                     persisted_keywords += 1
 
             research.result_data = {
@@ -203,18 +269,24 @@ async def start_keyword_research(request: StartResearchRequest) -> APIResponse[R
             )
         )
 
+    except IntegrityError as e:
+        logger.error("keyword_research_integrity_error", error=str(e))
+        raise HTTPException(status_code=400, detail=f"Invalid request data: {e.orig}")
     except Exception as e:
         logger.error("keyword_research_failed", error=str(e))
-        async with get_tenant_session(request.tenant_id) as session:
-            failed_research = KeywordResearch(
-                tenant_id=request.tenant_id,
-                client_id=request.client_id,
-                seed_keyword=request.seed_keywords[0] if request.seed_keywords else "unnamed",
-                status="failed",
-                result_data={"error": str(e)},
-            )
-            session.add(failed_research)
-            await session.flush()
+        try:
+            async with get_tenant_session(request.tenant_id) as session:
+                failed_research = KeywordResearch(
+                    tenant_id=request.tenant_id,
+                    client_id=request.client_id,
+                    seed_keyword=request.seed_keywords[0] if request.seed_keywords else "unnamed",
+                    status="failed",
+                    result_data={"error": str(e)},
+                )
+                session.add(failed_research)
+                await session.flush()
+        except Exception:
+            logger.error("failed_to_record_research_failure", error=str(e))
         raise HTTPException(status_code=500, detail=f"Keyword research failed: {e!s}")
 
 

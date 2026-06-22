@@ -660,17 +660,27 @@ class PredictiveIntelligenceService:
                 recommendation=f"Prediction failed: {str(e)[:100]}",
             )
 
-    async def _get_campaign(self, campaign_id: UUID) -> Any:
+    async def _get_campaign(self, campaign_id: UUID, tenant_id: UUID | None = None) -> Any:
         try:
             from sqlalchemy import select
-            from seo_platform.core.database import get_tenant_session
+            from seo_platform.core.database import get_session, get_tenant_session
             from seo_platform.models.backlink import BacklinkCampaign
 
-            async with get_tenant_session(None) as session:
-                result = await session.execute(
-                    select(BacklinkCampaign).where(BacklinkCampaign.id == campaign_id)
-                )
-                return result.scalar_one_or_none()
+            if tenant_id:
+                async with get_tenant_session(tenant_id) as session:
+                    result = await session.execute(
+                        select(BacklinkCampaign).where(
+                            BacklinkCampaign.id == campaign_id,
+                            BacklinkCampaign.tenant_id == tenant_id,
+                        )
+                    )
+                    return result.scalar_one_or_none()
+            else:
+                async with get_session() as session:
+                    result = await session.execute(
+                        select(BacklinkCampaign).where(BacklinkCampaign.id == campaign_id)
+                    )
+                    return result.scalar_one_or_none()
         except Exception:
             return None
 
