@@ -7,14 +7,14 @@ Manages cached domain rating lookups, spam detection, and trust evaluation.
 from __future__ import annotations
 
 import json
-import logging
 
 from pydantic import BaseModel
 
+from seo_platform.core.logging import get_logger
 from seo_platform.core.redis import get_redis
 from seo_platform.providers.seo import DomainAuthority, calculate_local_authority
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 
 class DomainQualityMetrics(BaseModel):

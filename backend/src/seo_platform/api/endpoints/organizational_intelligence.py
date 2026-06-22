@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from seo_platform.core.auth import get_validated_tenant_id
 from fastapi import APIRouter, Query
 
 from seo_platform.services.organizational_intelligence import organizational_intelligence
@@ -7,7 +8,7 @@ from seo_platform.services.organizational_intelligence import organizational_int
 router = APIRouter()
 
 
-@router.get("/organizational-intelligence/workflow-intelligence")
+@router.get("/workflow-intelligence")
 async def get_org_workflow_intelligence(
     org_id: str = Query(..., description="Organization ID"),
 ):
@@ -15,7 +16,7 @@ async def get_org_workflow_intelligence(
     return {"success": True, "data": result.model_dump()}
 
 
-@router.get("/organizational-intelligence/team-coordination")
+@router.get("/team-coordination")
 async def get_team_coordination(
     team_id: str = Query(..., description="Team ID"),
 ):
@@ -23,7 +24,7 @@ async def get_team_coordination(
     return {"success": True, "data": result.model_dump()}
 
 
-@router.get("/organizational-intelligence/approval-bottlenecks")
+@router.get("/approval-bottlenecks")
 async def get_approval_bottlenecks(
     org_id: str = Query(..., description="Organization ID"),
 ):
@@ -31,7 +32,7 @@ async def get_approval_bottlenecks(
     return {"success": True, "data": result.model_dump()}
 
 
-@router.get("/organizational-intelligence/operational-productivity")
+@router.get("/operational-productivity")
 async def get_operational_productivity(
     org_id: str = Query(..., description="Organization ID"),
 ):
@@ -39,7 +40,7 @@ async def get_operational_productivity(
     return {"success": True, "data": result.model_dump()}
 
 
-@router.get("/organizational-intelligence/efficiency-forecast")
+@router.get("/efficiency-forecast")
 async def get_efficiency_forecast(
     org_id: str = Query(..., description="Organization ID"),
     months: int = Query(12, ge=3, le=60),
@@ -48,7 +49,7 @@ async def get_efficiency_forecast(
     return {"success": True, "data": result.model_dump()}
 
 
-@router.get("/organizational-intelligence/operational-hierarchy")
+@router.get("/operational-hierarchy")
 async def get_operational_hierarchy(
     org_id: str = Query(..., description="Organization ID"),
 ):
@@ -56,7 +57,7 @@ async def get_operational_hierarchy(
     return {"success": True, "data": result.model_dump()}
 
 
-@router.get("/organizational-intelligence/dependency-map")
+@router.get("/dependency-map")
 async def get_organizational_dependency_map(
     org_id: str = Query(..., description="Organization ID"),
 ):

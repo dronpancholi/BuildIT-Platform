@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from seo_platform.core.auth import get_validated_tenant_id
 from fastapi import APIRouter, Query
 
 from seo_platform.services.maintainability_dominance import maintainability_dominance
@@ -7,7 +8,7 @@ from seo_platform.services.maintainability_dominance import maintainability_domi
 router = APIRouter()
 
 
-@router.get("/maintainability-dominance/migration-readiness")
+@router.get("/migration-readiness")
 async def get_migration_readiness(
     component: str = Query(..., description="Component to assess"),
 ):
@@ -15,7 +16,7 @@ async def get_migration_readiness(
     return {"success": True, "data": result.model_dump()}
 
 
-@router.get("/maintainability-dominance/schema-evolution")
+@router.get("/schema-evolution")
 async def get_schema_evolution(
     entity: str = Query(..., description="Entity to analyze"),
 ):
@@ -23,7 +24,7 @@ async def get_schema_evolution(
     return {"success": True, "data": result.model_dump()}
 
 
-@router.get("/maintainability-dominance/api-governance")
+@router.get("/api-governance")
 async def get_api_governance(
     api_spec: str = Query("current", description="API spec version to govern"),
 ):
@@ -31,7 +32,7 @@ async def get_api_governance(
     return {"success": True, "data": result.model_dump()}
 
 
-@router.get("/maintainability-dominance/event-contract-governance")
+@router.get("/event-contract-governance")
 async def get_event_contract_governance(
     contract_id: str = Query(..., description="Event contract ID to validate"),
 ):
@@ -39,7 +40,7 @@ async def get_event_contract_governance(
     return {"success": True, "data": result.model_dump()}
 
 
-@router.get("/maintainability-dominance/temporal-versioning")
+@router.get("/temporal-versioning")
 async def get_temporal_versioning(
     workflow_type: str = Query(..., description="Workflow type to analyze"),
 ):
@@ -47,7 +48,7 @@ async def get_temporal_versioning(
     return {"success": True, "data": result.model_dump()}
 
 
-@router.get("/maintainability-dominance/infra-compatibility")
+@router.get("/infra-compatibility")
 async def get_infra_compatibility(
     component: str = Query(..., description="Component to check"),
     target: str = Query(..., description="Target environment"),
@@ -56,7 +57,7 @@ async def get_infra_compatibility(
     return {"success": True, "data": result.model_dump()}
 
 
-@router.get("/maintainability-dominance/upgrade-safety")
+@router.get("/upgrade-safety")
 async def get_upgrade_safety(
     component: str = Query(..., description="Component to upgrade"),
     target_version: str = Query(..., description="Target version"),
@@ -65,7 +66,7 @@ async def get_upgrade_safety(
     return {"success": True, "data": result.model_dump()}
 
 
-@router.post("/maintainability-dominance/compatibility-simulation")
+@router.post("/compatibility-simulation")
 async def post_compatibility_simulation(
     component: str = Query(..., description="Component to simulate"),
     changes: str = Query(..., description="JSON array of changes to simulate"),
@@ -76,7 +77,7 @@ async def post_compatibility_simulation(
     return {"success": True, "data": result.model_dump()}
 
 
-@router.get("/maintainability-dominance/maintainability-score")
+@router.get("/maintainability-score")
 async def get_maintainability_score(
     component: str = Query(..., description="Component to score"),
 ):

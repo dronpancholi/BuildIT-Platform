@@ -6,6 +6,7 @@ REST endpoints for analyzing real resource usage and costs.
 
 from __future__ import annotations
 
+from seo_platform.core.auth import get_validated_tenant_id
 import json
 from uuid import UUID
 
@@ -16,7 +17,7 @@ from seo_platform.services.infrastructure_economics import infrastructure_econom
 router = APIRouter()
 
 
-@router.get("/infra-economics/ai-costs")
+@router.get("/ai-costs")
 async def get_ai_costs(
     time_window_hours: int = Query(24, ge=1, le=168, description="Hours to analyze"),
 ):
@@ -25,7 +26,7 @@ async def get_ai_costs(
     return {"success": True, "data": analytics.model_dump()}
 
 
-@router.get("/infra-economics/queue-costs")
+@router.get("/queue-costs")
 async def get_queue_costs(
     time_window_hours: int = Query(24, ge=1, le=168, description="Hours to analyze"),
 ):
@@ -34,7 +35,7 @@ async def get_queue_costs(
     return {"success": True, "data": analytics.model_dump()}
 
 
-@router.get("/infra-economics/scraping-costs")
+@router.get("/scraping-costs")
 async def get_scraping_costs(
     time_window_hours: int = Query(24, ge=1, le=168, description="Hours to analyze"),
 ):
@@ -43,7 +44,7 @@ async def get_scraping_costs(
     return {"success": True, "data": analytics.model_dump()}
 
 
-@router.get("/infra-economics/utilization")
+@router.get("/utilization")
 async def get_infra_utilization(
     time_window_hours: int = Query(24, ge=1, le=168, description="Hours to analyze"),
 ):
@@ -52,7 +53,7 @@ async def get_infra_utilization(
     return {"success": True, "data": analytics.model_dump()}
 
 
-@router.get("/infra-economics/worker-efficiency")
+@router.get("/worker-efficiency")
 async def get_worker_efficiency(
     time_window_hours: int = Query(24, ge=1, le=168, description="Hours to analyze"),
 ):
@@ -61,7 +62,7 @@ async def get_worker_efficiency(
     return {"success": True, "data": analytics.model_dump()}
 
 
-@router.get("/infra-economics/event-throughput")
+@router.get("/event-throughput")
 async def get_event_throughput(
     time_window_hours: int = Query(24, ge=1, le=168, description="Hours to analyze"),
 ):
@@ -70,7 +71,7 @@ async def get_event_throughput(
     return {"success": True, "data": analytics.model_dump()}
 
 
-@router.get("/infra-economics/roi")
+@router.get("/roi")
 async def get_operational_roi(
     tenant_id: str = Query(..., description="Tenant UUID"),
     time_window_days: int = Query(30, ge=1, le=365, description="Days to analyze"),
@@ -81,7 +82,7 @@ async def get_operational_roi(
     return {"success": True, "data": roi.model_dump()}
 
 
-@router.get("/infra-economics/optimization-intelligence")
+@router.get("/optimization-intelligence")
 async def get_optimization_intelligence(
     time_window_hours: int = Query(24, ge=1, le=168, description="Hours to analyze"),
 ):
@@ -90,7 +91,7 @@ async def get_optimization_intelligence(
     return {"success": True, "data": intelligence.model_dump()}
 
 
-@router.get("/infra-economics/cost-optimization")
+@router.get("/cost-optimization")
 async def get_cost_optimization(
     time_window_hours: int = Query(24, ge=1, le=168, description="Hours to analyze"),
 ):
@@ -99,7 +100,7 @@ async def get_cost_optimization(
     return {"success": True, "data": optimization.model_dump()}
 
 
-@router.get("/infra-economics/ai-efficiency")
+@router.get("/ai-efficiency")
 async def get_ai_efficiency(
     time_window_hours: int = Query(24, ge=1, le=168, description="Hours to analyze"),
 ):
@@ -108,7 +109,7 @@ async def get_ai_efficiency(
     return {"success": True, "data": efficiency.model_dump()}
 
 
-@router.get("/infra-economics/scraping-efficiency")
+@router.get("/scraping-efficiency")
 async def get_scraping_efficiency(
     time_window_hours: int = Query(24, ge=1, le=168, description="Hours to analyze"),
 ):
@@ -117,7 +118,7 @@ async def get_scraping_efficiency(
     return {"success": True, "data": analytics.model_dump()}
 
 
-@router.get("/infra-economics/queue-efficiency")
+@router.get("/queue-efficiency")
 async def get_queue_efficiency(
     time_window_hours: int = Query(24, ge=1, le=168, description="Hours to analyze"),
 ):
@@ -126,7 +127,7 @@ async def get_queue_efficiency(
     return {"success": True, "data": intelligence.model_dump()}
 
 
-@router.get("/infra-economics/worker-utilization")
+@router.get("/worker-utilization")
 async def get_worker_utilization(
     time_window_hours: int = Query(24, ge=1, le=168, description="Hours to analyze"),
 ):
@@ -135,7 +136,7 @@ async def get_worker_utilization(
     return {"success": True, "data": optimization.model_dump()}
 
 
-@router.get("/infra-economics/roi-forecast")
+@router.get("/roi-forecast")
 async def get_roi_forecast(
     timeframe_days: int = Query(30, ge=1, le=365, description="Days to forecast"),
 ):

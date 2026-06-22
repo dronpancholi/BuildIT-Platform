@@ -7,11 +7,12 @@ to the frontend Mission Control console.
 
 from __future__ import annotations
 
+from seo_platform.core.auth import get_validated_tenant_id
 from fastapi import APIRouter, Depends
 from pydantic import BaseModel, Field
 
-from seo_platform.core.auth import CurrentUser, get_current_user
 from seo_platform.core.kill_switch import kill_switch_service
+from seo_platform.core.rbac import RequirePermission
 from seo_platform.schemas import APIResponse
 
 router = APIRouter()
@@ -30,16 +31,21 @@ class DeactivateRequest(BaseModel):
 
 
 @router.get("", response_model=APIResponse[list[dict]])
-async def list_active_kill_switches() -> APIResponse[list[dict]]:
+async def list_active_kill_switches(
+    _auth: None = Depends(RequirePermission("system:read")),
+) -> APIResponse[list[dict]]:
     """List all currently active kill switches from Redis."""
-    switches = await kill_switch_service.list_active()
+    try:
+        switches = await kill_switch_service.list_active()
+    except Exception:
+        switches = []
     return APIResponse(data=switches)
 
 
 @router.post("/activate", response_model=APIResponse[dict])
 async def activate_kill_switch(
     request: ActivateRequest,
-    current_user: CurrentUser = Depends(get_current_user),
+    current_user = Depends(RequirePermission("system:write")),
 ) -> APIResponse[dict]:
     """Activate an emergency kill switch. Takes immediate effect."""
     await kill_switch_service.activate(
@@ -58,7 +64,7 @@ async def activate_kill_switch(
 @router.post("/deactivate", response_model=APIResponse[dict])
 async def deactivate_kill_switch(
     request: DeactivateRequest,
-    current_user: CurrentUser = Depends(get_current_user),
+    current_user = Depends(RequirePermission("system:write")),
 ) -> APIResponse[dict]:
     """Deactivate an emergency kill switch. Restores normal operations."""
     await kill_switch_service.deactivate(

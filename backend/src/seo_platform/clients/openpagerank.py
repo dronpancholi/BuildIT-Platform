@@ -6,14 +6,13 @@ Queries the free DomCop OpenPageRank API to get domain popularity metrics.
 
 from __future__ import annotations
 
-import logging
-
 import httpx
 from pydantic import BaseModel, Field
 
 from seo_platform.config import get_settings
+from seo_platform.core.logging import get_logger
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 
 class OpenPageRankItem(BaseModel):

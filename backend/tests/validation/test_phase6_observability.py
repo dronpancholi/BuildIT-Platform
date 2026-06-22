@@ -41,7 +41,7 @@ class TestProviderHealthCenter:
         center = ProviderHealthCenter()
         status = await center.get_health_status()
         for name in ["Scrapling", "SearXNG", "OpenPageRank", "DataForSEO", "Ahrefs"]:
-            assert name in status["providers"], f"Missing {name}"
+            assert name.lower() in status["providers"], f"Missing {name}"
         assert status["total_providers"] >= 5
         assert "overall_uptime_pct" in status
 

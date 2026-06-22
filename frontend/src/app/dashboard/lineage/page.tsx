@@ -9,6 +9,7 @@ import {
 } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { fetchApi, MOCK_TENANT_ID } from "@/lib/api";
+import { safeArr, safeStr, safeNum, safeUpper, safeLower, safeFixed, safeLocale, safePct, safeDate, safeDateTime, safeTime, safeReplace, safeSplit, safeSlice, safeStartsWith, safeFind, safeIncludes, safeSort, safeObj, safeKeys, safeValues, safeEntries, safeInitials } from "@/lib/safe";
 
 interface LineageEvent {
   event_id: string;
@@ -59,7 +60,7 @@ const SOURCE_ICONS: Record<string, React.ReactNode> = {
 };
 
 function detectSourceType(service: string): string {
-  const lower = service.toLowerCase();
+  const lower = safeLower(service, "");
   if (lower.includes("workflow") || lower.includes("temporal")) return "workflow";
   if (lower.includes("approval") || lower.includes("gate")) return "approval";
   if (lower.includes("campaign")) return "campaign";
@@ -378,7 +379,7 @@ export default function LineagePage() {
                     <p className="text-sm text-slate-500 font-mono">No events in the last 24 hours</p>
                   </div>
                 ) : (
-                  (timelineData?.events || []).map((event) => (
+                  safeArr<LineageEvent>(timelineData?.events).map((event) => (
                     <div
                       key={event.event_id}
                       className={`flex items-center gap-3 p-2.5 rounded-md cursor-pointer hover:bg-surface-darker/50 transition-colors ${

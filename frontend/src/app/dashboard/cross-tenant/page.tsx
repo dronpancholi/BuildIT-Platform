@@ -6,6 +6,7 @@ import {
 } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { fetchApi } from "@/lib/api";
+import { safeArr, safeNum, safeStr, safeUpper, safeFixed, safeReplace, safeSlice, safeLocale } from "@/lib/safe";
 
 interface CrossTenantAnalytics {
   aggregated_metrics: Record<string, number>;
@@ -81,10 +82,10 @@ export default function CrossTenantPage() {
     refetchInterval: 15000,
   });
 
-  const benchmarkList = benchmarks || [];
-  const baselineList = baselines || [];
-  const trendList = trends || [];
-  const tenantBenchList = tenantBenchmarks || [];
+  const benchmarkList = safeArr<Benchmark>(benchmarks);
+  const baselineList = safeArr<WorkflowBaseline>(baselines);
+  const trendList = safeArr<OperationalTrend>(trends);
+  const tenantBenchList = safeArr<TenantBenchmark>(tenantBenchmarks);
 
   return (
     <div className="space-y-6">
@@ -96,7 +97,7 @@ export default function CrossTenantPage() {
         {analytics && (
           <div className="px-3 py-1.5 rounded-md bg-surface-darker border border-surface-border text-xs font-mono text-slate-400 flex items-center gap-2">
             <Layers className="w-4 h-4" />
-            {analytics.active_tenants} TENANTS
+            {safeStr(analytics.active_tenants)} TENANTS
           </div>
         )}
       </div>
@@ -116,11 +117,11 @@ export default function CrossTenantPage() {
             <div className="space-y-4">
               <div className="grid grid-cols-2 gap-3">
                 <div className="p-3 rounded-md bg-surface-darker/50 border border-surface-border/50 text-center">
-                  <span className="text-2xl font-bold font-mono text-slate-100">{analytics.active_tenants}</span>
+                  <span className="text-2xl font-bold font-mono text-slate-100">{safeStr(analytics.active_tenants)}</span>
                   <p className="text-[10px] font-mono text-slate-500 mt-1">Active Tenants</p>
                 </div>
                 <div className="p-3 rounded-md bg-surface-darker/50 border border-surface-border/50 text-center">
-                  <span className="text-2xl font-bold font-mono text-slate-100">{analytics.trend_period}</span>
+                  <span className="text-2xl font-bold font-mono text-slate-100">{safeStr(analytics.trend_period)}</span>
                   <p className="text-[10px] font-mono text-slate-500 mt-1">Trend Period</p>
                 </div>
               </div>
@@ -128,8 +129,8 @@ export default function CrossTenantPage() {
                 <div className="grid grid-cols-2 gap-2">
                   {Object.entries(analytics.aggregated_metrics).map(([key, val]) => (
                     <div key={key} className="flex items-center justify-between p-2 rounded bg-surface-darker/30 border border-surface-border/30 text-xs font-mono">
-                      <span className="text-slate-500 uppercase">{key.replace(/_/g, " ")}</span>
-                      <span className="text-slate-300">{typeof val === 'number' ? val.toLocaleString() : val}</span>
+                      <span className="text-slate-500 uppercase">{safeReplace(key, /_/g, " ")}</span>
+                      <span className="text-slate-300">{typeof val === 'number' ? safeLocale(val) : safeStr(val)}</span>
                     </div>
                   ))}
                 </div>
@@ -158,22 +159,22 @@ export default function CrossTenantPage() {
                   transition={{ delay: i * 0.05 }}
                   className="p-3 rounded-md bg-surface-darker/50 border border-surface-border/50"
                 >
-                  <p className="text-xs font-mono text-slate-300 uppercase mb-2">{b.operation.replace(/_/g, " ")}</p>
+                  <p className="text-xs font-mono text-slate-300 uppercase mb-2">{safeReplace(b.operation, /_/g, " ")}</p>
                   <div className="grid grid-cols-4 gap-2">
                     <div className="text-center">
-                      <span className="text-sm font-bold font-mono text-emerald-400">{b.p50}</span>
+                      <span className="text-sm font-bold font-mono text-emerald-400">{safeStr(b.p50)}</span>
                       <p className="text-[9px] font-mono text-slate-600">P50</p>
                     </div>
                     <div className="text-center">
-                      <span className="text-sm font-bold font-mono text-amber-400">{b.p75}</span>
+                      <span className="text-sm font-bold font-mono text-amber-400">{safeStr(b.p75)}</span>
                       <p className="text-[9px] font-mono text-slate-600">P75</p>
                     </div>
                     <div className="text-center">
-                      <span className="text-sm font-bold font-mono text-orange-400">{b.p90}</span>
+                      <span className="text-sm font-bold font-mono text-orange-400">{safeStr(b.p90)}</span>
                       <p className="text-[9px] font-mono text-slate-600">P90</p>
                     </div>
                     <div className="text-center">
-                      <span className="text-sm font-bold font-mono text-red-400">{b.p99}</span>
+                      <span className="text-sm font-bold font-mono text-red-400">{safeStr(b.p99)}</span>
                       <p className="text-[9px] font-mono text-slate-600">P99</p>
                     </div>
                   </div>
@@ -207,20 +208,20 @@ export default function CrossTenantPage() {
                   className="p-4 rounded-md bg-surface-darker/50 border border-surface-border/50"
                 >
                   <div className="flex items-center justify-between mb-2">
-                    <span className="text-xs font-mono text-slate-200 uppercase">{bl.workflow_type.replace(/_/g, " ")}</span>
-                    <span className={`text-[10px] font-mono font-bold ${bl.success_rate >= 99 ? "text-emerald-400" : bl.success_rate >= 95 ? "text-amber-400" : "text-red-400"}`}>
-                      {bl.success_rate.toFixed(1)}% SR
+                    <span className="text-xs font-mono text-slate-200 uppercase">{safeReplace(bl.workflow_type, /_/g, " ")}</span>
+                    <span className={`text-[10px] font-mono font-bold ${safeNum(bl.success_rate) >= 99 ? "text-emerald-400" : safeNum(bl.success_rate) >= 95 ? "text-amber-400" : "text-red-400"}`}>
+                      {safeFixed(bl.success_rate, 1)}% SR
                     </span>
                   </div>
                   <div className="flex items-center gap-4 text-[10px] font-mono text-slate-500">
-                    <span>P50: <span className="text-slate-300">{bl.p50_duration_ms}ms</span></span>
-                    <span>P95: <span className="text-slate-300">{bl.p95_duration_ms}ms</span></span>
+                    <span>P50: <span className="text-slate-300">{safeStr(bl.p50_duration_ms)}ms</span></span>
+                    <span>P95: <span className="text-slate-300">{safeStr(bl.p95_duration_ms)}ms</span></span>
                   </div>
                   <div className="w-full h-1.5 bg-surface-darker rounded-full overflow-hidden mt-2">
                     <motion.div
                       initial={{ width: 0 }}
-                      animate={{ width: `${bl.success_rate}%` }}
-                      className={`h-full rounded-full ${bl.success_rate >= 99 ? "bg-emerald-500" : bl.success_rate >= 95 ? "bg-amber-500" : "bg-red-500"}`}
+                      animate={{ width: `${safeNum(bl.success_rate)}%` }}
+                      className={`h-full rounded-full ${safeNum(bl.success_rate) >= 99 ? "bg-emerald-500" : safeNum(bl.success_rate) >= 95 ? "bg-amber-500" : "bg-red-500"}`}
                       transition={{ duration: 0.5 }}
                     />
                   </div>
@@ -251,16 +252,16 @@ export default function CrossTenantPage() {
                   className="p-4 rounded-md bg-surface-darker/50 border border-surface-border/50"
                 >
                   <div className="flex items-center justify-between mb-1">
-                    <span className="text-xs font-mono text-slate-300 uppercase">{t.metric.replace(/_/g, " ")}</span>
+                    <span className="text-xs font-mono text-slate-300 uppercase">{safeReplace(t.metric, /_/g, " ")}</span>
                     <div className="flex items-center gap-2">
                       <span className={`text-[10px] font-mono ${t.direction === "up" ? "text-emerald-400" : t.direction === "down" ? "text-red-400" : "text-amber-400"}`}>
-                        {t.direction === "up" ? "↑" : t.direction === "down" ? "↓" : "→"} {t.change_pct > 0 ? "+" : ""}{t.change_pct.toFixed(1)}%
+                        {t.direction === "up" ? "↑" : t.direction === "down" ? "↓" : "→"} {safeNum(t.change_pct) > 0 ? "+" : ""}{safeFixed(t.change_pct, 1)}%
                       </span>
                       <span className={`text-[9px] font-mono px-1 py-0.5 rounded border ${
                         t.significance === "high" ? "bg-red-500/10 text-red-400 border-red-500/20" :
                         t.significance === "medium" ? "bg-amber-500/10 text-amber-400 border-amber-500/20" :
                         "bg-slate-500/10 text-slate-400 border-slate-500/20"
-                      }`}>{t.significance.toUpperCase()}</span>
+                      }`}>{safeUpper(t.significance)}</span>
                     </div>
                   </div>
                 </motion.div>
@@ -276,9 +277,9 @@ export default function CrossTenantPage() {
               <div className="space-y-2">
                 {tenantBenchList.slice(0, 5).map((tb, i) => (
                   <div key={i} className="flex items-center justify-between p-2 rounded bg-surface-darker/30 border border-surface-border/30 text-[10px] font-mono">
-                    <span className="text-slate-400 truncate max-w-[120px]">{tb.tenant_id.slice(0, 8)}...</span>
+                    <span className="text-slate-400 truncate max-w-[120px]">{safeSlice(tb.tenant_id, 0, 8)}...</span>
                     <span className="text-slate-500">{tb.metric}</span>
-                    <span className="text-slate-300">{typeof tb.percentile === 'number' ? tb.percentile.toFixed(0) : tb.percentile}th</span>
+                    <span className="text-slate-300">{typeof tb.percentile === 'number' ? safeFixed(tb.percentile, 0) : safeStr(tb.percentile)}th</span>
                   </div>
                 ))}
               </div>

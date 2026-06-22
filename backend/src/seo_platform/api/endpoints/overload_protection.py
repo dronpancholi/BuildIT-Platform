@@ -1,8 +1,9 @@
 from __future__ import annotations
 
+from seo_platform.core.auth import get_validated_tenant_id
 from uuid import UUID
 
-from fastapi import APIRouter, Body, Query
+from fastapi import APIRouter, Depends, Body, Query
 from pydantic import BaseModel
 
 from seo_platform.services.overload_protection import overload_protection
@@ -37,37 +38,37 @@ class EnforceQuotaRequest(BaseModel):
     resource_type: str  # workflow | ai_inference | email
 
 
-@router.get("/overload/queue-status")
+@router.get("/queue-status")
 async def get_queue_overload() -> dict:
     reports = await overload_protection.check_queue_overload()
     return {"success": True, "data": [r.to_dict() for r in reports], "count": len(reports)}
 
 
-@router.post("/overload/throttle-queue")
+@router.post("/throttle-queue")
 async def throttle_queue(request: ThrottleQueueRequest) -> dict:
     config = await overload_protection.throttle_queue(request.queue_name)
     return {"success": True, "data": config.to_dict()}
 
 
-@router.post("/overload/release-queue")
+@router.post("/release-queue")
 async def release_queue_throttle(request: ReleaseQueueRequest) -> dict:
     result = await overload_protection.release_queue_throttle(request.queue_name)
     return {"success": True, "data": result.to_dict()}
 
 
-@router.get("/overload/scraping-throttle")
+@router.get("/scraping-throttle")
 async def get_scraping_throttle() -> dict:
     state = await overload_protection.check_scraping_throttle()
     return {"success": True, "data": state.to_dict()}
 
 
-@router.post("/overload/adjust-scraping")
+@router.post("/adjust-scraping")
 async def adjust_scraping(request: AdjustScrapingRequest) -> dict:
     config = await overload_protection.adjust_scraping_concurrency(request.target_concurrency)
     return {"success": True, "data": config.to_dict()}
 
 
-@router.get("/overload/ai-throttle")
+@router.get("/ai-throttle")
 async def get_ai_throttle(
     tenant_id: UUID | None = Query(None),
     task_type: str = Query("seo_analysis"),
@@ -76,25 +77,25 @@ async def get_ai_throttle(
     return {"success": True, "data": check.to_dict()}
 
 
-@router.get("/overload/pressure")
+@router.get("/pressure")
 async def get_pressure_telemetry() -> dict:
     telemetry = await overload_protection.get_pressure_telemetry()
     return {"success": True, "data": telemetry.to_dict()}
 
 
-@router.get("/overload/saturation-alerts")
+@router.get("/saturation-alerts")
 async def get_saturation_alerts() -> dict:
     alerts = await overload_protection.get_saturation_alerts()
     return {"success": True, "data": [a.to_dict() for a in alerts], "count": len(alerts)}
 
 
-@router.get("/overload/tenant-usage")
-async def get_tenant_usage(tenant_id: UUID = Query(...)) -> dict:
+@router.get("/tenant-usage")
+async def get_tenant_usage(tenant_id: UUID = Depends(get_validated_tenant_id)) -> dict:
     usage = await overload_protection.get_tenant_resource_usage(tenant_id)
     return {"success": True, "data": usage.to_dict()}
 
 
-@router.post("/overload/enforce-quota")
+@router.post("/enforce-quota")
 async def enforce_quota(request: EnforceQuotaRequest) -> dict:
     result = await overload_protection.enforce_tenant_quota(
         request.tenant_id, request.resource_type,

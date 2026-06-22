@@ -1,27 +1,29 @@
 "use client";
 
-import { useState } from "react";
-import { motion } from "framer-motion";
-import { Users, Plus, Search, Loader2, Globe, MapPin, Target, TrendingUp, CheckCircle2, AlertTriangle, ArrowRight, Sparkles, Building2, Briefcase, Bot } from "lucide-react";
-import { useQuery } from "@tanstack/react-query";
-import { fetchApi, MOCK_TENANT_ID } from "@/lib/api";
-import { useCommandCenter } from "@/hooks/use-command-center";
+import { useState, useMemo } from "react";
 import { useRouter } from "next/navigation";
-import { useClientStore } from "@/hooks/use-client";
-
-interface ClientProfile {
-  id: string;
-  name: string;
-  domain: string;
-  niche: string;
-  business_type: string;
-  geo_focus: string[];
-  profile_data: Record<string, any>;
-  competitors: string[];
-  created_at: string;
-  keyword_count?: number;
-  campaign_count?: number;
-}
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { motion } from "framer-motion";
+import {
+  Plus, Search, Users, Globe, Building2, Briefcase,
+  ArrowRight, ChevronLeft, ChevronRight, Loader2,
+  Archive, RotateCcw, AlertTriangle,
+} from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Badge } from "@/components/ui/badge";
+import { EmptyState } from "@/components/ui/empty-state";
+import { ErrorState } from "@/components/ui/error-state";
+import {
+  Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter,
+} from "@/components/ui/dialog";
+import { useApiList, useApiCreate } from "@/services/hooks";
+import { fetchApi, clientApi } from "@/lib/api";
+import { ENDPOINTS } from "@/services/endpoints";
+import { formatDate, cn } from "@/lib/utils";
+import { ErrorBoundary } from "@/components/error-boundary";
+import { Select } from "@/components/ui/select";
+import { safeArr, safeStr, safeNum, safeUpper, safeLower, safeFixed, safeLocale, safePct, safeDate, safeDateTime, safeTime, safeReplace, safeSplit, safeSlice, safeStartsWith, safeFind, safeIncludes, safeSort, safeObj, safeKeys, safeValues, safeEntries, safeInitials } from "@/lib/safe";
 
 const NICHE_OPTIONS = [
   "B2B SaaS", "E-commerce", "Healthcare", "Legal", "Real Estate",
@@ -29,133 +31,438 @@ const NICHE_OPTIONS = [
   "Finance", "Technology", "Hospitality", "Manufacturing", "Non-profit",
 ];
 
-export default function ClientsPage() {
-  const { openCommand } = useCommandCenter();
-  const router = useRouter();
-  const setClient = useClientStore((s) => s.setClient);
-  const [search, setSearch] = useState("");
+interface Client {
+  id: string;
+  tenant_id: string;
+  name: string;
+  industry?: string;
+  status?: string;
+  archived_at?: string | null;
+  created_at: string;
+  updated_at?: string;
+  domain?: string;
+  niche?: string;
+  business_type?: string;
+}
 
-  const { data: clients = [], isLoading } = useQuery<ClientProfile[]>({
-    queryKey: ["clients"],
-    queryFn: () => fetchApi(`/clients?tenant_id=${MOCK_TENANT_ID}`),
-    refetchInterval: 30000,
+interface CreateClientPayload {
+  name: string;
+  domain: string;
+  niche?: string;
+  business_type?: string;
+}
+
+const PAGE_SIZE = 20;
+
+const statusVariant = (s: string) => {
+  if (s === "active") return "success" as const;
+  if (s === "archived") return "secondary" as const;
+  return "outline" as const;
+};
+
+export default function ClientsListPage() {
+  return (
+    <ErrorBoundary>
+      <ClientsListPageContent />
+    </ErrorBoundary>
+  );
+}
+
+function ClientsListPageContent() {
+  const router = useRouter();
+  const queryClient = useQueryClient();
+  const [search, setSearch] = useState("");
+  const [offset, setOffset] = useState(0);
+  const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [showCreate, setShowCreate] = useState(false);
+  const [showArchive, setShowArchive] = useState<string | null>(null);
+  const [form, setForm] = useState<CreateClientPayload>({
+    name: "",
+    domain: "",
+    niche: "",
+    business_type: "",
   });
 
-  const filtered = clients.filter((c) =>
-    !search || c.name.toLowerCase().includes(search.toLowerCase()) || c.domain.includes(search)
+  const params = useMemo(
+    () => ({
+      offset,
+      limit: PAGE_SIZE,
+      search: search || undefined,
+      status: statusFilter === "all" ? undefined : statusFilter,
+    }),
+    [offset, search, statusFilter]
   );
 
-  const switchToClient = (client: ClientProfile) => {
-    setClient({ id: client.id, name: client.name, domain: client.domain, niche: client.niche || "General" });
-    router.push("/dashboard");
+  const { data: clients = [], isLoading, isError, error, refetch } = useApiList<Client>(
+    ENDPOINTS.CLIENTS,
+    params
+  );
+
+  const createMutation = useApiCreate<Client, CreateClientPayload>(ENDPOINTS.CLIENTS, {
+    invalidateKeys: [ENDPOINTS.CLIENTS],
+    successMessage: "Client created successfully",
+  });
+
+  const archiveMutation = useMutation({
+    mutationFn: (clientId: string) => clientApi.archiveClient(clientId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [ENDPOINTS.CLIENTS] });
+      setShowArchive(null);
+    },
+  });
+
+  const restoreMutation = useMutation({
+    mutationFn: (clientId: string) => clientApi.restoreClient(clientId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [ENDPOINTS.CLIENTS] });
+    },
+  });
+
+  const total = safeArr<Client>(clients).length;
+  const totalPages = Math.ceil(total / PAGE_SIZE);
+  const currentPage = Math.floor(offset / PAGE_SIZE) + 1;
+  const hasMore = offset + PAGE_SIZE < total;
+
+  const handleCreate = () => {
+    createMutation.mutate(form, {
+      onSuccess: () => {
+        setShowCreate(false);
+        setForm({ name: "", domain: "", niche: "", business_type: "" });
+      },
+    });
   };
+
+  if (isError) {
+    return (
+      <div className="space-y-6">
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-2xl font-bold text-slate-100 tracking-tight">Clients</h1>
+          </div>
+        </div>
+        <ErrorState
+          error={error}
+          message="Failed to load clients"
+          onRetry={() => refetch()}
+        />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-slate-100 tracking-tight">Clients</h1>
-          <p className="text-slate-500 text-sm mt-0.5">{clients.length} client{clients.length !== 1 ? "s" : ""}</p>
+          <p className="text-slate-500 text-sm mt-0.5">
+            {total} client{total !== 1 ? "s" : ""}
+          </p>
         </div>
-        <button onClick={() => openCommand("add_client")} className="px-4 py-2 bg-platform-600 hover:bg-platform-500 text-white rounded-md text-sm font-bold font-mono transition-colors shadow-lg shadow-platform-900/30 flex items-center gap-2">
-          <Plus className="w-4 h-4" /> Add Client
-        </button>
+        <Button onClick={() => setShowCreate(true)} className="gap-2">
+          <Plus className="w-4 h-4" /> New Client
+        </Button>
       </div>
 
-      <div className="relative max-w-sm">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
-        <input
-          type="text"
-          placeholder="Search clients..."
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          className="w-full bg-surface-darker border border-surface-border rounded-lg py-2 pl-10 pr-4 text-sm text-slate-200 focus:outline-none focus:border-platform-500/50 transition-colors"
-        />
+      <div className="flex items-center gap-4">
+        <div className="relative max-w-sm flex-1">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
+          <Input
+            placeholder="Search by name or domain..."
+            value={search}
+            onChange={(e) => {
+              setSearch(e.target.value);
+              setOffset(0);
+            }}
+            className="pl-10"
+          />
+        </div>
+        <div className="flex items-center gap-1 bg-surface-darker/50 rounded-lg p-1">
+          {[
+            { id: "all", label: "All" },
+            { id: "active", label: "Active" },
+            { id: "archived", label: "Archived" },
+          ].map((tab) => (
+            <button
+              key={tab.id}
+              onClick={() => {
+                setStatusFilter(tab.id);
+                setOffset(0);
+              }}
+              className={cn(
+                "px-3 py-1.5 text-xs font-mono rounded-md transition-all",
+                statusFilter === tab.id
+                  ? "bg-platform-600 text-white"
+                  : "text-slate-400 hover:text-slate-200 hover:bg-surface-border"
+              )}
+            >
+              {tab.label}
+            </button>
+          ))}
+        </div>
       </div>
 
       {isLoading ? (
-        <div className="flex justify-center py-20"><Loader2 className="w-8 h-8 text-platform-500 animate-spin" /></div>
-      ) : filtered.length === 0 ? (
-        <div className="glass-panel p-12 flex flex-col items-center justify-center text-center">
-          <div className="w-14 h-14 rounded-full bg-surface-darker border border-surface-border flex items-center justify-center mb-3">
-            <Users className="text-slate-600" size={28} />
+        <div className="glass-panel overflow-hidden">
+          <div className="divide-y divide-surface-border">
+            {Array.from({ length: 8 }).map((_, i) => (
+              <div key={i} className="px-5 py-4 flex items-center gap-4 animate-pulse">
+                <div className="w-10 h-10 rounded-lg bg-surface-darker" />
+                <div className="flex-1 space-y-2">
+                  <div className="h-3 w-32 bg-surface-darker rounded" />
+                  <div className="h-2.5 w-20 bg-surface-darker rounded" />
+                </div>
+                <div className="h-2.5 w-16 bg-surface-darker rounded" />
+                <div className="h-2.5 w-16 bg-surface-darker rounded" />
+                <div className="h-2.5 w-24 bg-surface-darker rounded" />
+              </div>
+            ))}
           </div>
-          <h3 className="text-base font-medium text-slate-300">No clients found</h3>
-          <p className="text-sm text-slate-500 mt-1">Add a client to start building their SEO intelligence.</p>
-          <button onClick={() => openCommand("add_client")} className="mt-4 px-4 py-2 bg-platform-600 hover:bg-platform-500 text-white rounded-md text-xs font-bold font-mono">
-            + ADD CLIENT
-          </button>
         </div>
+      ) : safeArr<Client>(clients).length === 0 ? (
+        <EmptyState
+          icon={<Users className="w-8 h-8" />}
+          title="No clients found"
+          description={
+            search
+              ? "No clients match your search. Try different keywords."
+              : "Add your first client to get started."
+          }
+          action={
+            !search
+              ? { label: "New Client", onClick: () => setShowCreate(true) }
+              : undefined
+          }
+        />
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {filtered.map((client, i) => {
-            const pd = client.profile_data || {};
-            const derivedNiche = client.niche || pd?.derived_industry || "General";
-            const goals = pd?.goals || [];
-            const hasEnrichment = pd?.last_analyzed;
-            return (
-              <motion.div
-                key={client.id}
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: i * 0.03 }}
-                className="glass-panel p-5 hover:border-platform-500/30 transition-all cursor-pointer group"
-                onClick={() => switchToClient(client)}
-              >
-                <div className="flex items-start justify-between mb-4">
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-lg bg-platform-600/20 border border-platform-500/20 flex items-center justify-center text-platform-400 font-bold text-sm">
-                      {client.name.split(" ").map((w: string) => w[0]).join("").slice(0, 2).toUpperCase()}
-                    </div>
-                    <div>
-                      <h3 className="text-sm font-semibold text-slate-200">{client.name}</h3>
-                      <p className="text-[10px] font-mono text-slate-500">{client.domain}</p>
-                    </div>
-                  </div>
-                  <div className={`px-2 py-0.5 rounded text-[9px] font-mono border ${
-                    hasEnrichment ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/20" : "bg-amber-500/10 text-amber-400 border-amber-500/20"
-                  }`}>
-                    {hasEnrichment ? "ENRICHED" : "PENDING"}
-                  </div>
-                </div>
+        <>
+          <div className="glass-panel overflow-hidden">
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm text-left">
+                <thead className="text-[9px] text-slate-500 uppercase bg-surface-darker border-b border-surface-border">
+                  <tr>
+                    <th className="px-5 py-3 font-mono font-medium">Name</th>
+                    <th className="px-5 py-3 font-mono font-medium">Domain</th>
+                    <th className="px-5 py-3 font-mono font-medium">Niche</th>
+                    <th className="px-5 py-3 font-mono font-medium">Business Type</th>
+                    <th className="px-5 py-3 font-mono font-medium">Status</th>
+                    <th className="px-5 py-3 font-mono font-medium">Created</th>
+                    <th className="px-5 py-3 w-20" />
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-surface-border">
+                  {safeArr<Client>(clients).map((client: Client, i: number) => {
+                    const isArchived = client.status === "archived";
+                    return (
+                      <motion.tr
+                        key={client.id}
+                        initial={{ opacity: 0, y: 6 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: i * 0.03 }}
+                        className={cn(
+                          "hover:bg-surface-border/30 transition-colors cursor-pointer group",
+                          isArchived && "opacity-60"
+                        )}
+                        onClick={() => router.push(`/dashboard/clients/${client.id}`)}
+                      >
+                        <td className="px-5 py-3">
+                          <div className="flex items-center gap-3">
+                            <div className="w-9 h-9 rounded-lg bg-platform-600/20 border border-platform-500/20 flex items-center justify-center text-platform-400 font-bold text-xs shrink-0">
+                              {client.name
+                                .split(" ")
+                                .map((w: string) => w[0])
+                                .join("")
+                                .slice(0, 2)
+                                .toUpperCase()}
+                            </div>
+                            <span className="font-medium text-slate-200 text-sm group-hover:text-platform-400 transition-colors">
+                              {client.name}
+                            </span>
+                          </div>
+                        </td>
+                        <td className="px-5 py-3">
+                          <div className="flex items-center gap-1.5 text-xs text-slate-400">
+                            <Globe className="w-3 h-3 text-slate-500" />
+                            {client.domain || "—"}
+                          </div>
+                        </td>
+                        <td className="px-5 py-3">
+                          <span className="text-xs text-slate-400">
+                            {client.niche || client.industry || "—"}
+                          </span>
+                        </td>
+                        <td className="px-5 py-3">
+                          <div className="flex items-center gap-1.5 text-xs text-slate-400">
+                            <Briefcase className="w-3 h-3 text-slate-500" />
+                            {client.business_type || "—"}
+                          </div>
+                        </td>
+                        <td className="px-5 py-3">
+                          <Badge variant={statusVariant(client.status ?? "")}>
+                            {(client.status ?? "—").toUpperCase()}
+                          </Badge>
+                        </td>
+                        <td className="px-5 py-3">
+                          <span className="text-[11px] font-mono text-slate-500">
+                            {formatDate(client.created_at)}
+                          </span>
+                        </td>
+                        <td className="px-5 py-3">
+                          <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
+                            {isArchived ? (
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => restoreMutation.mutate(client.id)}
+                                disabled={restoreMutation.isPending}
+                                className="h-7 px-2 text-xs gap-1"
+                              >
+                                <RotateCcw className="w-3 h-3" />
+                                Restore
+                              </Button>
+                            ) : (
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => setShowArchive(client.id)}
+                                className="h-7 px-2 text-xs gap-1 text-red-400 hover:text-red-300 hover:bg-red-500/10"
+                              >
+                                <Archive className="w-3 h-3" />
+                                Archive
+                              </Button>
+                            )}
+                          </div>
+                        </td>
+                      </motion.tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
 
-                <div className="space-y-2 text-xs">
-                  <div className="flex items-center gap-2 text-slate-500">
-                    <Briefcase className="w-3 h-3" />
-                    <span>{derivedNiche}</span>
-                    {client.business_type && <span className="text-platform-400">· {client.business_type}</span>}
-                  </div>
-                  {client.geo_focus && client.geo_focus.length > 0 && (
-                    <div className="flex items-center gap-2 text-slate-500">
-                      <MapPin className="w-3 h-3" />
-                      <span>{client.geo_focus.join(", ")}</span>
-                    </div>
-                  )}
-                  {goals.length > 0 && (
-                    <div className="flex items-center gap-2 text-slate-500">
-                      <Target className="w-3 h-3" />
-                      <span>{goals.slice(0, 3).join(", ")}{goals.length > 3 ? ` +${goals.length - 3}` : ""}</span>
-                    </div>
-                  )}
-                  {client.competitors && client.competitors.length > 0 && (
-                    <div className="flex items-center gap-2 text-slate-500">
-                      <TrendingUp className="w-3 h-3" />
-                      <span>{client.competitors.length} competitors</span>
-                    </div>
-                  )}
-                </div>
-
-                <div className="mt-4 pt-3 border-t border-surface-border/50 flex items-center justify-between text-[10px] font-mono text-slate-600">
-                  <span>{client.keyword_count ?? 0} kw · {client.campaign_count ?? 0} campaigns</span>
-                  <span className="text-platform-400 group-hover:underline flex items-center gap-1">
-                    Open <ArrowRight className="w-3 h-3" />
-                  </span>
-                </div>
-              </motion.div>
-            );
-          })}
-        </div>
+            <div className="flex items-center justify-between px-5 py-3 border-t border-surface-border bg-surface-darker/50">
+              <span className="text-[10px] font-mono text-slate-500">
+                Showing {offset + 1}–{Math.min(offset + PAGE_SIZE, total)} of {total}
+              </span>
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  onClick={() => setOffset(Math.max(0, offset - PAGE_SIZE))}
+                  disabled={offset === 0}
+                  className="gap-1"
+                >
+                  <ChevronLeft className="w-3.5 h-3.5" /> Prev
+                </Button>
+                <span className="text-[10px] font-mono text-slate-400">
+                  {currentPage} / {totalPages || 1}
+                </span>
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  onClick={() => setOffset(offset + PAGE_SIZE)}
+                  disabled={!hasMore}
+                  className="gap-1"
+                >
+                  Next <ChevronRight className="w-3.5 h-3.5" />
+                </Button>
+              </div>
+            </div>
+          </div>
+        </>
       )}
+
+      <Dialog open={showCreate} onOpenChange={setShowCreate}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>New Client</DialogTitle>
+            <DialogDescription>Add a new client to your portfolio.</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <label className="text-xs font-mono text-slate-400 mb-1.5 block">Client Name</label>
+              <Input
+                name="name"
+                placeholder="Acme Corp"
+                value={form.name}
+                onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
+              />
+            </div>
+            <div>
+              <label className="text-xs font-mono text-slate-400 mb-1.5 block">Domain</label>
+              <Input
+                name="domain"
+                placeholder="acme.com"
+                value={form.domain}
+                onChange={(e) => setForm((f) => ({ ...f, domain: e.target.value }))}
+              />
+            </div>
+            <div>
+              <label className="text-xs font-mono text-slate-400 mb-1.5 block">Niche</label>
+              <Select
+                options={[
+                  { label: "B2B SaaS", value: "B2B SaaS" },
+                  { label: "E-commerce", value: "E-commerce" },
+                  { label: "Healthcare", value: "Healthcare" },
+                  { label: "Finance", value: "Finance" },
+                  { label: "Technology", value: "Technology" },
+                  { label: "Other", value: "Other" },
+                ]}
+                value={form.niche}
+                onChange={(e: any) => setForm((f) => ({ ...f, niche: e.target.value }))}
+                placeholder="Select niche..."
+              />
+            </div>
+            <div>
+              <label className="text-xs font-mono text-slate-400 mb-1.5 block">Business Type</label>
+              <Input
+                placeholder="Technology"
+                value={form.business_type}
+                onChange={(e) => setForm((f) => ({ ...f, business_type: e.target.value }))}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowCreate(false)}>
+              Cancel
+            </Button>
+            <Button
+              onClick={handleCreate}
+              disabled={!form.name || createMutation.isPending}
+            >
+              {createMutation.isPending && <Loader2 className="w-4 h-4 animate-spin" />}
+              Create Client
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Archive Confirmation Dialog */}
+      <Dialog open={!!showArchive} onOpenChange={() => setShowArchive(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-red-400">
+              <AlertTriangle className="w-5 h-5" />
+              Archive Client
+            </DialogTitle>
+            <DialogDescription>
+              Are you sure you want to archive this client? They will be moved to the archived list and can be restored later.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowArchive(null)}>
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={() => showArchive && archiveMutation.mutate(showArchive)}
+              disabled={archiveMutation.isPending}
+            >
+              {archiveMutation.isPending && <Loader2 className="w-4 h-4 animate-spin" />}
+              Archive Client
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

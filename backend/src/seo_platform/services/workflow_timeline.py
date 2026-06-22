@@ -7,13 +7,13 @@ real-time updates via SSE so the frontend can show live progress.
 
 from __future__ import annotations
 
-import logging
 from typing import Any
 from uuid import UUID
 
+from seo_platform.core.logging import get_logger
 from seo_platform.models.observability import CampaignTimelineEvent
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 
 class WorkflowTimelineService:

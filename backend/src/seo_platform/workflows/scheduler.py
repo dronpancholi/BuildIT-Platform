@@ -10,6 +10,7 @@ Every schedule creates REAL Temporal workflows that:
 - generate reports
 - verify health
 - create recommendations
+- monitor acquired backlinks for regressions (Workstream F)
 """
 
 from __future__ import annotations
@@ -48,6 +49,48 @@ def register_scheduled_workflow(
         "task_queue": task_queue,
         "input_data": input_data or {},
     })
+
+
+# ---------------------------------------------------------------------------
+# Workstream F: Weekly backlink regression monitor
+# ---------------------------------------------------------------------------
+# Cron format follows the standard Temporal (and POSIX) 5-field
+# expression: minute, hour, day-of-month, month, day-of-week.
+# "0 9 * * 1" = 09:00 UTC every Monday.
+register_scheduled_workflow(
+    workflow_name="ScheduledLinkMonitor",
+    cron_schedule="0 9 * * 1",
+    task_queue=TaskQueue.BACKLINK_ENGINE,
+    input_data={},
+)
+
+
+# Stand-alone APScheduler fallback for environments without a Temporal
+# Schedule client available. The worker entry-point (worker.py) calls
+# ``install_local_schedules`` on startup when the Temporal scheduler is
+# not reachable.
+_LOCAL_SCHEDULES: list[dict[str, Any]] = [
+    {
+        "name": "link_monitoring_weekly",
+        "func": "seo_platform.workflows.scheduler._local_run_link_monitor",
+        "trigger": "cron",
+        "day_of_week": "mon",
+        "hour": 9,
+        "minute": 0,
+    },
+]
+
+
+async def _local_run_link_monitor() -> dict[str, Any]:
+    """APScheduler-compatible entry point that wraps the Temporal activity."""
+    from seo_platform.workflows.link_monitoring import monitor_links_activity
+
+    return await monitor_links_activity()
+
+
+def get_local_schedules() -> list[dict[str, Any]]:
+    """Expose the local (APScheduler) schedules to the worker bootstrap."""
+    return list(_LOCAL_SCHEDULES)
 
 
 # ---------------------------------------------------------------------------

@@ -301,15 +301,7 @@ class RecommendationEngine:
             logger.warning("keyword_recommendations_failed", error=str(e))
 
         if not recommendations:
-            recommendations.append(KeywordRecommendation(
-                id="kw-default",
-                recommendation_text="Keyword portfolio appears healthy — continue monitoring for new opportunities",
-                priority="P3",
-                impact="low",
-                effort="low",
-                confidence=0.5,
-                supporting_data={"note": "no_issues_detected"},
-            ))
+            logger.info("no_keyword_recommendations", tenant_id=str(tenant_id), note="no_issues_detected")
 
         return recommendations
 
@@ -516,15 +508,7 @@ class RecommendationEngine:
             logger.warning("campaign_recommendations_failed", error=str(e))
 
         if not recommendations:
-            recommendations.append(CampaignRecommendation(
-                id="camp-default",
-                recommendation_text="No campaign optimization recommendations — all campaigns appear healthy",
-                priority="P3",
-                impact="low",
-                effort="low",
-                confidence=0.5,
-                supporting_data={"note": "no_issues_detected"},
-            ))
+            logger.info("no_campaign_recommendations", tenant_id=str(tenant_id), note="no_issues_detected")
 
         return recommendations
 
@@ -591,15 +575,7 @@ class RecommendationEngine:
             logger.warning("workflow_recommendations_failed", error=str(e))
 
         if not recommendations:
-            recommendations.append(WorkflowRecommendation(
-                id="wf-default",
-                recommendation_text="No workflow optimization needed — operational metrics are within thresholds",
-                priority="P3",
-                impact="low",
-                effort="low",
-                confidence=0.5,
-                supporting_data={"note": "normal_operations"},
-            ))
+            logger.info("no_workflow_recommendations", tenant_id=str(tenant_id), note="no_issues_detected")
 
         return recommendations
 

@@ -11,6 +11,7 @@ import type {
   KeywordOpportunity, ClusterAuthority,
   ClusterVisualizationNode, ClusterVisualizationEdge,
 } from "@/types/business-intelligence";
+import { safeNum, safeFixed, safeLocale } from "@/lib/safe";
 
 export function KeywordIntelligencePanel() {
   const [opportunities, setOpportunities] = useState<KeywordOpportunity[]>([]);
@@ -100,11 +101,12 @@ export function KeywordIntelligencePanel() {
               </div>
             ) : (
               sortedClusters.map((cluster, i) => {
-                const authorityPct = Math.round(cluster.authority * 100);
-                const opportunityPct = Math.round(cluster.opportunity * 100);
+                const authorityPct = Math.round(safeNum(cluster.authority) * 100);
+                const opportunityPct = Math.round(safeNum(cluster.opportunity) * 100);
+                const uniqueKey = cluster.name || `cluster-${i}`;
                 return (
                   <motion.div
-                    key={cluster.name}
+                    key={uniqueKey}
                     initial={{ opacity: 0, x: -5 }}
                     animate={{ opacity: 1, x: 0 }}
                     transition={{ delay: i * 0.03 }}
@@ -118,9 +120,9 @@ export function KeywordIntelligencePanel() {
                       <div className="flex items-center gap-3 text-[9px] font-mono">
                         <span className="flex items-center gap-1 text-slate-500">
                           <Globe className="w-2.5 h-2.5" />
-                          {cluster.total_volume.toLocaleString()}
+                          {safeLocale(cluster.total_volume)}
                         </span>
-                        <span className="text-slate-600">diff {cluster.avg_difficulty.toFixed(0)}%</span>
+                        <span className="text-slate-600">diff {safeFixed(cluster.avg_difficulty, 0)}%</span>
                       </div>
                     </div>
                     <div className="grid grid-cols-2 gap-2">
@@ -167,7 +169,7 @@ export function KeywordIntelligencePanel() {
               </div>
             ) : (
               topOpportunities.map((opp, i) => {
-                const oppPct = Math.round(opp.opportunity_score * 100);
+                const oppPct = Math.round(safeNum(opp.opportunity_score) * 100);
                 return (
                   <motion.div
                     key={opp.keyword}
@@ -180,8 +182,8 @@ export function KeywordIntelligencePanel() {
                     <div className="flex-1 min-w-0">
                       <p className="text-[11px] font-mono text-slate-200 truncate">{opp.keyword}</p>
                       <div className="flex items-center gap-2 text-[8px] font-mono text-slate-600">
-                        <span>vol {opp.search_volume.toLocaleString()}</span>
-                        <span>diff {opp.difficulty}%</span>
+                        <span>vol {safeLocale(opp.search_volume)}</span>
+                        <span>diff {safeNum(opp.difficulty)}%</span>
                         {opp.cluster && <span className="text-platform-500/70">{opp.cluster}</span>}
                       </div>
                     </div>

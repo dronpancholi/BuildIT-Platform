@@ -45,24 +45,25 @@ export function CommandCenter() {
     setSuccess(null);
     setWorkflowRunId(null);
 
-    const data = Object.fromEntries(formData.entries());
+    const raw = Object.fromEntries(formData.entries());
+    const goals = formData.getAll("goals");
 
     try {
       let endpoint = "";
-      let payload: Record<string, unknown> = Object.fromEntries(formData.entries());
+      let payload: Record<string, unknown> = { ...raw, goals };
       let expectedWorkflowId = "";
 
       switch (activeCommand) {
         case "add_client":
           endpoint = "/clients";
-          payload = { ...data, tenant_id: MOCK_TENANT_ID };
+          payload = { ...raw, goals, tenant_id: MOCK_TENANT_ID };
           break;
         case "create_campaign":
           endpoint = "/campaigns";
           payload = {
-            ...data,
+            ...raw,
             tenant_id: MOCK_TENANT_ID,
-            target_link_count: parseInt(data.target_link_count as string) || 10,
+            target_link_count: parseInt(raw.target_link_count as string) || 10,
           };
           break;
         case "generate_report":
@@ -73,9 +74,9 @@ export function CommandCenter() {
           break;
         case "keyword_discovery":
           endpoint = "/keywords/research";
-          const rawKeywords = data.seed_keywords as string || "";
+          const rawKeywords = raw.seed_keywords as string || "";
           payload = {
-            ...data,
+            ...raw,
             tenant_id: MOCK_TENANT_ID,
             seed_keywords: rawKeywords ? rawKeywords.split(",").map((s: string) => s.trim()) : [],
           };

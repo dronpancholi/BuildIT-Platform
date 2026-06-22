@@ -88,7 +88,8 @@ class SEOScraperEngine(BaseScraper):
                         if title_el:
                             title = await title_el.inner_text()
                             break
-                    except:
+                    except Exception as e:
+                        logger.debug("title_selector_failed", selector=selector, error=str(e))
                         continue
 
                 for selector in ["a", "div.r a"]:
@@ -97,7 +98,8 @@ class SEOScraperEngine(BaseScraper):
                         if link_el:
                             url = await link_el.get_attribute("href")
                             break
-                    except:
+                    except Exception as e:
+                        logger.debug("link_selector_failed", selector=selector, error=str(e))
                         continue
 
                 for selector in self.DESC_SELECTORS:
@@ -106,7 +108,8 @@ class SEOScraperEngine(BaseScraper):
                         if desc_el:
                             desc = await desc_el.inner_text()
                             break
-                    except:
+                    except Exception as e:
+                        logger.debug("desc_selector_failed", selector=selector, error=str(e))
                         continue
 
                 if title and url and "http" in url:
@@ -142,7 +145,8 @@ class SEOScraperEngine(BaseScraper):
                     text = await el.inner_text()
                     if text and len(text) > 10:
                         questions.append(text)
-                except:
+                except Exception as e:
+                    logger.debug("paa_extraction_failed", error=str(e))
                     continue
 
             return questions
@@ -175,7 +179,8 @@ class SEOScraperEngine(BaseScraper):
                     text = await el.inner_text()
                     if text and len(text) > 2:
                         suggestions.append(text)
-                except:
+                except Exception as e:
+                    logger.debug("autocomplete_extraction_failed", error=str(e))
                     continue
 
             return suggestions

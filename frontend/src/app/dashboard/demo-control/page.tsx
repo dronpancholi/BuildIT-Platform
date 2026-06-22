@@ -8,6 +8,7 @@ import {
 } from "lucide-react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { fetchApi, MOCK_TENANT_ID } from "@/lib/api";
+import { safeArr, safeStr, safeNum, safeUpper, safeLower, safeFixed, safeLocale, safePct, safeDate, safeDateTime, safeTime, safeReplace, safeSplit, safeSlice, safeStartsWith, safeFind, safeIncludes, safeSort, safeObj, safeKeys, safeValues, safeEntries, safeInitials } from "@/lib/safe";
 
 interface Scenario {
   name: string;
@@ -87,14 +88,32 @@ export default function DemoControlPage() {
     }
   };
 
-  const checkEntries = readiness ? Object.entries(readiness.checks) : [];
+  const checkEntries = readiness ? safeEntries(readiness.checks) : [];
 
   return (
     <div className="space-y-6">
+      <div className="glass-panel p-4 border-amber-500/30 bg-amber-500/5">
+        <div className="flex items-start gap-3">
+          <AlertTriangle className="w-5 h-5 text-amber-400 mt-0.5 flex-shrink-0" />
+          <div>
+            <h3 className="text-sm font-semibold text-amber-300 mb-1">Demo injection is disabled in operator mode</h3>
+            <p className="text-xs text-slate-300 font-mono leading-relaxed">
+              Scenario load and reset actions return 410 Gone. To create a real tenant and add
+              real data, use the onboarding flow (<code className="text-amber-300">POST /api/v1/identity/onboard</code>)
+              then add clients and campaigns. The readiness check below is still active and reflects
+              real infrastructure health (PostgreSQL, Redis, Temporal, AI).
+            </p>
+          </div>
+        </div>
+      </div>
+
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold text-slate-100 tracking-tight font-mono">DEMO_CONTROL</h1>
           <p className="text-slate-400 mt-1 font-mono text-sm uppercase tracking-wider">Scenario injection & workspace management</p>
+        </div>
+        <div className="px-3 py-1.5 rounded-md border text-xs font-mono flex items-center gap-2 bg-amber-500/10 border-amber-500/20 text-amber-400">
+          <AlertTriangle className="w-3 h-3" /> DEMO INJECTION DISABLED
         </div>
         <div className={`px-3 py-1.5 rounded-md border text-xs font-mono flex items-center gap-2 ${
           readiness?.overall_healthy
@@ -102,7 +121,7 @@ export default function DemoControlPage() {
             : "bg-red-500/10 border-red-500/20 text-red-400"
         }`}>
           <span className={`w-2 h-2 rounded-full ${readiness?.overall_healthy ? "bg-emerald-500" : "bg-red-500"} ${!readiness?.overall_healthy ? "animate-pulse" : ""}`} />
-          {readiness?.readiness.toUpperCase() ?? "CHECKING"}
+          {safeUpper(readiness?.readiness, "CHECKING")}
         </div>
       </div>
 
@@ -119,7 +138,7 @@ export default function DemoControlPage() {
           </div>
         ) : (
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-            {checkEntries.map(([name, check]) => (
+            {safeArr<[string, ReadinessCheck]>(checkEntries).map(([name, check]) => (
               <div key={name} className={`p-3 rounded-lg border ${
                 check.healthy
                   ? "bg-emerald-500/5 border-emerald-500/20"
@@ -156,11 +175,11 @@ export default function DemoControlPage() {
             <div className="flex justify-center py-8">
               <Loader2 className="w-6 h-6 text-platform-500 animate-spin" />
             </div>
-          ) : scenarios.length === 0 ? (
+          ) : safeArr<Scenario>(scenarios).length === 0 ? (
             <div className="text-center py-8 text-slate-500 font-mono text-sm">NO_SCENARIOS_AVAILABLE</div>
           ) : (
             <div className="space-y-3">
-              {scenarios.map((scenario) => (
+              {safeArr<Scenario>(scenarios).map((scenario) => (
                 <motion.div
                   key={scenario.name}
                   initial={{ opacity: 0, y: 10 }}
@@ -181,7 +200,7 @@ export default function DemoControlPage() {
                     {loadingScenario === scenario.name ? (
                       <><Loader2 className="w-3.5 h-3.5 animate-spin" /> LOADING...</>
                     ) : (
-                      <><Sparkles className="w-3.5 h-3.5" /> LOAD {scenario.name.toUpperCase()}</>
+                      <><Sparkles className="w-3.5 h-3.5" /> LOAD {safeUpper(scenario.name)}</>
                     )}
                   </button>
                 </motion.div>

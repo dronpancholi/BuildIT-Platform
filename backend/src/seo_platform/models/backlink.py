@@ -47,6 +47,15 @@ class CampaignStatus(str, enum.Enum):
     MONITORING = "monitoring"
     COMPLETE = "complete"
     CANCELLED = "cancelled"
+    ARCHIVED = "archived"
+
+    # Phase R1 fix — workflow fail-loud guard states that the
+    # BacklinkCampaignWorkflow writes via update_campaign_status_activity(...).
+    # Without these members, CampaignStatus(status) raises ValueError and
+    # the activity retries forever, evicting the workflow with no outcome
+    # persisted (see S5B-FIX for diagnosis).
+    FAILED_NO_PROSPECTS = "failed_no_prospects"
+    FAILED_NO_EMAILS_SENT = "failed_no_emails_sent"
 
 
 class CampaignType(str, enum.Enum):
@@ -132,6 +141,9 @@ class BacklinkCampaign(Base, UUIDPrimaryKeyMixin, TenantMixin, TimestampMixin):
     prospects: Mapped[list[BacklinkProspect]] = relationship(
         "BacklinkProspect", back_populates="campaign", lazy="dynamic",
     )
+    threads: Mapped[list[OutreachThread]] = relationship(
+        "OutreachThread", back_populates="campaign", lazy="selectin",
+    )
 
 
 class BacklinkProspect(Base, UUIDPrimaryKeyMixin, TenantMixin, TimestampMixin):
@@ -165,6 +177,14 @@ class BacklinkProspect(Base, UUIDPrimaryKeyMixin, TenantMixin, TimestampMixin):
     contact_name: Mapped[str | None] = mapped_column(String(255), nullable=True)
     contact_email: Mapped[str | None] = mapped_column(String(255), nullable=True)
     contact_source: Mapped[str | None] = mapped_column(String(50), nullable=True)  # hunter, snov, manual
+
+    # Email verification (Phase 1.2 — Workstream C)
+    email_verification_status: Mapped[str] = mapped_column(
+        String(50), nullable=False, server_default=text("'unverified'"),
+    )  # unverified | deliverable | undeliverable | risky | unknown
+    email_verification_result: Mapped[dict[str, Any]] = mapped_column(
+        JSONB, nullable=False, server_default=text("'{}'::jsonb"),
+    )
 
     scoring_rationale: Mapped[dict[str, Any]] = mapped_column(
         JSONB, nullable=False, server_default=text("'{}'::jsonb"),
@@ -212,6 +232,7 @@ class OutreachThread(Base, UUIDPrimaryKeyMixin, TenantMixin, TimestampMixin):
     )
 
     # Relationships
+    campaign: Mapped[BacklinkCampaign] = relationship("BacklinkCampaign", lazy="selectin")
     prospect: Mapped[BacklinkProspect] = relationship("BacklinkProspect", back_populates="threads")
 
 
@@ -240,3 +261,17 @@ class AcquiredLink(Base, UUIDPrimaryKeyMixin, TenantMixin, TimestampMixin):
     first_verified_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     last_checked_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     check_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+
+    # --- Workstream E: Link Verification Engine telemetry ---
+    verification_history: Mapped[list[dict[str, Any]]] = mapped_column(
+        JSONB, nullable=False, server_default=text("'[]'::jsonb"),
+    )
+    last_http_status: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    last_response_time_ms: Mapped[float | None] = mapped_column(Float, nullable=True)
+    last_checked_redirect_chain: Mapped[list[dict[str, Any]] | None] = mapped_column(
+        JSONB, nullable=True,
+    )
+    last_match_anchor: Mapped[str | None] = mapped_column(String(500), nullable=True)
+    last_match_rel: Mapped[str | None] = mapped_column(String(100), nullable=True)
+    last_match_position: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    last_error: Mapped[str | None] = mapped_column(Text, nullable=True)

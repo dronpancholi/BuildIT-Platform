@@ -1,3 +1,4 @@
+# PHASE 1.2 — Simulation removed: yellowpages adapter import (file deleted) and stubbed Yelp branch
 """
 SEO Platform — Citation Submission Workflow
 ==========================================
@@ -131,9 +132,7 @@ async def execute_directory_submission(
 
     try:
         if adapter_name == "yellowpages":
-            from seo_platform.services.citation_engine.adapters.yellowpages import YellowPagesAdapter
-            adapter = YellowPagesAdapter()
-            result = await adapter.submit_profile(profile_id)
+            result = {"success": False, "error": "YellowPages adapter is not available — no real submission path is configured."}
         elif adapter_name == "yelp":
             result = {"success": False, "error": "Yelp adapter not implemented"}
         else:
@@ -236,76 +235,97 @@ class CitationSubmissionWorkflow:
         input_data = CitationWorkflowInput.model_validate_json(input_json)
         output = CitationWorkflowOutput(errors=[])
 
-        validation = await workflow.execute_activity(
-            validate_business_profile,
-            args=[input_data.tenant_id, input_data.profile_id],
-            task_queue=TaskQueue.SEO_INTELLIGENCE,
-            start_to_close_timeout=timedelta(minutes=2),
-            retry_policy=RetryPreset.DATABASE,
-        )
-
-        if not validation.get("valid"):
-            output.errors.append(f"Profile validation failed: {validation.get('error')}")
-            return output.model_dump_json()
-
-        governance = await workflow.execute_activity(
-            governance_scan_activity,
-            args=[input_data.tenant_id, {"profile_id": input_data.profile_id}],
-            task_queue=TaskQueue.AI_ORCHESTRATION,
-            start_to_close_timeout=timedelta(minutes=3),
-            retry_policy=RetryPreset.LLM_INFERENCE,
-        )
-
-        if governance.get("risk_score", 0) > 0.8:
-            output.errors.append("Governance scan failed - high risk score")
-            return output.model_dump_json()
-
-        approval_result = await workflow.execute_activity(
-            create_citation_approval,
-            args=[input_data.tenant_id, workflow.info().workflow_id, input_data.profile_id, input_data.adapter_name],
-            task_queue=TaskQueue.SEO_INTELLIGENCE,
-            start_to_close_timeout=timedelta(seconds=30),
-            retry_policy=RetryPreset.DATABASE,
-        )
-
-        self._approval_decision = None
-        await workflow.wait_condition(
-            lambda: self._approval_decision is not None,
-            timeout=timedelta(hours=24),
-        )
-
-        if self._approval_decision != "approved":
-            output.errors.append("Citation submission rejected")
-            return output.model_dump_json()
-
-        submission_result = await workflow.execute_activity(
-            execute_directory_submission,
-            args=[input_data.tenant_id, input_data.profile_id, input_data.adapter_name],
-            task_queue=TaskQueue.SEO_INTELLIGENCE,
-            start_to_close_timeout=timedelta(minutes=10),
-            retry_policy=RetryPreset.SCRAPING,
-        )
-
-        if submission_result.get("success"):
-            output.success = True
-            output.submission_url = submission_result.get("submission_url", "")
-            output.verification_state = "pending"
-
-            verify_result = await workflow.execute_activity(
-                verify_citation_listing,
-                args=[
-                    input_data.tenant_id,
-                    input_data.profile_id,
-                    input_data.adapter_name,
-                    submission_result.get("submission_url", ""),
-                ],
+        try:
+            validation = await workflow.execute_activity(
+                validate_business_profile,
+                args=[input_data.tenant_id, input_data.profile_id],
                 task_queue=TaskQueue.SEO_INTELLIGENCE,
                 start_to_close_timeout=timedelta(minutes=2),
+                retry_policy=RetryPreset.DATABASE,
+            )
+
+            if not validation.get("valid"):
+                output.errors.append(f"Profile validation failed: {validation.get('error')}")
+                return output.model_dump_json()
+
+            governance = await workflow.execute_activity(
+                governance_scan_activity,
+                args=[input_data.tenant_id, {"profile_id": input_data.profile_id}],
+                task_queue=TaskQueue.AI_ORCHESTRATION,
+                start_to_close_timeout=timedelta(minutes=3),
+                retry_policy=RetryPreset.LLM_INFERENCE,
+            )
+
+            if governance.get("risk_score", 0) > 0.8:
+                output.errors.append("Governance scan failed - high risk score")
+                return output.model_dump_json()
+
+            approval_result = await workflow.execute_activity(
+                create_citation_approval,
+                args=[input_data.tenant_id, workflow.info().workflow_id, input_data.profile_id, input_data.adapter_name],
+                task_queue=TaskQueue.SEO_INTELLIGENCE,
+                start_to_close_timeout=timedelta(seconds=30),
+                retry_policy=RetryPreset.DATABASE,
+            )
+
+            self._approval_decision = None
+            await workflow.wait_condition(
+                lambda: self._approval_decision is not None,
+                timeout=timedelta(hours=24),
+            )
+
+            if self._approval_decision != "approved":
+                output.errors.append("Citation submission rejected")
+                return output.model_dump_json()
+
+            submission_result = await workflow.execute_activity(
+                execute_directory_submission,
+                args=[input_data.tenant_id, input_data.profile_id, input_data.adapter_name],
+                task_queue=TaskQueue.SEO_INTELLIGENCE,
+                start_to_close_timeout=timedelta(minutes=10),
                 retry_policy=RetryPreset.SCRAPING,
             )
-            output.verification_state = "verified" if verify_result.get("verified") else "unverified"
-        else:
-            output.errors.append(submission_result.get("error", "Submission failed"))
+
+            if submission_result.get("success"):
+                output.success = True
+                output.submission_url = submission_result.get("submission_url", "")
+                output.verification_state = "pending"
+
+                verify_result = await workflow.execute_activity(
+                    verify_citation_listing,
+                    args=[
+                        input_data.tenant_id,
+                        input_data.profile_id,
+                        input_data.adapter_name,
+                        submission_result.get("submission_url", ""),
+                    ],
+                    task_queue=TaskQueue.SEO_INTELLIGENCE,
+                    start_to_close_timeout=timedelta(minutes=2),
+                    retry_policy=RetryPreset.SCRAPING,
+                )
+                output.verification_state = "verified" if verify_result.get("verified") else "unverified"
+            else:
+                output.errors.append(submission_result.get("error", "Submission failed"))
+                raise RuntimeError(submission_result.get("error", "Submission failed"))
+
+        except Exception as e:
+            try:
+                from seo_platform.workflows.backlink_campaign import raise_workflow_failure_alert_activity
+                await workflow.execute_activity(
+                    raise_workflow_failure_alert_activity,
+                    args=[
+                        str(input_data.tenant_id),
+                        str(input_data.profile_id),
+                        "CitationSubmissionWorkflow",
+                        str(e),
+                    ],
+                    task_queue=TaskQueue.SEO_INTELLIGENCE,
+                    start_to_close_timeout=timedelta(seconds=30),
+                    retry_policy=RetryPreset.DATABASE,
+                )
+            except Exception as alert_err:
+                logger.warning("failed_to_raise_workflow_failure_alert", error=str(alert_err))
+            output.errors.append(str(e))
 
         return output.model_dump_json()
 

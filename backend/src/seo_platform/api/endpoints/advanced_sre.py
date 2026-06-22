@@ -8,6 +8,7 @@ and infra self-analysis.
 
 from __future__ import annotations
 
+from seo_platform.core.auth import get_validated_tenant_id
 from fastapi import APIRouter, Query
 
 from seo_platform.services.advanced_sre import advanced_sre
@@ -15,7 +16,7 @@ from seo_platform.services.advanced_sre import advanced_sre
 router = APIRouter()
 
 
-@router.get("/advanced-sre/incident-predictions")
+@router.get("/incident-predictions")
 async def get_incident_predictions(
     lookahead_hours: int = Query(24, ge=1, le=168, description="Hours to look ahead for predictions"),
 ) -> dict:
@@ -24,7 +25,7 @@ async def get_incident_predictions(
     return {"success": True, "data": [p.model_dump() for p in predictions]}
 
 
-@router.get("/advanced-sre/autonomous-diagnostics")
+@router.get("/autonomous-diagnostics")
 async def get_autonomous_diagnostics(
     scope: str = Query("full", description="Diagnostic scope (full, quick)"),
 ) -> dict:
@@ -33,7 +34,7 @@ async def get_autonomous_diagnostics(
     return {"success": True, "data": diagnostics.model_dump()}
 
 
-@router.get("/advanced-sre/workflow-degradation-forecast")
+@router.get("/workflow-degradation-forecast")
 async def get_workflow_degradation_forecast(
     workflow_type: str = Query(..., description="Workflow type to forecast degradation for"),
     lookahead_hours: int = Query(24, ge=1, le=168, description="Hours to forecast ahead"),
@@ -43,21 +44,21 @@ async def get_workflow_degradation_forecast(
     return {"success": True, "data": forecast.model_dump()}
 
 
-@router.get("/advanced-sre/operational-pressure-prediction")
+@router.get("/operational-pressure-prediction")
 async def get_operational_pressure_prediction() -> dict:
     """Predict operational pressure across system components."""
     predictions = await advanced_sre.predict_operational_pressure()
     return {"success": True, "data": [p.model_dump() for p in predictions]}
 
 
-@router.get("/advanced-sre/distributed-anomaly-intelligence")
+@router.get("/distributed-anomaly-intelligence")
 async def get_distributed_anomaly_intelligence() -> dict:
     """Analyze distributed anomaly intelligence across the system."""
     anomalies = await advanced_sre.analyze_distributed_anomaly_intelligence()
     return {"success": True, "data": [a.model_dump() for a in anomalies]}
 
 
-@router.get("/advanced-sre/infra-self-analysis")
+@router.get("/infra-self-analysis")
 async def get_infra_self_analysis() -> dict:
     """Run comprehensive infrastructure self-analysis."""
     report = await advanced_sre.run_infra_self_analysis()

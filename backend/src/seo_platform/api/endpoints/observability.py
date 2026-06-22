@@ -7,18 +7,19 @@ AI inference analytics, scraping telemetry, and communication telemetry.
 
 from __future__ import annotations
 
+from seo_platform.core.auth import get_validated_tenant_id
 from uuid import UUID
 
-from fastapi import APIRouter, Query
+from fastapi import Depends,  APIRouter, Query
 
 from seo_platform.services.observability_service import observability_service
 
 router = APIRouter()
 
 
-@router.get("/observability/traces")
+@router.get("/traces")
 async def get_traces(
-    tenant_id: UUID = Query(..., description="Tenant UUID"),
+    tenant_id: UUID = Depends(get_validated_tenant_id),
     workflow_type: str | None = Query(None, description="Filter by workflow type"),
     status: str | None = Query(None, description="Filter by execution status"),
     time_window_hours: int = Query(24, description="Time window in hours"),
@@ -37,7 +38,7 @@ async def get_traces(
     }
 
 
-@router.get("/observability/workflow-analytics")
+@router.get("/workflow-analytics")
 async def get_workflow_analytics(
     time_window_hours: int = Query(24, description="Time window in hours"),
 ) -> dict:
@@ -46,7 +47,7 @@ async def get_workflow_analytics(
     return {"success": True, "data": analytics.model_dump()}
 
 
-@router.get("/observability/retry-analytics")
+@router.get("/retry-analytics")
 async def get_retry_analytics(
     time_window_hours: int = Query(24, description="Time window in hours"),
 ) -> dict:
@@ -55,7 +56,7 @@ async def get_retry_analytics(
     return {"success": True, "data": analytics.model_dump()}
 
 
-@router.get("/observability/inference-analytics")
+@router.get("/inference-analytics")
 async def get_inference_analytics(
     time_window_hours: int = Query(24, description="Time window in hours"),
 ) -> dict:
@@ -64,7 +65,7 @@ async def get_inference_analytics(
     return {"success": True, "data": analytics.model_dump()}
 
 
-@router.get("/observability/scraping-telemetry")
+@router.get("/scraping-telemetry")
 async def get_scraping_telemetry(
     time_window_hours: int = Query(24, description="Time window in hours"),
 ) -> dict:
@@ -73,9 +74,9 @@ async def get_scraping_telemetry(
     return {"success": True, "data": telemetry.model_dump()}
 
 
-@router.get("/observability/communication-telemetry")
+@router.get("/communication-telemetry")
 async def get_communication_telemetry(
-    tenant_id: UUID = Query(..., description="Tenant UUID"),
+    tenant_id: UUID = Depends(get_validated_tenant_id),
     time_window_hours: int = Query(24, description="Time window in hours"),
 ) -> dict:
     """Return email communication telemetry from database."""

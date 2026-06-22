@@ -1,8 +1,18 @@
 """
-SEO Platform — Local Development Seed Script
-=============================================
-Populates the database with realistic test data for the operations console.
-Run with: uv run python -m seo_platform.scripts.seed
+SEO Platform — Local Development Seed Script (DEV-ONLY)
+========================================================
+Populates the database with Faker-generated synthetic test data for local
+exploration of the operations console. NOT FOR PRODUCTION.
+
+This script is intentionally NOT imported by the application. It must be
+invoked explicitly:
+
+    PYTHONPATH=backend/src uv run python -m seo_platform.scripts.seed
+
+Phase 2.5.1: Production-grade deployments do not run this. Real customer
+onboarding uses `POST /api/v1/identity/onboard` (empty tenant, 0 rows).
+The script is retained for local dev convenience and for the demo
+console (which is a Phase 2.5 deliverable, not a production path).
 """
 
 import asyncio

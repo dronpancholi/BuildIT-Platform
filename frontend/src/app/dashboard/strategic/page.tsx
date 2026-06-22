@@ -7,43 +7,58 @@ import {
 } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { fetchApi, MOCK_TENANT_ID } from "@/lib/api";
+import { safeArr, safeNum, safeStr, safeUpper, safeReplace, safeObj } from "@/lib/safe";
 
 interface KeyMetrics {
-  total_campaigns: number;
-  active_workflows: number;
-  avg_health_score: number;
-  pending_approvals: number;
-  [key: string]: number;
+  total_campaigns?: number;
+  active_workflows?: number;
+  active_workers?: number;
+  total_workers?: number;
+  failed_workflows?: number;
+  time_window_hours?: number;
+  [key: string]: number | undefined;
 }
 
 interface OperationalSummary {
   key_metrics: KeyMetrics;
-  notable_events: string[];
+  notable_events: Array<string | Record<string, unknown>>;
   recommended_focus: string[];
+  narrative?: string;
 }
 
 interface StrategicAction {
   action: string;
-  impact: string;
+  impact?: string;
   priority: string;
+  category?: string;
 }
 
 interface StrategicContext {
-  active_campaigns: number;
-  pending_approvals: number;
-  infra_health: string;
+  active_campaigns: Array<{ id: string; name: string; status: string; acquired_links: number; target_links: number; health_score: number }> | number;
+  pending_approvals: Array<{ id: string; type: string; summary: string }> | number;
+  infra_health: { overall_status: string; congested_queues?: unknown[]; degraded_components?: unknown[] };
+  ongoing_anomalies?: unknown[];
   strategic_actions: StrategicAction[];
 }
 
 interface CampaignPerformance {
-  campaign: string;
-  score: number;
-  trend: string;
+  name: string;
+  campaign?: string;  // legacy alias
+  score?: number;
+  completion_pct?: number;
+  trend?: string;
+  reply_rate?: number;
+  acquired_links?: number;
+  target_links?: number;
 }
 
 interface WorkflowReliability {
-  workflow: string;
-  reliability: number;
+  workflow?: string;
+  queue?: string;
+  reliability?: number;
+  congestion_level?: string;
+  depth?: number;
+  worker_count?: number;
 }
 
 interface OrganizationIntelligence {
@@ -99,14 +114,16 @@ const SEVERITY_BADGE: Record<string, string> = {
 };
 
 function probColor(p: number): string {
-  if (p >= 0.7) return "bg-emerald-500";
-  if (p >= 0.4) return "bg-amber-500";
+  const n = safeNum(p);
+  if (n >= 0.7) return "bg-emerald-500";
+  if (n >= 0.4) return "bg-amber-500";
   return "bg-red-500";
 }
 
 function probTextColor(p: number): string {
-  if (p >= 0.7) return "text-emerald-400";
-  if (p >= 0.4) return "text-amber-400";
+  const n = safeNum(p);
+  if (n >= 0.7) return "text-emerald-400";
+  if (n >= 0.4) return "text-amber-400";
   return "text-red-400";
 }
 
@@ -139,9 +156,9 @@ export default function StrategicPage() {
     refetchInterval: 15000,
   });
 
-  const actions = Array.isArray(prioritized) ? prioritized : [];
-  const sortedActions = [...actions].sort((a, b) => a.priority.localeCompare(b.priority));
-  const anomalies = predictiveDashboard?.predicted_anomalies || [];
+  const actions = safeArr<PrioritizedAction>(prioritized);
+  const sortedActions = [...actions].sort((a, b) => safeStr(a.priority).localeCompare(safeStr(b.priority)));
+  const anomalies = safeArr<PredictiveAlert>(predictiveDashboard?.predicted_anomalies);
   const criticalCount = anomalies.filter(a => a.severity === "critical").length;
 
   return (
@@ -186,8 +203,8 @@ export default function StrategicPage() {
                 <div className="grid grid-cols-2 gap-3">
                   {Object.entries(summary.key_metrics).map(([key, val]) => (
                     <div key={key} className="p-3 rounded-md bg-surface-darker/50 border border-surface-border/50">
-                      <p className="text-[10px] font-mono text-slate-500 uppercase">{key.replace(/_/g, " ")}</p>
-                      <p className="text-lg font-bold font-mono text-slate-200 mt-1">{typeof val === "number" ? val : val}</p>
+                      <p className="text-[10px] font-mono text-slate-500 uppercase">{safeReplace(key, /_/g, " ")}</p>
+                      <p className="text-lg font-bold font-mono text-slate-200 mt-1">{typeof val === "number" ? val : safeStr(val)}</p>
                     </div>
                   ))}
                 </div>
@@ -196,12 +213,19 @@ export default function StrategicPage() {
                 <div>
                   <p className="text-[10px] font-mono text-amber-400 uppercase mb-2">Notable Events</p>
                   <div className="space-y-1">
-                    {summary.notable_events.map((evt, i) => (
-                      <div key={i} className="flex items-center gap-2 text-xs font-mono text-slate-300">
-                        <span className="w-1.5 h-1.5 rounded-full bg-amber-500 flex-shrink-0" />
-                        {evt}
-                      </div>
-                    ))}
+                    {summary.notable_events.map((evt, i) => {
+                      const obj = safeObj(evt);
+                      const label = typeof evt === "string" ? evt :
+                        (obj.message as string) ||
+                        (obj.type as string) ||
+                        safeStr(evt);
+                      return (
+                        <div key={i} className="flex items-center gap-2 text-xs font-mono text-slate-300">
+                          <span className="w-1.5 h-1.5 rounded-full bg-amber-500 flex-shrink-0" />
+                          {label}
+                        </div>
+                      );
+                    })}
                   </div>
                 </div>
               )}
@@ -239,16 +263,25 @@ export default function StrategicPage() {
               <div className="grid grid-cols-3 gap-3">
                 <div className="p-3 rounded-md bg-surface-darker/50 border border-surface-border/50 text-center">
                   <p className="text-[10px] font-mono text-slate-500 uppercase">Campaigns</p>
-                  <p className="text-xl font-bold font-mono text-slate-200">{strategicContext.active_campaigns}</p>
+                  <p className="text-xl font-bold font-mono text-slate-200">
+                    {Array.isArray(strategicContext.active_campaigns) ? strategicContext.active_campaigns.length : safeStr(strategicContext.active_campaigns)}
+                  </p>
                 </div>
                 <div className="p-3 rounded-md bg-surface-darker/50 border border-surface-border/50 text-center">
                   <p className="text-[10px] font-mono text-slate-500 uppercase">Approvals</p>
-                  <p className="text-xl font-bold font-mono text-amber-400">{strategicContext.pending_approvals}</p>
+                  <p className="text-xl font-bold font-mono text-amber-400">
+                    {Array.isArray(strategicContext.pending_approvals) ? strategicContext.pending_approvals.length : safeStr(strategicContext.pending_approvals)}
+                  </p>
                 </div>
                 <div className="p-3 rounded-md bg-surface-darker/50 border border-surface-border/50 text-center">
                   <p className="text-[10px] font-mono text-slate-500 uppercase">Infra</p>
-                  <p className={`text-xl font-bold font-mono ${strategicContext.infra_health === "healthy" ? "text-emerald-400" : "text-red-400"}`}>
-                    {strategicContext.infra_health?.toUpperCase() || "—"}
+                  <p className={`text-xl font-bold font-mono ${
+                    (typeof strategicContext.infra_health === 'object' ? strategicContext.infra_health.overall_status : strategicContext.infra_health) === "healthy"
+                      ? "text-emerald-400" : "text-amber-400"
+                  }`}>
+                    {safeUpper(typeof strategicContext.infra_health === 'object'
+                      ? strategicContext.infra_health.overall_status
+                      : strategicContext.infra_health)}
                   </p>
                 </div>
               </div>
@@ -262,7 +295,7 @@ export default function StrategicPage() {
                           <span className={`text-[10px] font-mono px-1.5 py-0.5 rounded border font-bold ${PRIORITY_BADGE[a.priority] || PRIORITY_BADGE.P3}`}>{a.priority}</span>
                           <span className="text-xs font-mono text-slate-300">{a.action}</span>
                         </div>
-                        <span className="text-[10px] font-mono text-slate-500">{a.impact}</span>
+                        <span className="text-[10px] font-mono text-slate-500">{safeStr(a.impact)}</span>
                       </div>
                     ))}
                   </div>
@@ -293,39 +326,49 @@ export default function StrategicPage() {
                 <div>
                   <p className="text-[10px] font-mono text-slate-500 uppercase mb-2">Campaign Performance</p>
                   <div className="space-y-2">
-                    {orgIntelligence.campaign_performance.map((c, i) => (
-                      <div key={i} className="space-y-1">
-                        <div className="flex items-center justify-between">
-                          <span className="text-xs font-mono text-slate-300">{c.campaign}</span>
-                          <span className={`text-[10px] font-mono ${c.trend === "up" ? "text-emerald-400" : c.trend === "down" ? "text-red-400" : "text-slate-500"}`}>
-                            {Math.round(c.score)}% {c.trend === "up" ? "↑" : c.trend === "down" ? "↓" : "→"}
-                          </span>
+                    {orgIntelligence.campaign_performance.map((c, i) => {
+                      const score = safeNum(c.score ?? c.completion_pct ?? (c.reply_rate != null ? c.reply_rate * 100 : 0));
+                      const campaignName = c.name || c.campaign || `Campaign ${i + 1}`;
+                      const trend = c.trend || (score > 50 ? "up" : score > 20 ? "stable" : "down");
+                      return (
+                        <div key={i} className="space-y-1">
+                          <div className="flex items-center justify-between">
+                            <span className="text-xs font-mono text-slate-300 truncate pr-2">{campaignName}</span>
+                            <span className={`text-[10px] font-mono flex-shrink-0 ${trend === "up" ? "text-emerald-400" : trend === "down" ? "text-red-400" : "text-slate-500"}`}>
+                              {Math.round(score)}% {trend === "up" ? "↑" : trend === "down" ? "↓" : "→"}
+                            </span>
+                          </div>
+                          <div className="w-full h-1.5 bg-surface-darker rounded-full overflow-hidden">
+                            <motion.div
+                              initial={{ width: 0 }}
+                              animate={{ width: `${Math.min(score, 100)}%` }}
+                              className={`h-full rounded-full ${score >= 70 ? "bg-emerald-500" : score >= 40 ? "bg-amber-500" : "bg-red-500"}`}
+                              transition={{ duration: 0.5 }}
+                            />
+                          </div>
                         </div>
-                        <div className="w-full h-1.5 bg-surface-darker rounded-full overflow-hidden">
-                          <motion.div
-                            initial={{ width: 0 }}
-                            animate={{ width: `${c.score}%` }}
-                            className={`h-full rounded-full ${c.score >= 70 ? "bg-emerald-500" : c.score >= 40 ? "bg-amber-500" : "bg-red-500"}`}
-                            transition={{ duration: 0.5 }}
-                          />
-                        </div>
-                      </div>
-                    ))}
+                      );
+                    })}
                   </div>
                 </div>
               )}
               {orgIntelligence.workflow_reliability && orgIntelligence.workflow_reliability.length > 0 && (
                 <div>
-                  <p className="text-[10px] font-mono text-slate-500 uppercase mb-2 mt-4">Workflow Reliability</p>
+                  <p className="text-[10px] font-mono text-slate-500 uppercase mb-2 mt-4">Queue Reliability</p>
                   <div className="space-y-2">
-                    {orgIntelligence.workflow_reliability.map((w, i) => (
-                      <div key={i} className="flex items-center justify-between p-2 rounded bg-surface-darker/30 border border-surface-border/30">
-                        <span className="text-xs font-mono text-slate-300">{w.workflow}</span>
-                        <span className={`text-xs font-mono font-bold ${w.reliability >= 80 ? "text-emerald-400" : w.reliability >= 50 ? "text-amber-400" : "text-red-400"}`}>
-                          {Math.round(w.reliability)}%
-                        </span>
-                      </div>
-                    ))}
+                    {orgIntelligence.workflow_reliability.map((w, i) => {
+                      const label = w.workflow || w.queue || `Queue ${i + 1}`;
+                      const level = w.congestion_level || "none";
+                      const reliability = safeNum(w.reliability ?? (level === "none" ? 100 : level === "low" ? 80 : level === "high" ? 40 : 60));
+                      return (
+                        <div key={i} className="flex items-center justify-between p-2 rounded bg-surface-darker/30 border border-surface-border/30">
+                          <span className="text-xs font-mono text-slate-300 truncate pr-2">{label}</span>
+                          <span className={`text-xs font-mono font-bold flex-shrink-0 ${reliability >= 80 ? "text-emerald-400" : reliability >= 50 ? "text-amber-400" : "text-red-400"}`}>
+                            {Math.round(reliability)}%
+                          </span>
+                        </div>
+                      );
+                    })}
                   </div>
                 </div>
               )}
@@ -366,7 +409,7 @@ export default function StrategicPage() {
                     <span className="text-[10px] font-mono text-slate-500 uppercase">{a.category}</span>
                   </div>
                   <p className="text-xs font-mono text-slate-300">{a.action}</p>
-                  <p className="text-[10px] font-mono text-slate-600 mt-1">Impact: {a.impact}</p>
+                  <p className="text-[10px] font-mono text-slate-600 mt-1">Impact: {safeStr(a.impact)}</p>
                 </motion.div>
               ))}
             </div>
@@ -407,7 +450,7 @@ export default function StrategicPage() {
               >
                 <div className="flex items-center gap-2 mb-2">
                   <span className={`text-[10px] font-mono px-1.5 py-0.5 rounded border font-bold ${SEVERITY_BADGE[a.severity] || SEVERITY_BADGE.low}`}>
-                    {a.severity.toUpperCase()}
+                    {safeUpper(a.severity)}
                   </span>
                   <span className="text-[10px] font-mono text-slate-500 uppercase">{a.component}</span>
                 </div>
@@ -415,12 +458,12 @@ export default function StrategicPage() {
                 <div>
                   <div className="flex justify-between text-[10px] font-mono mb-1">
                     <span className="text-slate-500">Probability</span>
-                    <span className={probTextColor(a.probability)}>{Math.round(a.probability * 100)}%</span>
+                    <span className={probTextColor(a.probability)}>{Math.round(safeNum(a.probability) * 100)}%</span>
                   </div>
                   <div className="w-full h-2 bg-surface-darker rounded-full overflow-hidden">
                     <motion.div
                       initial={{ width: 0 }}
-                      animate={{ width: `${a.probability * 100}%` }}
+                      animate={{ width: `${safeNum(a.probability) * 100}%` }}
                       className={`h-full rounded-full ${probColor(a.probability)}`}
                       transition={{ duration: 0.5 }}
                     />

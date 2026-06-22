@@ -1,3 +1,4 @@
+from seo_platform.core.auth import get_validated_tenant_id
 """
 SEO Platform — Backlink Intelligence Endpoints
 ================================================
@@ -9,7 +10,7 @@ NOT execution decisions.
 """
 
 from uuid import UUID
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query
 from seo_platform.services.backlink_engine.advanced_intelligence import advanced_backlink_intelligence
 from seo_platform.services.backlink_engine.intelligence import backlink_intelligence
 
@@ -17,7 +18,7 @@ router = APIRouter()
 
 
 @router.get("/prospects")
-async def get_prospects_intelligence(tenant_id: UUID = Query(...)) -> dict:
+async def get_prospects_intelligence(tenant_id: UUID = Depends(get_validated_tenant_id)) -> dict:
     """Retrieve prospects intelligence details for tenant campaigns."""
     from sqlalchemy import select
     from seo_platform.core.database import get_tenant_session
@@ -49,7 +50,7 @@ async def get_prospects_intelligence(tenant_id: UUID = Query(...)) -> dict:
 
 
 @router.get("/authority-propagation")
-async def get_authority_propagation_intelligence(tenant_id: UUID = Query(...)) -> dict:
+async def get_authority_propagation_intelligence(tenant_id: UUID = Depends(get_validated_tenant_id)) -> dict:
     """Trace authority flow for domain prospects of a tenant."""
     from sqlalchemy import select
     from seo_platform.core.database import get_tenant_session
@@ -80,7 +81,7 @@ async def get_authority_propagation_intelligence(tenant_id: UUID = Query(...)) -
 
 
 @router.get("/outreach-predictions")
-async def get_outreach_predictions_intelligence(tenant_id: UUID = Query(...)) -> dict:
+async def get_outreach_predictions_intelligence(tenant_id: UUID = Depends(get_validated_tenant_id)) -> dict:
     """Predict outreach success metrics across tenant campaigns."""
     from sqlalchemy import select
     from seo_platform.core.database import get_tenant_session
@@ -115,7 +116,7 @@ async def get_outreach_predictions_intelligence(tenant_id: UUID = Query(...)) ->
 
 
 @router.get("/response-probability")
-async def get_response_probability_intelligence(tenant_id: UUID = Query(...)) -> dict:
+async def get_response_probability_intelligence(tenant_id: UUID = Depends(get_validated_tenant_id)) -> dict:
     """Retrieve response probabilities for domain prospects of a tenant."""
     from sqlalchemy import select
     from seo_platform.core.database import get_tenant_session
@@ -146,7 +147,7 @@ async def get_response_probability_intelligence(tenant_id: UUID = Query(...)) ->
 
 
 @router.get("/broken-links")
-async def get_broken_links_intelligence(tenant_id: UUID = Query(...)) -> dict:
+async def get_broken_links_intelligence(tenant_id: UUID = Depends(get_validated_tenant_id)) -> dict:
     """Retrieve broken link opportunities for tenant campaigns."""
     from sqlalchemy import select
     from seo_platform.core.database import get_tenant_session

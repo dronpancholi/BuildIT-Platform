@@ -5,6 +5,7 @@ import { ShieldAlert, Power, Clock, AlertTriangle, CheckCircle, Loader2, History
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { fetchApi } from "@/lib/api";
 import { useState } from "react";
+import { safeArr, safeStr, safeNum, safeUpper, safeLower, safeFixed, safeLocale, safePct, safeDate, safeDateTime, safeTime, safeReplace, safeSplit, safeSlice, safeStartsWith, safeFind, safeIncludes, safeSort, safeObj, safeKeys, safeValues, safeEntries, safeInitials } from "@/lib/safe";
 
 interface KillSwitch {
   key: string;
@@ -83,13 +84,13 @@ export default function KillSwitchesPage() {
     },
   });
 
-  const isActive = (key: string) => activeSwitch.some((s) => s.key === key);
+  const isActive = (key: string) => safeArr<KillSwitch>(activeSwitch).some((s) => s.key === key);
 
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-slate-100 tracking-tight font-mono">KILL_SWITCHES</h1>
+          <h1 className="text-3xl font-bold text-slate-100 tracking-tight">Kill Switches</h1>
           <p className="text-slate-400 mt-1 font-mono text-sm uppercase tracking-wider">Emergency Operations Control</p>
         </div>
         <div className="flex items-center gap-3">
@@ -101,13 +102,13 @@ export default function KillSwitchesPage() {
             AUDIT LOG
           </button>
           <div className={`px-3 py-1.5 rounded-md flex items-center gap-2 border ${
-            activeSwitch.length > 0
+            safeArr<KillSwitch>(activeSwitch).length > 0
               ? "bg-red-500/10 border-red-500/30"
               : "bg-emerald-500/10 border-emerald-500/30"
           }`}>
-            <span className={`w-2 h-2 rounded-full ${activeSwitch.length > 0 ? "bg-red-500 animate-pulse" : "bg-emerald-500"}`}></span>
-            <span className={`text-xs font-mono ${activeSwitch.length > 0 ? "text-red-400" : "text-emerald-400"}`}>
-              {activeSwitch.length > 0 ? `${activeSwitch.length} ACTIVE` : "ALL_CLEAR"}
+            <span className={`w-2 h-2 rounded-full ${safeArr<KillSwitch>(activeSwitch).length > 0 ? "bg-red-500 animate-pulse" : "bg-emerald-500"}`}></span>
+            <span className={`text-xs font-mono ${safeArr<KillSwitch>(activeSwitch).length > 0 ? "text-red-400" : "text-emerald-400"}`}>
+              {safeArr<KillSwitch>(activeSwitch).length > 0 ? `${safeArr<KillSwitch>(activeSwitch).length} ACTIVE` : "ALL_CLEAR"}
             </span>
           </div>
         </div>
@@ -205,12 +206,12 @@ export default function KillSwitchesPage() {
                   className="mt-4 pt-4 border-t border-red-500/20"
                 >
                   <div className="flex items-center gap-4 text-xs text-red-300 font-mono">
-                    <span className="flex items-center gap-1"><Clock className="w-3 h-3" /> Active since: {activeSwitch.find(s => s.key === sw.key)?.activated_at ? new Date(activeSwitch.find(s => s.key === sw.key)!.activated_at).toLocaleString() : "unknown"}</span>
-                    <span>By: {activeSwitch.find(s => s.key === sw.key)?.activated_by || "console_admin"}</span>
+                    <span className="flex items-center gap-1"><Clock className="w-3 h-3" /> Active since: {safeArr<KillSwitch>(activeSwitch).find(s => s.key === sw.key)?.activated_at ? new Date(safeArr<KillSwitch>(activeSwitch).find(s => s.key === sw.key)!.activated_at).toLocaleString() : "unknown"}</span>
+                    <span>By: {safeArr<KillSwitch>(activeSwitch).find(s => s.key === sw.key)?.activated_by || "console_admin"}</span>
                   </div>
-                  {activeSwitch.find(s => s.key === sw.key)?.reason && (
+                  {safeArr<KillSwitch>(activeSwitch).find(s => s.key === sw.key)?.reason && (
                     <p className="text-xs text-slate-500 mt-2 font-mono">
-                      Reason: {activeSwitch.find(s => s.key === sw.key)?.reason}
+                      Reason: {safeArr<KillSwitch>(activeSwitch).find(s => s.key === sw.key)?.reason}
                     </p>
                   )}
                 </motion.div>
@@ -234,10 +235,10 @@ export default function KillSwitchesPage() {
                 <History className="w-4 h-4 text-platform-400" /> Audit Log
               </h3>
               <div className="space-y-2 max-h-64 overflow-y-auto custom-scrollbar">
-                {auditLog.length === 0 ? (
+                {safeArr<AuditEntry>(auditLog).length === 0 ? (
                   <div className="text-sm text-slate-500 font-mono text-center py-4">No audit entries recorded</div>
                 ) : (
-                  auditLog.map((entry) => (
+                  safeArr<AuditEntry>(auditLog).map((entry) => (
                     <div key={entry.id} className="flex items-center justify-between p-3 bg-surface-darker/50 rounded border border-surface-border/50 text-xs font-mono">
                       <div className="flex items-center gap-3">
                         <span className={`w-1.5 h-1.5 rounded-full ${entry.action === "activate" ? "bg-red-500" : "bg-emerald-500"}`}></span>

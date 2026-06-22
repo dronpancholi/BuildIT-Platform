@@ -9,16 +9,16 @@ Design: Mimics realistic browser headers. Zero-cost fallback provider.
 
 from __future__ import annotations
 
-import logging
 from typing import Any
 
 from pydantic import BaseModel, Field
 
 from seo_platform.clients.scrapling_cache import ScraplingCache
 from seo_platform.clients.trafilatura import TrafilaturaClient
+from seo_platform.core.logging import get_logger
 from seo_platform.core.reliability import CircuitBreaker
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 _scrapling_circuit_breaker = CircuitBreaker("scrapling_client", failure_threshold=3, recovery_timeout=30)
 

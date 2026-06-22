@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from seo_platform.core.auth import get_validated_tenant_id
 from fastapi import APIRouter, Body, Query
 
 from seo_platform.services.maintainability_service import maintainability_service
@@ -7,7 +8,7 @@ from seo_platform.services.maintainability_service import maintainability_servic
 router = APIRouter()
 
 
-@router.post("/maintainability/workflow-migration-plan")
+@router.post("/workflow-migration-plan")
 async def plan_workflow_migration(
     source_version: str = Body(...),
     target_version: str = Body(...),
@@ -16,19 +17,19 @@ async def plan_workflow_migration(
     return {"success": True, "data": plan.model_dump()}
 
 
-@router.get("/maintainability/event-schema-evolution")
+@router.get("/event-schema-evolution")
 async def track_event_schema_evolution() -> dict:
     evolution = await maintainability_service.track_event_schema_evolution()
     return {"success": True, "data": evolution.model_dump()}
 
 
-@router.get("/maintainability/temporal-versioning")
+@router.get("/temporal-versioning")
 async def assess_temporal_versioning() -> dict:
     assessment = await maintainability_service.assess_temporal_versioning()
     return {"success": True, "data": assessment.model_dump()}
 
 
-@router.get("/maintainability/replay-compatibility")
+@router.get("/replay-compatibility")
 async def assess_replay_compatibility(
     workflow_type: str = Query(...),
     source_version: str = Query(...),
@@ -40,7 +41,7 @@ async def assess_replay_compatibility(
     return {"success": True, "data": result.model_dump()}
 
 
-@router.get("/maintainability/long-term")
+@router.get("/long-term")
 async def assess_long_term_maintainability(
     service_name: str = Query(..., description="Service name to assess"),
 ) -> dict:
@@ -48,13 +49,13 @@ async def assess_long_term_maintainability(
     return {"success": True, "data": assessment.model_dump()}
 
 
-@router.get("/maintainability/service-dependencies")
+@router.get("/service-dependencies")
 async def govern_service_dependencies() -> dict:
     governance = await maintainability_service.govern_service_dependencies()
     return {"success": True, "data": governance.model_dump()}
 
 
-@router.get("/maintainability/platform-lifecycle")
+@router.get("/platform-lifecycle")
 async def assess_platform_lifecycle() -> dict:
     lifecycle = await maintainability_service.assess_platform_lifecycle()
     return {"success": True, "data": lifecycle.model_dump()}

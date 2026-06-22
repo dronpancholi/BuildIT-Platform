@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from seo_platform.core.auth import get_validated_tenant_id
 from uuid import UUID
 
 from fastapi import APIRouter, Body, Query
@@ -9,15 +10,15 @@ from seo_platform.services.enterprise_ecosystem import enterprise_ecosystem
 router = APIRouter()
 
 
-@router.get("/enterprise-ecosystem/organization-intelligence")
+@router.get("/organization-intelligence")
 async def get_organization_intelligence(
-    org_id: str = Query(...),
+    org_id: str = Query("org-main"),
 ) -> dict:
     intelligence = await enterprise_ecosystem.get_organization_intelligence(org_id)
     return {"success": True, "data": intelligence.model_dump()}
 
 
-@router.get("/enterprise-ecosystem/department-analysis")
+@router.get("/department-analysis")
 async def get_department_analysis(
     department: str = Query(...),
 ) -> dict:
@@ -25,7 +26,7 @@ async def get_department_analysis(
     return {"success": True, "data": analysis.model_dump()}
 
 
-@router.get("/enterprise-ecosystem/cross-team-coordination")
+@router.get("/cross-team-coordination")
 async def get_cross_team_coordination() -> dict:
     coordinations = await enterprise_ecosystem.get_cross_team_coordination()
     return {
@@ -35,21 +36,21 @@ async def get_cross_team_coordination() -> dict:
     }
 
 
-@router.get("/enterprise-ecosystem/operational-hierarchy")
+@router.get("/operational-hierarchy")
 async def get_operational_hierarchy() -> dict:
     hierarchy = await enterprise_ecosystem.build_operational_hierarchy()
     return {"success": True, "data": hierarchy.model_dump()}
 
 
-@router.get("/enterprise-ecosystem/organizational-performance")
+@router.get("/organizational-performance")
 async def get_organizational_performance(
-    org_id: str = Query(...),
+    org_id: str = Query("org-main"),
 ) -> dict:
     performance = await enterprise_ecosystem.analyze_organizational_performance(org_id)
     return {"success": True, "data": performance.model_dump()}
 
 
-@router.get("/enterprise-ecosystem/campaign-orchestration")
+@router.get("/campaign-orchestration")
 async def get_campaign_orchestration(
     campaign_id: str = Query(...),
 ) -> dict:
@@ -57,19 +58,19 @@ async def get_campaign_orchestration(
     return {"success": True, "data": orchestration.model_dump()}
 
 
-@router.get("/enterprise-ecosystem/organizational-graph")
+@router.get("/organizational-graph")
 async def get_organizational_graph() -> dict:
     graph = await enterprise_ecosystem.build_organizational_graph()
     return {"success": True, "data": graph.model_dump()}
 
 
-@router.get("/enterprise-ecosystem/operational-dependencies")
+@router.get("/operational-dependencies")
 async def get_operational_dependencies() -> dict:
     mapping = await enterprise_ecosystem.map_operational_dependencies()
     return {"success": True, "data": mapping.model_dump()}
 
 
-@router.post("/enterprise-ecosystem/strategic-coordination")
+@router.post("/strategic-coordination")
 async def post_strategic_coordination(
     coordination_type: str = Body(...),
     participants: list[str] = Body(...),

@@ -1,3 +1,4 @@
+# PHASE 1.2 — Simulation removed: "Simulated Mode" HEALTHY short-circuits in nim, nim-401, and external_apis checks
 """
 SEO Platform — Health Check Endpoints
 =======================================
@@ -6,16 +7,17 @@ Deep health checks with per-component status reporting.
 
 from __future__ import annotations
 
+from seo_platform.core.auth import get_validated_tenant_id
 import asyncio
 import os
 import time
 from datetime import UTC, datetime
 
-import logging
-
 from fastapi import APIRouter
 
-logger = logging.getLogger(__name__)
+from seo_platform.core.logging import get_logger
+
+logger = get_logger(__name__)
 
 from seo_platform.config import get_settings
 from seo_platform.schemas import ComponentHealth, HealthResponse, HealthStatus
@@ -33,7 +35,7 @@ async def health_check() -> HealthResponse:
     """
     settings = get_settings()
 
-    pg, redis, kafka, temporal, qdrant, minio, workers, evt, nim, playwright, ext = \
+    pg, redis, kafka, temporal, qdrant, minio, workers, evt, nim, playwright, ext, mailhog = \
         await asyncio.gather(
             _check_postgres(),
             _check_redis(),
@@ -46,8 +48,9 @@ async def health_check() -> HealthResponse:
             _check_nvidia_nim(),
             _check_playwright(),
             _check_external_apis(),
+            _check_mailhog(),
         )
-    components = [pg, redis, kafka, temporal, qdrant, minio, workers, evt, nim, playwright, ext]
+    components = [pg, redis, kafka, temporal, qdrant, minio, workers, evt, nim, playwright, ext, mailhog]
 
     # Hard requirements: Postgres, Redis
     critical_unhealthy = pg.status == HealthStatus.UNHEALTHY or redis.status == HealthStatus.UNHEALTHY
@@ -82,17 +85,32 @@ async def health_check() -> HealthResponse:
 
 @router.get("/healthz")
 async def liveness() -> dict:
-    """Kubernetes liveness probe — lightweight, no dependency checks."""
+    """Kubernetes liveness probe — lightweight, no dependency checks. Always 200 if process is alive."""
     return {"status": "alive"}
 
 
 @router.get("/ready")
-async def readiness() -> dict:
-    """Kubernetes readiness probe — checks critical dependencies."""
-    pg = await _check_postgres()
-    redis = await _check_redis()
-    ready = pg.status == HealthStatus.HEALTHY and redis.status == HealthStatus.HEALTHY
-    return {"ready": ready}
+async def readiness():
+    """Kubernetes readiness probe — 200 only when critical deps are healthy, 503 otherwise."""
+    from fastapi.responses import JSONResponse
+
+    pg, redis, kafka, temporal = await asyncio.gather(
+        _check_postgres(),
+        _check_redis(),
+        _check_kafka(),
+        _check_temporal(),
+    )
+    critical_ok = pg.status == HealthStatus.HEALTHY and redis.status == HealthStatus.HEALTHY
+    body = {
+        "ready": critical_ok,
+        "components": {
+            "postgresql": pg.status.value,
+            "redis": redis.status.value,
+            "kafka": kafka.status.value,
+            "temporal": temporal.status.value,
+        },
+    }
+    return JSONResponse(status_code=200 if critical_ok else 503, content=body)
 
 
 async def _check_postgres() -> ComponentHealth:
@@ -253,6 +271,43 @@ async def _check_workers() -> ComponentHealth:
         )
 
 
+async def _check_mailhog() -> ComponentHealth:
+    """Check MailHog SMTP server reachability on the configured SMTP_HOST:SMTP_PORT."""
+    import smtplib
+
+    start = time.monotonic()
+    smtp_host = os.environ.get("SMTP_HOST", "localhost")
+    smtp_port = int(os.environ.get("SMTP_PORT", "1025"))
+    try:
+        client = smtplib.SMTP(timeout=2.0)
+        try:
+            code, _ = client.connect(host=smtp_host, port=smtp_port)
+        finally:
+            try:
+                client.quit()
+            except Exception:
+                pass
+        latency = (time.monotonic() - start) * 1000
+        if code in (220,):
+            return ComponentHealth(
+                name="mailhog", status=HealthStatus.HEALTHY,
+                latency_ms=round(latency, 1),
+                message=f"SMTP server reachable at {smtp_host}:{smtp_port}",
+            )
+        return ComponentHealth(
+            name="mailhog", status=HealthStatus.DEGRADED,
+            latency_ms=round(latency, 1),
+            message=f"SMTP server returned unexpected code {code}",
+        )
+    except Exception as e:
+        latency = (time.monotonic() - start) * 1000
+        return ComponentHealth(
+            name="mailhog", status=HealthStatus.DEGRADED,
+            latency_ms=round(latency, 1),
+            message=f"SMTP {smtp_host}:{smtp_port} unreachable: {str(e)[:100]}",
+        )
+
+
 async def _check_event_bus() -> ComponentHealth:
     """Check event bus health."""
     start = time.monotonic()
@@ -301,8 +356,8 @@ async def _check_nvidia_nim() -> ComponentHealth:
         settings = get_settings()
         if not settings.nvidia.api_key or "mock" in settings.nvidia.api_key.lower():
             return ComponentHealth(
-                name="nim", status=HealthStatus.HEALTHY,
-                latency_ms=0.0, message="Nominal (Simulated Mode)"
+                name="nim", status=HealthStatus.DEGRADED,
+                latency_ms=0.0, message="No real NVIDIA NIM API key configured (mock or empty).",
             )
 
         async with httpx.AsyncClient(timeout=3.0) as http:
@@ -321,8 +376,8 @@ async def _check_nvidia_nim() -> ComponentHealth:
             )
             if resp.status_code == 401:
                 return ComponentHealth(
-                    name="nim", status=HealthStatus.HEALTHY,
-                    latency_ms=0.0, message="Nominal (Simulated fallback)"
+                    name="nim", status=HealthStatus.DEGRADED,
+                    latency_ms=0.0, message="NVIDIA NIM rejected API key (401).",
                 )
             resp.raise_for_status()
         latency = (time.monotonic() - start) * 1000
@@ -366,6 +421,14 @@ async def _check_external_apis() -> ComponentHealth:
     from seo_platform.config import get_settings
 
     s = get_settings()
+
+    if s.effective_mock_mode:
+        return ComponentHealth(
+            name="external_apis", status=HealthStatus.DEGRADED,
+            latency_ms=0,
+            message="Zero-cost mode active (no API keys configured) — using free fallback providers.",
+        )
+
     configured = []
     missing = []
 
@@ -404,6 +467,50 @@ async def prometheus_metrics():
     from fastapi.responses import Response
     from prometheus_client import CONTENT_TYPE_LATEST, generate_latest
     return Response(content=generate_latest(), media_type=CONTENT_TYPE_LATEST)
+
+
+# ---------------------------------------------------------------------------
+# K8s-friendly liveness / readiness probes
+# ---------------------------------------------------------------------------
+# CAP-FIX-001: Split the deep /health check into cheap liveness probe and
+# cached readiness probe. Kubernetes liveness probes default to a 1s
+# timeout. The previous /health endpoint runs 12 component checks with
+# 30-470ms latency each, totaling 360ms p50 and 3.6s p99 at concurrency 50.
+# This caused liveness probes to time out and K8s to restart the pod.
+#
+# /livez: "Is the Python process alive and able to respond?" — <1ms.
+# /readyz: "Is the system ready to serve traffic?" — cached deep check (10s TTL).
+
+_health_cache: dict = {"result": None, "expires_at": 0.0}
+_HEALTH_CACHE_TTL_SECONDS = 10.0
+
+
+@router.get("/livez")
+async def liveness() -> dict:
+    """Liveness probe — returns 200 if the process is up. No I/O, <1ms."""
+    return {"status": "alive"}
+
+
+@router.get("/readyz")
+async def readiness() -> dict:
+    """Readiness probe — returns 200 if the system is ready to serve traffic.
+    Caches the deep health check for 10s to avoid pinging 12 components on every probe.
+    """
+    import time
+    now = time.monotonic()
+    if _health_cache["result"] is None or now > _health_cache["expires_at"]:
+        # Run the deep check
+        result = await health_check()
+        _health_cache["result"] = result
+        _health_cache["expires_at"] = now + _HEALTH_CACHE_TTL_SECONDS
+    result = _health_cache["result"]
+    # model_dump(mode="json") serializes datetimes to ISO strings; required
+    # because the deep health check result contains a `timestamp` datetime.
+    payload = result.model_dump(mode="json")
+    if result.status == HealthStatus.UNHEALTHY:
+        from fastapi.responses import JSONResponse
+        return JSONResponse(status_code=503, content=payload)
+    return payload
 
 @router.get("/telemetry/{tenant_id}")
 async def get_tenant_telemetry(tenant_id: str) -> dict:

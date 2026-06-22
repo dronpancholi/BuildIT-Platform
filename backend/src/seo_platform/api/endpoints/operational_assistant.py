@@ -1,9 +1,10 @@
 from __future__ import annotations
 
+from seo_platform.core.auth import get_validated_tenant_id
 from typing import Any
 from uuid import UUID
 
-from fastapi import APIRouter, Query, Body
+from fastapi import APIRouter, Depends, Query, Body
 from pydantic import BaseModel
 
 from seo_platform.services.operational_assistant import operational_assistant
@@ -17,7 +18,7 @@ class ExplainAnomalyRequest(BaseModel):
 
 
 @router.get("/workflow")
-async def get_workflow_assistance(tenant_id: UUID = Query(...)) -> dict:
+async def get_workflow_assistance(tenant_id: UUID = Depends(get_validated_tenant_id)) -> dict:
     recommendations = await operational_assistant.get_workflow_assistance(tenant_id)
     return {
         "success": True,
@@ -28,7 +29,7 @@ async def get_workflow_assistance(tenant_id: UUID = Query(...)) -> dict:
 
 @router.get("/campaign")
 async def get_campaign_assistance(
-    tenant_id: UUID = Query(...),
+    tenant_id: UUID = Depends(get_validated_tenant_id),
     campaign_id: UUID | None = Query(None),
 ) -> dict:
     recommendations = await operational_assistant.get_campaign_assistance(
@@ -81,7 +82,7 @@ async def get_infrastructure_assistance() -> dict:
 
 @router.get("/prioritize")
 async def prioritize_operational_actions(
-    tenant_id: UUID = Query(...),
+    tenant_id: UUID = Depends(get_validated_tenant_id),
 ) -> dict:
     actions = await operational_assistant.prioritize_operational_actions(tenant_id)
     return {

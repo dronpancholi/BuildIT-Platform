@@ -1,6 +1,7 @@
 "use client";
 
 import { create } from "zustand";
+import { DEFAULT_TENANT_ID } from "@/config/constants";
 
 export interface ClientInfo {
   id: string;
@@ -16,7 +17,7 @@ interface ClientStore {
 
 export const useClientStore = create<ClientStore>((set) => ({
   currentClient: {
-    id: "00000000-0000-0000-0000-000000000001",
+    id: DEFAULT_TENANT_ID,
     name: "TechStart Inc.",
     domain: "techstart.io",
     niche: "B2B SaaS",

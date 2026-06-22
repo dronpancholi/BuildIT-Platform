@@ -8,6 +8,7 @@ event propagation, anomaly heatmaps, incident dashboard, trace replay.
 
 from __future__ import annotations
 
+from seo_platform.core.auth import get_validated_tenant_id
 from fastapi import APIRouter, Body, Query
 
 from seo_platform.services.sre_observability import sre_observability
@@ -15,7 +16,7 @@ from seo_platform.services.sre_observability import sre_observability
 router = APIRouter()
 
 
-@router.get("/sre/traces")
+@router.get("/sre-observability/sre/traces")
 async def get_distributed_traces(
     tenant_id: str | None = Query(None, description="Filter by tenant UUID"),
     workflow_type: str | None = Query(None, description="Filter by workflow type"),
@@ -37,21 +38,21 @@ async def get_distributed_traces(
     }
 
 
-@router.get("/sre/topology")
+@router.get("/sre-observability/sre/topology")
 async def get_infra_topology():
     """Return current infrastructure topology with nodes, edges, and dependency health."""
     topology = await sre_observability.get_infra_topology()
     return {"success": True, "data": topology.model_dump()}
 
 
-@router.get("/sre/queue-pressure")
+@router.get("/sre-observability/sre/queue-pressure")
 async def get_queue_pressure_dashboard():
     """Return per-queue pressure analysis with thresholds, trends, and scores."""
     dashboard = await sre_observability.get_queue_pressure_dashboard()
     return {"success": True, "data": dashboard.model_dump()}
 
 
-@router.get("/sre/queue-heatmap")
+@router.get("/sre-observability/sre/queue-heatmap")
 async def get_queue_heatmap(
     hours: int = Query(24, ge=1, le=168, description="Time window in hours"),
 ):
@@ -64,7 +65,7 @@ async def get_queue_heatmap(
     }
 
 
-@router.get("/sre/workflow-heatmap")
+@router.get("/sre-observability/sre/workflow-heatmap")
 async def get_workflow_heatmap(
     hours: int = Query(24, ge=1, le=168, description="Time window in hours"),
 ):
@@ -73,7 +74,7 @@ async def get_workflow_heatmap(
     return {"success": True, "data": heatmap.model_dump()}
 
 
-@router.get("/sre/worker-saturation")
+@router.get("/sre-observability/sre/worker-saturation")
 async def get_worker_saturation():
     """Return per-worker utilization: active tasks, slot %, task duration, health check."""
     saturation = await sre_observability.get_worker_saturation()
@@ -84,7 +85,7 @@ async def get_worker_saturation():
     }
 
 
-@router.get("/sre/replay-analytics")
+@router.get("/sre-observability/sre/replay-analytics")
 async def get_replay_analytics(
     time_window_hours: int = Query(24, ge=1, le=168, description="Time window in hours"),
 ):
@@ -95,7 +96,7 @@ async def get_replay_analytics(
     return {"success": True, "data": analytics.model_dump()}
 
 
-@router.get("/sre/scraping-latency")
+@router.get("/sre-observability/sre/scraping-latency")
 async def get_scraping_latency(
     hours: int = Query(24, ge=1, le=168, description="Time window in hours"),
 ):
@@ -104,7 +105,7 @@ async def get_scraping_latency(
     return {"success": True, "data": analytics.model_dump()}
 
 
-@router.get("/sre/ai-latency")
+@router.get("/sre-observability/sre/ai-latency")
 async def get_ai_latency(
     hours: int = Query(24, ge=1, le=168, description="Time window in hours"),
 ):
@@ -113,7 +114,7 @@ async def get_ai_latency(
     return {"success": True, "data": analytics.model_dump()}
 
 
-@router.get("/sre/event-propagation")
+@router.get("/sre-observability/sre/event-propagation")
 async def get_event_propagation_telemetry(
     hours: int = Query(24, ge=1, le=168, description="Time window in hours"),
 ):
@@ -122,7 +123,7 @@ async def get_event_propagation_telemetry(
     return {"success": True, "data": telemetry.model_dump()}
 
 
-@router.get("/sre/anomaly-heatmap")
+@router.get("/sre-observability/sre/anomaly-heatmap")
 async def get_anomaly_heatmap(
     hours: int = Query(24, ge=1, le=168, description="Time window in hours"),
 ):
@@ -131,14 +132,14 @@ async def get_anomaly_heatmap(
     return {"success": True, "data": heatmap.model_dump()}
 
 
-@router.get("/sre/incident-dashboard")
+@router.get("/sre-observability/sre/incident-dashboard")
 async def get_incident_dashboard():
     """Return active and recent incidents with MTTD and MTTR."""
     dashboard = await sre_observability.get_incident_dashboard()
     return {"success": True, "data": dashboard.model_dump()}
 
 
-@router.post("/sre/replay-trace")
+@router.post("/sre-observability/sre/replay-trace")
 async def replay_trace(
     trace_id: str = Body(..., embed=True, description="Workflow trace ID to replay"),
 ):

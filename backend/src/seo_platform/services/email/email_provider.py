@@ -1,3 +1,4 @@
+# PHASE 1.2 — Simulation verified: get_email_provider() factory uses MailhogClient only when use_mock_providers=True
 """
 SEO Platform — Enterprise Email Provider Client
 =================================================

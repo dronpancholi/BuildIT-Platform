@@ -1,18 +1,17 @@
-import type { Metadata } from "next";
-import { Inter } from "next/font/google";
-import "./globals.css";
-import { cn } from "@/lib/utils";
-import { Providers } from "./providers";
-import { CommandCenter } from "@/components/operational/command-center";
+import type { Metadata } from 'next';
+import { Inter } from 'next/font/google';
+import './globals.css';
+import { cn } from '@/lib/utils';
+import { Providers } from './providers';
 
-const inter = Inter({ 
-  subsets: ["latin"],
-  variable: "--font-inter", 
+const inter = Inter({
+  subsets: ['latin'],
+  variable: '--font-inter',
 });
 
 export const metadata: Metadata = {
-  title: "BuildIT | Enterprise SEO Operations",
-  description: "AI proposes. Deterministic systems execute.",
+  title: 'BuildIT | Enterprise SEO Operations',
+  description: 'AI proposes. Deterministic systems execute.',
 };
 
 export default function RootLayout({
@@ -22,11 +21,13 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" className="dark">
-      <body className={cn(inter.variable, "font-sans bg-surface-darker text-slate-300 min-h-screen")}>
-        <Providers>
-          {children}
-          <CommandCenter />
-        </Providers>
+      <body
+        className={cn(
+          inter.variable,
+          'font-sans bg-surface-darker text-slate-300 min-h-screen'
+        )}
+      >
+        <Providers>{children}</Providers>
       </body>
     </html>
   );

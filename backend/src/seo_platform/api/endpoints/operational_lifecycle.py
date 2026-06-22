@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from seo_platform.core.auth import get_validated_tenant_id
 from fastapi import APIRouter, Query
 
 from seo_platform.services.operational_lifecycle import operational_lifecycle
@@ -7,7 +8,7 @@ from seo_platform.services.operational_lifecycle import operational_lifecycle
 router = APIRouter()
 
 
-@router.get("/operational-lifecycle/lifecycle-score")
+@router.get("/lifecycle-score")
 async def get_lifecycle_score(
     service_id: str = Query(..., description="Service ID to score"),
 ):
@@ -15,7 +16,7 @@ async def get_lifecycle_score(
     return {"success": True, "data": score.model_dump()}
 
 
-@router.get("/operational-lifecycle/infrastructure-aging")
+@router.get("/infrastructure-aging")
 async def get_infrastructure_aging(
     service_id: str = Query(..., description="Service ID to analyze"),
 ):
@@ -23,7 +24,7 @@ async def get_infrastructure_aging(
     return {"success": True, "data": report.model_dump()}
 
 
-@router.get("/operational-lifecycle/dependency-lifecycle")
+@router.get("/dependency-lifecycle")
 async def get_dependency_lifecycle(
     dep_id: str = Query(..., description="Dependency ID to track"),
 ):
@@ -31,7 +32,7 @@ async def get_dependency_lifecycle(
     return {"success": True, "data": dep.model_dump()}
 
 
-@router.get("/operational-lifecycle/degradation-forecast")
+@router.get("/degradation-forecast")
 async def get_degradation_forecast(
     service_id: str = Query(..., description="Service ID to forecast"),
     horizon_days: int = Query(90, ge=7, le=365, description="Forecast horizon in days"),
@@ -40,7 +41,7 @@ async def get_degradation_forecast(
     return {"success": True, "data": forecast.model_dump()}
 
 
-@router.get("/operational-lifecycle/operational-entropy")
+@router.get("/operational-entropy")
 async def get_operational_entropy(
     service_id: str = Query(..., description="Service ID to analyze"),
 ):
@@ -48,7 +49,7 @@ async def get_operational_entropy(
     return {"success": True, "data": report.model_dump()}
 
 
-@router.get("/operational-lifecycle/workflow-drift")
+@router.get("/workflow-drift")
 async def get_workflow_drift(
     workflow_type: str = Query(..., description="Workflow type to analyze"),
 ):
@@ -56,7 +57,7 @@ async def get_workflow_drift(
     return {"success": True, "data": report.model_dump()}
 
 
-@router.get("/operational-lifecycle/infra-rot-prevention")
+@router.get("/infra-rot-prevention")
 async def get_infra_rot_prevention(
     service_id: str = Query(..., description="Service ID to analyze"),
 ):
@@ -64,7 +65,7 @@ async def get_infra_rot_prevention(
     return {"success": True, "data": plan.model_dump()}
 
 
-@router.get("/operational-lifecycle/sustainability-analytics")
+@router.get("/sustainability-analytics")
 async def get_sustainability_analytics(
     scope: str = Query("platform", description="Analytics scope"),
 ):
@@ -72,7 +73,7 @@ async def get_sustainability_analytics(
     return {"success": True, "data": analytics.model_dump()}
 
 
-@router.get("/operational-lifecycle/long-term-health-forecast")
+@router.get("/long-term-health-forecast")
 async def get_long_term_health_forecast(
     service_id: str = Query(..., description="Service ID to forecast"),
     months: int = Query(12, ge=3, le=60, description="Forecast horizon in months"),

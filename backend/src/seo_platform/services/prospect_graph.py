@@ -77,6 +77,7 @@ class ProspectGraphSystem:
             result = await session.execute(
                 select(BacklinkProspect).where(
                     BacklinkProspect.campaign_id == campaign_id,
+                    BacklinkProspect.tenant_id == tenant_id,
                 )
             )
             prospects = result.scalars().all()
@@ -562,6 +563,7 @@ class ProspectGraphSystem:
             result = await session.execute(
                 select(BacklinkProspect).where(
                     BacklinkProspect.campaign_id == campaign_id,
+                    BacklinkProspect.tenant_id == tenant_id,
                 )
             )
             prospects = result.scalars().all()

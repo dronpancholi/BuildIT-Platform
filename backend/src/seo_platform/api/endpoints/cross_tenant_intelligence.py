@@ -1,15 +1,16 @@
 from __future__ import annotations
 
+from seo_platform.core.auth import get_validated_tenant_id
 from uuid import UUID
 
-from fastapi import APIRouter, Query
+from fastapi import APIRouter, Depends, Query
 
 from seo_platform.services.cross_tenant_intelligence import cross_tenant_intelligence
 
 router = APIRouter()
 
 
-@router.get("/cross-tenant/benchmarks")
+@router.get("/benchmarks")
 async def get_benchmarks(
     metric: str | None = Query(None),
 ) -> dict:
@@ -21,13 +22,13 @@ async def get_benchmarks(
     }
 
 
-@router.get("/cross-tenant/analytics")
+@router.get("/analytics")
 async def get_analytics() -> dict:
     analytics = await cross_tenant_intelligence.get_cross_tenant_analytics()
     return {"success": True, "data": analytics.model_dump()}
 
 
-@router.get("/cross-tenant/workflow-baselines")
+@router.get("/workflow-baselines")
 async def get_workflow_baselines(
     workflow_type: str | None = Query(None),
 ) -> dict:
@@ -39,9 +40,9 @@ async def get_workflow_baselines(
     }
 
 
-@router.get("/cross-tenant/anomaly-comparison")
+@router.get("/anomaly-comparison")
 async def get_anomaly_comparison(
-    tenant_id: UUID = Query(...),
+    tenant_id: UUID = Depends(get_validated_tenant_id),
     anomaly_type: str = Query(...),
 ) -> dict:
     comparison = await cross_tenant_intelligence.compare_anomaly_to_benchmark(
@@ -50,7 +51,7 @@ async def get_anomaly_comparison(
     return {"success": True, "data": comparison.model_dump()}
 
 
-@router.get("/cross-tenant/infrastructure-utilization")
+@router.get("/infrastructure-utilization")
 async def get_infrastructure_utilization() -> dict:
     utilization = await cross_tenant_intelligence.get_infrastructure_utilization_intelligence()
     return {
@@ -60,7 +61,7 @@ async def get_infrastructure_utilization() -> dict:
     }
 
 
-@router.get("/cross-tenant/operational-trends")
+@router.get("/operational-trends")
 async def get_operational_trends(
     metric: str = Query(...),
     timeframe: str = Query("24h"),
@@ -71,9 +72,9 @@ async def get_operational_trends(
     return {"success": True, "data": trend.model_dump()}
 
 
-@router.get("/cross-tenant/tenant-benchmarks")
+@router.get("/tenant-benchmarks")
 async def get_tenant_benchmarks(
-    tenant_id: UUID = Query(...),
+    tenant_id: UUID = Depends(get_validated_tenant_id),
 ) -> dict:
     benchmarks = await cross_tenant_intelligence.get_tenant_operational_benchmarks(tenant_id)
     return {"success": True, "data": benchmarks}

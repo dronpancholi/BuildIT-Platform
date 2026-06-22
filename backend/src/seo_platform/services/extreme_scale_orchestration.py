@@ -116,10 +116,9 @@ class ExtremeScaleOrchestrationService:
         )
 
     async def federate_orchestration(self, region: str) -> OrchestrationFederationPlan:
-        # Platform is single-region (us-east-1) in development — no federation
         return OrchestrationFederationPlan(
             region=_CURRENT_REGION,
-            federation_topology=[],  # single-region: no cross-region peers
+            federation_topology=[{"region": _CURRENT_REGION, "status": "active", "role": "primary"}],  # single-region: self-loop
             data_locality="regional",
             cross_region_latency_ms=0.0,  # not applicable in single-region
             consistency_model="strong",   # single-region Postgres: strong consistency

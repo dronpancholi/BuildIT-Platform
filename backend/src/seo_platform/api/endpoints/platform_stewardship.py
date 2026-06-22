@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from seo_platform.core.auth import get_validated_tenant_id
 from fastapi import APIRouter, Query
 
 from seo_platform.services.platform_stewardship import platform_stewardship
@@ -7,7 +8,7 @@ from seo_platform.services.platform_stewardship import platform_stewardship
 router = APIRouter()
 
 
-@router.get("/platform-stewardship/stewardship-assessment")
+@router.get("/stewardship-assessment")
 async def get_stewardship_assessment(
     scope: str = Query("platform", description="Assessment scope"),
 ):
@@ -15,7 +16,7 @@ async def get_stewardship_assessment(
     return {"success": True, "data": result.model_dump()}
 
 
-@router.get("/platform-stewardship/infra-governance-dashboard")
+@router.get("/infra-governance-dashboard")
 async def get_infra_governance_dashboard(
     scope: str = Query("platform", description="Dashboard scope"),
 ):
@@ -23,7 +24,7 @@ async def get_infra_governance_dashboard(
     return {"success": True, "data": dashboard.model_dump()}
 
 
-@router.get("/platform-stewardship/lifecycle-governance")
+@router.get("/lifecycle-governance")
 async def get_lifecycle_governance(
     service_id: str = Query(..., description="Service ID"),
 ):
@@ -31,7 +32,7 @@ async def get_lifecycle_governance(
     return {"success": True, "data": result.model_dump()}
 
 
-@router.get("/platform-stewardship/operational-quality-score")
+@router.get("/operational-quality-score")
 async def get_operational_quality_score(
     service_id: str = Query(..., description="Service ID"),
 ):
@@ -39,7 +40,7 @@ async def get_operational_quality_score(
     return {"success": True, "data": score.model_dump()}
 
 
-@router.get("/platform-stewardship/maintainability-governance")
+@router.get("/maintainability-governance")
 async def get_maintainability_governance(
     component_id: str = Query(..., description="Component ID"),
 ):
@@ -47,7 +48,7 @@ async def get_maintainability_governance(
     return {"success": True, "data": result.model_dump()}
 
 
-@router.get("/platform-stewardship/platform-sustainability")
+@router.get("/platform-sustainability")
 async def get_platform_sustainability(
     scope: str = Query("platform", description="Sustainability scope"),
 ):

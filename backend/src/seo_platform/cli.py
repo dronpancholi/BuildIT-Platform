@@ -45,10 +45,27 @@ def db_migrate(head: bool) -> None:
 @main.command()
 @click.argument("task_queue", default="seo-platform-onboarding")
 def worker(task_queue: str) -> None:
-    """Start a Temporal worker for a specific task queue."""
+    """Start a Temporal worker for a specific task queue.
+
+    Examples:
+        python -m seo_platform.cli worker backlink_engine
+        python -m seo_platform.cli worker ai_orchestration
+    """
+    from seo_platform.workflows import TaskQueue
+
+    # Map short names to full TaskQueue values
+    short_to_full = {
+        name.lower().removeprefix("seo_platform_").lower(): getattr(TaskQueue, name)
+        for name in dir(TaskQueue)
+        if not name.startswith("_")
+    }
+
+    # Also support bare short names like "backlink_engine" -> "seo-platform-backlink-engine"
+    full_value = short_to_full.get(task_queue.lower(), task_queue)
+
     from seo_platform.workflows.worker import run_worker
-    click.echo(f"🚀 Starting Temporal worker for queue: {task_queue}")
-    asyncio.run(run_worker(task_queue))
+    click.echo(f"🚀 Starting Temporal worker for queue: {full_value}")
+    asyncio.run(run_worker(full_value))
 
 
 @main.command()

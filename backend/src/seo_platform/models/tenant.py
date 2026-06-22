@@ -48,6 +48,11 @@ class UserRole(str, enum.Enum):
     CLIENT = "client"
 
 
+class ClientStatus(str, enum.Enum):
+    ACTIVE = "active"
+    ARCHIVED = "archived"
+
+
 class OnboardingStatus(str, enum.Enum):
     PENDING = "pending"
     COLLECTING = "collecting"
@@ -158,6 +163,8 @@ class User(Base, UUIDPrimaryKeyMixin, TimestampMixin):
 # Client Model
 # ---------------------------------------------------------------------------
 class Client(Base, UUIDPrimaryKeyMixin, TenantMixin, TimestampMixin):
+    # Relationship to contacts added for Phase 14 CRM actions
+    contacts: Mapped[list["Contact"]] = relationship("Contact", back_populates="client", lazy="selectin")  # noqa: F821
     """
     SEO client managed by a Tenant (agency's client).
 
@@ -173,7 +180,7 @@ class Client(Base, UUIDPrimaryKeyMixin, TenantMixin, TimestampMixin):
     name: Mapped[str] = mapped_column(String(255), nullable=False)
     domain: Mapped[str] = mapped_column(String(255), nullable=False)
     niche: Mapped[str | None] = mapped_column(String(100), nullable=True)
-    geo_focus: Mapped[list[dict]] = mapped_column(JSONB, nullable=False, server_default=text("'[]'::jsonb"))
+    geo_focus: Mapped[list[str]] = mapped_column(JSONB, nullable=False, server_default=text("'[]'::jsonb"))
     business_type: Mapped[BusinessType | None] = mapped_column(
         Enum(BusinessType, name="business_type", create_constraint=True, values_callable=lambda x: [e.value for e in x]),
         nullable=True,
@@ -183,6 +190,12 @@ class Client(Base, UUIDPrimaryKeyMixin, TenantMixin, TimestampMixin):
         nullable=False,
         default=OnboardingStatus.PENDING,
     )
+    status: Mapped[ClientStatus] = mapped_column(
+        Enum(ClientStatus, name="client_status", create_constraint=True, values_callable=lambda x: [e.value for e in x]),
+        nullable=False,
+        default=ClientStatus.ACTIVE,
+    )
+    archived_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     profile_data: Mapped[dict[str, Any]] = mapped_column(JSONB, nullable=False, server_default=text("'{}'::jsonb"))
     competitors: Mapped[list[str]] = mapped_column(JSONB, nullable=False, server_default=text("'[]'::jsonb"))
 

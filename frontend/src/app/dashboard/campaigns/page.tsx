@@ -1,312 +1,258 @@
 "use client";
 
-import { useState, useMemo, Fragment } from "react";
-import { motion } from "framer-motion";
+import { useState } from "react";
+import { useRouter } from "next/navigation";
+import { useApiList, useApiCreate } from "@/services/hooks";
+import { ENDPOINTS } from "@/services/endpoints";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
+import { Select } from "@/components/ui/select";
+import { EmptyState } from "@/components/ui/empty-state";
+import { LoadingSpinner } from "@/components/ui/loading-spinner";
 import {
-  Plus, Search, Loader2, GitBranch,
-  TrendingUp, TrendingDown, Activity, Link2,
-  Mail, Radio, CheckCircle2, Eye,
-} from "lucide-react";
-import { useQuery } from "@tanstack/react-query";
-import { fetchApi } from "@/lib/api";
-import { useCommandCenter } from "@/hooks/use-command-center";
-import { CampaignEvolutionPanel } from "@/components/operational/campaign-evolution-panel";
-import { CampaignWorkflowStepper } from "@/components/operational/campaign-workflow-stepper";
-import { EmailThreadViewer } from "@/components/operational/email-thread-viewer";
-import type { CampaignIntelligence } from "@/types/business-intelligence";
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
+import { formatDate } from "@/lib/utils";
+import { Plus, FileText, Search } from "lucide-react";
+import type { Campaign, Client } from "@/types/models";
+import { safeArr, safeStr, safeNum, safeUpper, safeLower, safeFixed, safeLocale, safePct, safeDate, safeDateTime, safeTime, safeReplace, safeSplit, safeSlice, safeStartsWith, safeFind, safeIncludes, safeSort, safeObj, safeKeys, safeValues, safeEntries, safeInitials } from "@/lib/safe";
 
-function getHealthColor(score: number): string {
-  if (score >= 0.9) return "text-emerald-400";
-  if (score >= 0.7) return "text-amber-400";
-  if (score >= 0.5) return "text-orange-400";
-  return "text-red-400";
+interface CampaignWithType extends Campaign {
+  campaign_type: string;
 }
 
-function getHealthBarColor(score: number): string {
-  if (score >= 0.9) return "bg-emerald-500";
-  if (score >= 0.7) return "bg-amber-500";
-  if (score >= 0.5) return "bg-orange-500";
-  return "bg-red-500";
-}
+const STATUS_TABS = [
+  { label: "All", value: "" },
+  { label: "Active", value: "active" },
+  { label: "Paused", value: "paused" },
+  { label: "Completed", value: "completed" },
+] as const;
 
-function getMomentumIcon(momentum: number) {
-  if (momentum > 0.01) return <TrendingUp className="w-3 h-3 text-emerald-400" />;
-  if (momentum < -0.01) return <TrendingDown className="w-3 h-3 text-red-400" />;
-  return <Activity className="w-3 h-3 text-slate-500" />;
-}
+const CAMPAIGN_TYPES = [
+  { label: "Guest Post", value: "guest_post" },
+  { label: "Broken Link", value: "broken_link" },
+  { label: "Resource Page", value: "resource_page" },
+];
 
-function getMomentumLabel(momentum: number): string {
-  if (momentum > 0.05) return "accelerating";
-  if (momentum > 0.01) return "improving";
-  if (momentum > -0.01) return "stable";
-  if (momentum > -0.05) return "declining";
-  return "critical";
-}
+const CAMPAIGN_TYPE_VARIANT: Record<string, "default" | "secondary" | "outline" | "success" | "warning" | "destructive"> = {
+  guest_post: "default",
+  broken_link: "secondary",
+  resource_page: "outline",
+};
+
+const STATUS_VARIANT: Record<string, "default" | "secondary" | "outline" | "success" | "warning" | "destructive"> = {
+  active: "success",
+  paused: "warning",
+  completed: "secondary",
+  draft: "outline",
+};
 
 export default function CampaignsPage() {
-  const { openCommand } = useCommandCenter();
+  const router = useRouter();
+  const [statusFilter, setStatusFilter] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
-  const [viewMode, setViewMode] = useState<"table" | "evolution">("evolution");
-  const [expandedEmails, setExpandedEmails] = useState<Set<string>>(new Set());
+  const [showCreateDialog, setShowCreateDialog] = useState(false);
+  const [createForm, setCreateForm] = useState({
+    name: "",
+    client_id: "",
+    campaign_type: "guest_post",
+  });
 
-  const toggleEmails = (campaignId: string) => {
-    setExpandedEmails((prev) => {
-      const next = new Set(prev);
-      if (next.has(campaignId)) next.delete(campaignId);
-      else next.add(campaignId);
-      return next;
+  const params: Record<string, string | number | boolean | undefined> = {};
+  if (statusFilter) params.status = statusFilter;
+  if (searchQuery) params.search = searchQuery;
+
+  const { data: campaigns, isLoading, error } = useApiList<CampaignWithType>(
+    ENDPOINTS.CAMPAIGNS,
+    params
+  );
+
+  const { data: clients } = useApiList<Client>(ENDPOINTS.CLIENTS);
+
+  const createMutation = useApiCreate<Campaign, typeof createForm>(
+    ENDPOINTS.CAMPAIGNS,
+    {
+      invalidateKeys: [ENDPOINTS.CAMPAIGNS],
+      successMessage: "Campaign created successfully",
+    }
+  );
+
+  const handleCreate = () => {
+    createMutation.mutate(createForm, {
+      onSuccess: () => {
+        setShowCreateDialog(false);
+        setCreateForm({ name: "", client_id: "", campaign_type: "guest_post" });
+      },
     });
   };
 
-  const { data: campaigns = [], isLoading, isError } = useQuery<CampaignIntelligence[]>({
-    queryKey: ["campaigns"],
-    queryFn: () => {
-      const data = fetchApi<any>("/business-intelligence/intelligence/campaigns");
-      return data.then((d) => d?.campaigns ?? []);
-    },
-    refetchInterval: 10000,
-  });
-
-  const filtered = campaigns.filter((c) =>
-    !searchQuery || c.name.toLowerCase().includes(searchQuery.toLowerCase()),
-  );
-
-  const sorted = useMemo(() =>
-    [...filtered].sort((a, b) => b.health_score - a.health_score),
-    [filtered],
-  );
-
-  const activeCount = campaigns.filter((c) => c.status === "active" || c.status === "monitoring").length;
-  const avgHealth = campaigns.length > 0
-    ? campaigns.reduce((s, c) => s + c.health_score, 0) / campaigns.length
-    : 0;
+  const clientMap = new Map(safeArr<Client>(clients).map((c) => [c.id, c.name]));
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-slate-100 tracking-tight">Campaigns</h1>
-          <p className="text-slate-400 mt-1">Live campaign health evolution tracking.</p>
+          <h1 className="text-3xl font-bold text-slate-100">Campaigns</h1>
+          <p className="text-slate-400 mt-1">Manage your outreach campaigns</p>
         </div>
-        <div className="flex items-center gap-3">
-          <div className="flex items-center gap-1 bg-surface-darker rounded-lg border border-surface-border p-0.5">
-            <button
-              onClick={() => setViewMode("evolution")}
-              className={`px-3 py-1.5 text-[10px] font-mono rounded-md transition-all ${
-                viewMode === "evolution"
-                  ? "bg-platform-500/10 text-platform-400 border border-platform-500/20"
-                  : "text-slate-500 hover:text-slate-300"
-              }`}
-            >
-              EVOLUTION
-            </button>
-            <button
-              onClick={() => setViewMode("table")}
-              className={`px-3 py-1.5 text-[10px] font-mono rounded-md transition-all ${
-                viewMode === "table"
-                  ? "bg-platform-500/10 text-platform-400 border border-platform-500/20"
-                  : "text-slate-500 hover:text-slate-300"
-              }`}
-            >
-              TABLE
-            </button>
-          </div>
-          <span className="px-3 py-1.5 bg-emerald-500/10 border border-emerald-500/30 rounded-md text-[10px] font-mono text-emerald-400 flex items-center gap-2">
-            <GitBranch className="w-3.5 h-3.5" />
-            {activeCount} active
-          </span>
-          <span className="px-3 py-1.5 bg-platform-500/10 border border-platform-500/30 rounded-md text-[10px] font-mono text-platform-400 flex items-center gap-2">
-            <Activity className="w-3.5 h-3.5" />
-            avg {Math.round(avgHealth * 100)}% health
-          </span>
-          <button
-            onClick={() => openCommand("create_campaign")}
-            className="px-4 py-2 bg-platform-600 hover:bg-platform-500 text-white rounded-md text-xs font-bold font-mono transition-colors shadow-lg shadow-platform-900/30 flex items-center gap-2 whitespace-nowrap"
-          >
-            <Plus className="w-4 h-4" />
-            CREATE
-          </button>
-        </div>
+        <Button onClick={() => setShowCreateDialog(true)}>
+          <Plus className="w-4 h-4" />
+          New Campaign
+        </Button>
       </div>
 
-      <div className="flex flex-col sm:flex-row gap-4">
-        <div className="relative flex-1">
+      <div className="flex items-center gap-4">
+        <div className="relative flex-1 max-w-sm">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
-          <input
-            type="text"
+          <Input
             placeholder="Search campaigns..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full pl-10 pr-4 py-2 bg-surface-darker border border-surface-border rounded-lg text-slate-200 placeholder-slate-500 focus:outline-none focus:border-platform-500 focus:ring-1 focus:ring-platform-500 transition-all text-sm"
+            className="pl-9"
           />
+        </div>
+        <div className="flex items-center gap-1 bg-surface-card border border-surface-border rounded-lg p-1">
+          {STATUS_TABS.map((tab) => (
+            <button
+              key={tab.value}
+              onClick={() => setStatusFilter(tab.value)}
+              className={`px-3 py-1.5 text-xs font-medium rounded-md transition-all ${
+                statusFilter === tab.value
+                  ? "bg-surface-darker text-slate-100 shadow-sm"
+                  : "text-slate-400 hover:text-slate-200"
+              }`}
+            >
+              {tab.label}
+            </button>
+          ))}
         </div>
       </div>
 
       {isLoading ? (
-        <div className="flex items-center justify-center py-20">
-          <Loader2 className="w-8 h-8 text-platform-500 animate-spin" />
-        </div>
-      ) : isError ? (
-        <div className="glass-panel p-6 border-red-500/20 bg-red-500/5">
-          <h3 className="text-red-400 font-medium">Failed to load campaigns</h3>
-          <p className="text-sm text-slate-400 mt-1">Ensure the backend and database are accessible.</p>
-        </div>
-      ) : viewMode === "evolution" ? (
-        <CampaignEvolutionPanel />
-      ) : sorted.length === 0 ? (
-        <div className="glass-panel p-12 flex flex-col items-center justify-center text-center">
-          <GitBranch className="w-12 h-12 text-slate-700 mb-3" />
-          <h3 className="text-lg font-medium text-slate-300">No Campaigns</h3>
-          <p className="text-sm text-slate-500 mt-1">Create your first campaign to start tracking.</p>
-          <button
-            onClick={() => openCommand("create_campaign")}
-            className="mt-4 px-4 py-2 bg-platform-600 hover:bg-platform-500 text-white rounded-md text-xs font-bold font-mono flex items-center gap-2"
-          >
-            <Plus className="w-4 h-4" /> CREATE CAMPAIGN
-          </button>
-        </div>
+        <LoadingSpinner size="lg" className="py-20" />
+      ) : error ? (
+        <Card className="border-red-500/20 bg-red-500/5">
+          <CardContent className="py-8 text-center">
+            <p className="text-red-400 text-sm">Failed to load campaigns. Please try again.</p>
+          </CardContent>
+        </Card>
+      ) : !campaigns || safeArr<CampaignWithType>(campaigns).length === 0 ? (
+        <EmptyState
+          icon={<FileText className="w-8 h-8" />}
+          title="No campaigns found"
+          description={
+            searchQuery || statusFilter
+              ? "No campaigns match your filters. Try adjusting your search."
+              : "Create your first campaign to start tracking outreach."
+          }
+          action={
+            !searchQuery && !statusFilter
+              ? { label: "New Campaign", onClick: () => setShowCreateDialog(true) }
+              : undefined
+          }
+        />
       ) : (
-        <div className="glass-panel overflow-hidden">
+        <Card>
           <div className="overflow-x-auto">
-            <table className="w-full text-sm text-left">
-              <thead className="text-[10px] text-slate-500 uppercase bg-surface-darker border-b border-surface-border">
-                <tr>
-                  <th className="px-5 py-3 font-mono font-medium">Campaign</th>
-                  <th className="px-5 py-3 font-mono font-medium">Status</th>
-                  <th className="px-5 py-3 font-mono font-medium text-center">Health</th>
-                  <th className="px-5 py-3 font-mono font-medium text-center">Momentum</th>
-                  <th className="px-5 py-3 font-mono font-medium text-center">Velocity</th>
-                  <th className="px-5 py-3 font-mono font-medium text-right">Links</th>
-                  <th className="px-5 py-3 font-mono font-medium text-right">Progress</th>
-                  <th className="px-5 py-3 font-mono font-medium text-right">Sent</th>
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-surface-border">
+                  <th className="text-left px-4 py-3 text-xs font-medium text-slate-400 uppercase tracking-wider">Name</th>
+                  <th className="text-left px-4 py-3 text-xs font-medium text-slate-400 uppercase tracking-wider">Client</th>
+                  <th className="text-left px-4 py-3 text-xs font-medium text-slate-400 uppercase tracking-wider">Type</th>
+                  <th className="text-left px-4 py-3 text-xs font-medium text-slate-400 uppercase tracking-wider">Status</th>
+                  <th className="text-left px-4 py-3 text-xs font-medium text-slate-400 uppercase tracking-wider">Created</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-surface-border">
-                {sorted.map((c, i) => {
-                  const latest = c.trends?.[0];
-                  const momentum = latest?.momentum ?? 0;
-                  const velocity = latest?.velocity ?? 0;
-                  const healthPct = Math.round(c.health_score * 100);
-                  const progressPct = Math.round(c.progress * 100);
-                  return (
-                    <Fragment key={c.id}>
-                      <motion.tr
-                        initial={{ opacity: 0, y: 5 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ delay: i * 0.03 }}
-                        className="hover:bg-surface-border/30 transition-colors group"
-                      >
-                        <td className="px-5 py-3.5">
-                          <div className="font-medium text-slate-200 text-sm">{c.name}</div>
-                          <div className="text-[10px] text-slate-500 font-mono mt-0.5 capitalize">
-                            {c.campaign_type.replace("_", " ")}
-                          </div>
-                        </td>
-                        <td className="px-5 py-3.5">
-                          <span className={`px-2 py-0.5 text-[10px] font-mono rounded-full border uppercase ${
-                            c.status === "active" ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/20" :
-                            c.status === "monitoring" ? "bg-platform-500/10 text-platform-400 border-platform-500/20" :
-                            c.status === "draft" ? "bg-slate-500/10 text-slate-400 border-slate-500/20" :
-                            "bg-amber-500/10 text-amber-400 border-amber-500/20"
-                          }`}>
-                            {c.status.replace("_", " ")}
-                          </span>
-                        </td>
-                        <td className="px-5 py-3.5 text-center">
-                          <div className="flex items-center justify-center gap-2">
-                            <div className="w-16 h-2 bg-surface-darker rounded-full overflow-hidden">
-                              <motion.div
-                                initial={{ width: 0 }}
-                                animate={{ width: `${healthPct}%` }}
-                                transition={{ duration: 0.5, delay: i * 0.05 }}
-                                className={`h-full rounded-full ${getHealthBarColor(c.health_score)}`}
-                              />
-                            </div>
-                            <span className={`text-[10px] font-mono font-bold ${getHealthColor(c.health_score)}`}>
-                              {healthPct}%
-                            </span>
-                          </div>
-                        </td>
-                        <td className="px-5 py-3.5 text-center">
-                          <div className="flex items-center justify-center gap-1">
-                            {getMomentumIcon(momentum)}
-                            <span className={`text-[10px] font-mono ${
-                              momentum > 0.01 ? "text-emerald-500" :
-                              momentum < -0.01 ? "text-red-400" : "text-slate-500"
-                            }`}>
-                              {getMomentumLabel(momentum)}
-                            </span>
-                          </div>
-                        </td>
-                        <td className="px-5 py-3.5 text-center">
-                          <span className="text-[10px] font-mono text-slate-500">
-                            {velocity > 0 ? `${velocity.toFixed(3)}/s` : "—"}
-                          </span>
-                        </td>
-                        <td className="px-5 py-3.5 text-right">
-                          <span className="inline-flex items-center gap-1 px-2 py-1 rounded bg-platform-900/30 text-platform-400 font-mono font-bold text-xs border border-platform-500/20">
-                            <Link2 className="w-3 h-3" />
-                            {c.acquired_link_count}/{c.target_link_count}
-                          </span>
-                        </td>
-                        <td className="px-5 py-3.5 text-right">
-                          <span className={`text-[11px] font-mono font-bold ${
-                            progressPct >= 80 ? "text-emerald-400" :
-                            progressPct >= 50 ? "text-amber-400" :
-                            "text-slate-500"
-                          }`}>
-                            {progressPct}%
-                          </span>
-                        </td>
-                        <td className="px-5 py-3.5 text-right">
-                          <button
-                            onClick={() => toggleEmails(c.id)}
-                            className={`inline-flex items-center gap-1 px-2 py-1 rounded text-[11px] font-mono transition-colors ${
-                              expandedEmails.has(c.id)
-                                ? "bg-platform-500/15 text-platform-400 border border-platform-500/30"
-                                : "text-slate-500 hover:text-slate-300 hover:bg-surface-border/30"
-                            }`}
-                          >
-                            <Mail className="w-3 h-3" />
-                            {c.total_emails_sent}
-                            <Eye className={`w-3 h-3 ${expandedEmails.has(c.id) ? "opacity-100" : "opacity-0 group-hover:opacity-50"}`} />
-                          </button>
-                        </td>
-                      </motion.tr>
-                      {expandedEmails.has(c.id) && (
-                        <motion.tr
-                          initial={{ opacity: 0 }}
-                          animate={{ opacity: 1 }}
-                        >
-                          <td colSpan={8} className="px-5 py-3 bg-surface-darker/30">
-                            <EmailThreadViewer campaignId={c.id} />
-                          </td>
-                        </motion.tr>
-                      )}
-                    </Fragment>
-                  );
-                })}
+                {safeArr<CampaignWithType>(campaigns).map((campaign) => (
+                  <tr
+                    key={campaign.id}
+                    onClick={() => router.push(`/dashboard/campaigns/${campaign.id}`)}
+                    className="hover:bg-surface-card/50 cursor-pointer transition-colors"
+                  >
+                    <td className="px-4 py-3 font-medium text-slate-200">{campaign.name}</td>
+                    <td className="px-4 py-3 text-slate-400">
+                      {clientMap.get(campaign.client_id) || campaign.client_id}
+                    </td>
+                    <td className="px-4 py-3">
+                      <Badge variant={CAMPAIGN_TYPE_VARIANT[(campaign as CampaignWithType).campaign_type] || "outline"}>
+                        {(campaign as CampaignWithType).campaign_type?.replace(/_/g, " ") || "—"}
+                      </Badge>
+                    </td>
+                    <td className="px-4 py-3">
+                      <Badge variant={STATUS_VARIANT[campaign.status] || "outline"}>
+                        {campaign.status}
+                      </Badge>
+                    </td>
+                    <td className="px-4 py-3 text-slate-400">
+                      {formatDate(campaign.created_at)}
+                    </td>
+                  </tr>
+                ))}
               </tbody>
             </table>
           </div>
-        </div>
+        </Card>
       )}
 
-      {/* Workflow Execution Progress for Active Campaigns */}
-      {viewMode === "table" && sorted.filter(c => c.status === "active" || c.status === "monitoring").length > 0 && (
-        <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-4">
-          {sorted.filter(c => c.status === "active" || c.status === "monitoring").slice(0, 3).map((campaign) => (
-            <div key={campaign.id} className="glass-panel p-4">
-              <div className="flex items-center gap-2 mb-3">
-                <Radio className="w-4 h-4 text-emerald-400" />
-                <span className="text-xs font-mono font-bold text-slate-200 truncate">{campaign.name}</span>
-                <span className="ml-auto text-[9px] font-mono text-slate-600">phase 2</span>
-              </div>
-              <CampaignWorkflowStepper activePhase="scoring" />
+      <Dialog open={showCreateDialog} onOpenChange={setShowCreateDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Create Campaign</DialogTitle>
+            <DialogDescription>Set up a new outreach campaign</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="campaign-name">Campaign Name</Label>
+              <Input
+                id="campaign-name"
+                placeholder="e.g., Q1 Link Building"
+                value={createForm.name}
+                onChange={(e) => setCreateForm({ ...createForm, name: e.target.value })}
+              />
             </div>
-          ))}
-        </div>
-      )}
+            <div className="space-y-2">
+              <Label htmlFor="campaign-client">Client</Label>
+              <Select
+                id="campaign-client"
+                placeholder="Select a client"
+                options={safeArr<Client>(clients).map((c) => ({ label: c.name, value: c.id }))}
+                value={createForm.client_id}
+                onChange={(e) => setCreateForm({ ...createForm, client_id: e.target.value })}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="campaign-type">Campaign Type</Label>
+              <Select
+                id="campaign-type"
+                options={CAMPAIGN_TYPES}
+                value={createForm.campaign_type}
+                onChange={(e) => setCreateForm({ ...createForm, campaign_type: e.target.value })}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowCreateDialog(false)}>
+              Cancel
+            </Button>
+            <Button
+              onClick={handleCreate}
+              disabled={!createForm.name || !createForm.client_id || createMutation.isPending}
+            >
+              {createMutation.isPending ? "Creating..." : "Create Campaign"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

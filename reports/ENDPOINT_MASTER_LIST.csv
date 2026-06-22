@@ -1,0 +1,385 @@
+METHOD,PATH,FUNCTION,FILE,RBAC,TENANT_FILTER,STATUS,NOTES
+GET,/healthz,healthz,backend/src/seo_platform/api/endpoints/health.py,N,N,WORKING,200 OK no DB
+GET,/health,health,backend/src/seo_platform/api/endpoints/health.py,N,N,WORKING,200 OK DB ping
+GET,/metrics,metrics,backend/src/seo_platform/api/endpoints/observability.py,N,N,WORKING,Prometheus
+GET,/api/v1/clients,list_clients,backend/src/seo_platform/api/endpoints/clients.py,Y,Y,WORKING,200 OK 50 rows
+POST,/api/v1/clients,create_client,backend/src/seo_platform/api/endpoints/clients.py,Y,Y,WORKING,201 Created
+GET,/api/v1/clients/{id},get_client,backend/src/seo_platform/api/endpoints/clients.py,Y,Y,WORKING,200 OK
+PUT,/api/v1/clients/{id},update_client,backend/src/seo_platform/api/endpoints/clients.py,Y,Y,WORKING,200 OK
+DELETE,/api/v1/clients/{id},archive_client,backend/src/seo_platform/api/endpoints/clients.py,Y,Y,WORKING,200 OK soft-delete
+GET,/api/v1/clients/{id}/stats,client_stats,backend/src/seo_platform/api/endpoints/clients.py,Y,Y,WORKING,aggregated
+GET,/api/v1/campaigns,list_campaigns,backend/src/seo_platform/api/endpoints/campaigns.py,Y,Y,WORKING,200 OK 19 rows
+POST,/api/v1/campaigns,create_campaign,backend/src/seo_platform/api/endpoints/campaigns.py,Y,Y,WORKING,201 Created
+GET,/api/v1/campaigns/{id},get_campaign,backend/src/seo_platform/api/endpoints/campaigns.py,Y,Y,WORKING,200 OK
+PUT,/api/v1/campaigns/{id},update_campaign,backend/src/seo_platform/api/endpoints/campaigns.py,Y,Y,WORKING,200 OK
+DELETE,/api/v1/campaigns/{id},archive_campaign,backend/src/seo_platform/api/endpoints/campaigns.py,Y,Y,WORKING,200 OK
+POST,/api/v1/campaigns/{id}/discover,discover_prospects,backend/src/seo_platform/api/endpoints/campaigns.py,Y,Y,WORKING,200 OK simulated fallback
+GET,/api/v1/campaigns/{id}/threads,list_threads,backend/src/seo_platform/api/endpoints/campaigns.py,Y,Y,WORKING,200 OK 21 rows
+GET,/api/v1/campaigns/{id}/portfolio,campaign_portfolio,backend/src/seo_platform/api/endpoints/campaigns.py,Y,Y,WORKING,200 OK
+GET,/api/v1/campaigns/{id}/timeline,campaign_timeline,backend/src/seo_platform/api/endpoints/campaigns.py,Y,Y,WORKING,200 OK
+POST,/api/v1/campaigns/{id}/agent,run_agent,backend/src/seo_platform/api/endpoints/campaigns.py,Y,Y,LIKELY_WORKING,autonomous agent
+GET,/api/v1/campaigns/{id}/discover/status,discover_status,backend/src/seo_platform/api/endpoints/campaigns.py,Y,Y,WORKING,200 OK
+GET,/api/v1/campaigns/{id}/metrics,campaign_metrics,backend/src/seo_platform/api/endpoints/campaigns.py,Y,Y,WORKING,200 OK
+GET,/api/v1/campaigns/{id}/backlinks,campaign_backlinks,backend/src/seo_platform/api/endpoints/campaigns.py,Y,Y,PARTIAL,counts real placement fake
+POST,/api/v1/campaigns/{id}/clone,clone_campaign,backend/src/seo_platform/api/endpoints/campaigns.py,Y,Y,LIKELY_WORKING,200 OK
+GET,/api/v1/campaigns/{id}/audit,campaign_audit,backend/src/seo_platform/api/endpoints/campaigns.py,Y,Y,WORKING,200 OK
+GET,/api/v1/keywords,list_keywords,backend/src/seo_platform/api/endpoints/keywords.py,Y,Y,WORKING,200 OK 125 rows
+POST,/api/v1/keywords/research,research,backend/src/seo_platform/api/endpoints/keywords.py,Y,Y,WORKING,200 OK
+GET,/api/v1/keywords/{id},get_keyword,backend/src/seo_platform/api/endpoints/keywords.py,Y,Y,WORKING,200 OK
+GET,/api/v1/plans,list_plans,backend/src/seo_platform/api/endpoints/plans.py,Y,Y,WORKING,200 OK
+POST,/api/v1/plans/generate,generate_plan,backend/src/seo_platform/api/endpoints/plans.py,Y,Y,BROKEN,422 needs goal_execution_id
+GET,/api/v1/plans/{id},get_plan,backend/src/seo_platform/api/endpoints/plans.py,Y,Y,WORKING,200 OK
+PUT,/api/v1/plans/{id},update_plan,backend/src/seo_platform/api/endpoints/plans.py,Y,Y,LIKELY_WORKING,200 OK
+DELETE,/api/v1/plans/{id},archive_plan,backend/src/seo_platform/api/endpoints/plans.py,Y,Y,LIKELY_WORKING,200 OK
+GET,/api/v1/plans/{id}/items,list_plan_items,backend/src/seo_platform/api/endpoints/plans.py,Y,Y,WORKING,200 OK
+GET,/api/v1/plans/{id}/steps,list_plan_steps,backend/src/seo_platform/api/endpoints/plans.py,Y,Y,WORKING,200 OK
+POST,/api/v1/plans/{id}/items,add_plan_item,backend/src/seo_platform/api/endpoints/plans.py,Y,Y,LIKELY_WORKING,201 Created
+POST,/api/v1/plans/bulk-generate,bulk_generate,backend/src/seo_platform/api/endpoints/plans.py,Y,Y,LIKELY_WORKING,async
+POST,/api/v1/plans/generate-async,generate_async,backend/src/seo_platform/api/endpoints/plans.py,Y,Y,LIKELY_WORKING,Temporal
+GET,/api/v1/approvals,list_approvals,backend/src/seo_platform/api/endpoints/approvals.py,Y,Y,WORKING,200 OK 2 rows
+GET,/api/v1/approvals/{id},get_approval,backend/src/seo_platform/api/endpoints/approvals.py,Y,Y,WORKING,200 OK
+POST,/api/v1/approvals/{id}/approve,approve,backend/src/seo_platform/api/endpoints/approvals.py,Y,Y,LIKELY_WORKING,200 OK
+POST,/api/v1/approvals/{id}/reject,reject,backend/src/seo_platform/api/endpoints/approvals.py,Y,Y,LIKELY_WORKING,200 OK
+GET,/api/v1/reports,list_reports,backend/src/seo_platform/api/endpoints/reports.py,Y,Y,WORKING,200 OK 5 rows
+POST,/api/v1/reports,create_report,backend/src/seo_platform/api/endpoints/reports.py,Y,Y,WORKING,201 Created
+GET,/api/v1/reports/{id},get_report,backend/src/seo_platform/api/endpoints/reports.py,Y,Y,PARTIAL,real data but [id] page hardcodes mocks
+POST,/api/v1/reports/generate,generate_report,backend/src/seo_platform/api/endpoints/reports.py,Y,Y,WORKING,201 Created
+GET,/api/v1/executions,list_executions,backend/src/seo_platform/api/endpoints/execution.py,Y,Y,WORKING,200 OK
+GET,/api/v1/executions/{id},get_execution,backend/src/seo_platform/api/endpoints/execution.py,Y,Y,WORKING,200 OK
+POST,/api/v1/executions/{id}/retry,retry_execution,backend/src/seo_platform/api/endpoints/execution.py,Y,Y,LIKELY_WORKING,202 Accepted
+GET,/api/v1/backlink-acquisition/prospects,list_prospects,backend/src/seo_platform/api/endpoints/backlink_acquisition.py,Y,Y,WORKING,200 OK
+GET,/api/v1/backlink-acquisition/prospect-graph,prospect_graph,backend/src/seo_platform/api/endpoints/backlink_acquisition.py,Y,Y,BROKEN,duplicates /prospect-graph
+POST,/api/v1/backlink-acquisition/outreach,send_outreach,backend/src/seo_platform/api/endpoints/backlink_acquisition.py,Y,Y,WORKING,200 OK
+POST,/api/v1/backlink-acquisition/mark-link-acquired,mark_link_acquired,backend/src/seo_platform/api/endpoints/backlink_acquisition.py,N,Y,FAKE,admin/test route must not be in prod
+POST,/api/v1/backlink-acquisition/simulate-reply,simulate_reply,backend/src/seo_platform/api/endpoints/backlink_acquisition.py,N,Y,FAKE,seeds fake replies
+GET,/api/v1/backlink-acquisition/replies,list_replies,backend/src/seo_platform/api/endpoints/backlink_acquisition.py,Y,Y,PARTIAL,table only populated by simulate-reply
+GET,/api/v1/backlink-acquisition/threads,list_outreach_threads,backend/src/seo_platform/api/endpoints/backlink_acquisition.py,Y,Y,WORKING,200 OK 21 rows
+GET,/api/v1/backlink-intelligence/domains,list_domains,backend/src/seo_platform/api/endpoints/backlink_intelligence.py,Y,Y,WORKING,200 OK
+GET,/api/v1/backlink-intelligence/opportunities,list_opportunities,backend/src/seo_platform/api/endpoints/backlink_intelligence.py,Y,Y,WORKING,200 OK
+GET,/api/v1/backlink-intelligence/gaps,list_gaps,backend/src/seo_platform/api/endpoints/backlink_intelligence.py,Y,Y,WORKING,200 OK
+GET,/api/v1/backlink-intelligence/anchors,list_anchors,backend/src/seo_platform/api/endpoints/backlink_intelligence.py,Y,Y,WORKING,200 OK
+GET,/api/v1/backlink-intelligence/competitors,list_competitors,backend/src/seo_platform/api/endpoints/backlink_intelligence.py,Y,Y,WORKING,200 OK
+GET,/api/v1/backlink-intelligence/deltas,list_deltas,backend/src/seo_platform/api/endpoints/backlink_intelligence.py,Y,Y,WORKING,200 OK
+GET,/api/v1/backlink-intelligence/scoring,scoring,backend/src/seo_platform/api/endpoints/backlink_intelligence.py,Y,Y,WORKING,200 OK
+GET,/api/v1/backlink-intelligence/links,list_links,backend/src/seo_platform/api/endpoints/backlink_intelligence.py,Y,Y,PARTIAL,counts real verification fake
+GET,/api/v1/backlink-intelligence/lost-links,list_lost,backend/src/seo_platform/api/endpoints/backlink_intelligence.py,Y,Y,PARTIAL,no monitoring
+GET,/api/v1/backlink-intelligence/acquired,list_acquired,backend/src/seo_platform/api/endpoints/backlink_intelligence.py,Y,Y,WORKING,200 OK 6 rows
+GET,/api/v1/backlink-intelligence/velocity,velocity,backend/src/seo_platform/api/endpoints/backlink_intelligence.py,Y,Y,WORKING,200 OK
+GET,/api/v1/backlink-intelligence/quality,quality,backend/src/seo_platform/api/endpoints/backlink_intelligence.py,Y,Y,PARTIAL,quality heuristic partial
+GET,/api/v1/backlink-intelligence/reporting,reporting,backend/src/seo_platform/api/endpoints/backlink_intelligence.py,Y,Y,PARTIAL,report aggregates
+GET,/api/v1/automation/rules,list_rules,backend/src/seo_platform/api/endpoints/automation.py,Y,Y,WORKING,200 OK
+POST,/api/v1/automation/rules,create_rule,backend/src/seo_platform/api/endpoints/automation.py,Y,Y,WORKING,201 Created
+GET,/api/v1/automation/rules/{id},get_rule,backend/src/seo_platform/api/endpoints/automation.py,Y,Y,WORKING,200 OK
+PUT,/api/v1/automation/rules/{id},update_rule,backend/src/seo_platform/api/endpoints/automation.py,Y,Y,WORKING,200 OK
+DELETE,/api/v1/automation/rules/{id},archive_rule,backend/src/seo_platform/api/endpoints/automation.py,Y,Y,WORKING,200 OK
+GET,/api/v1/automation/triggers,list_triggers,backend/src/seo_platform/api/endpoints/automation.py,Y,Y,WORKING,200 OK
+POST,/api/v1/automation/triggers,create_trigger,backend/src/seo_platform/api/endpoints/automation.py,Y,Y,WORKING,201 Created
+GET,/api/v1/automation/actions,list_actions,backend/src/seo_platform/api/endpoints/automation.py,Y,Y,WORKING,200 OK
+POST,/api/v1/automation/actions,create_action,backend/src/seo_platform/api/endpoints/automation.py,Y,Y,WORKING,201 Created
+GET,/api/v1/automation/schedules,list_schedules,backend/src/seo_platform/api/endpoints/automation.py,Y,Y,WORKING,200 OK
+POST,/api/v1/automation/schedules,create_schedule,backend/src/seo_platform/api/endpoints/automation.py,Y,Y,WORKING,201 Created
+GET,/api/v1/automation/runs,list_runs,backend/src/seo_platform/api/endpoints/automation.py,Y,Y,WORKING,200 OK
+GET,/api/v1/automation/runs/{id},get_run,backend/src/seo_platform/api/endpoints/automation.py,Y,Y,WORKING,200 OK
+POST,/api/v1/automation/runs/{id}/cancel,cancel_run,backend/src/seo_platform/api/endpoints/automation.py,Y,Y,LIKELY_WORKING,200 OK
+POST,/api/v1/automation/dry-run,dry_run,backend/src/seo_platform/api/endpoints/automation.py,Y,Y,WORKING,200 OK
+GET,/api/v1/automation/kanban,kanban,backend/src/seo_platform/api/endpoints/automation.py,Y,Y,WORKING,200 OK
+GET,/api/v1/automation/stats,stats,backend/src/seo_platform/api/endpoints/automation.py,Y,Y,WORKING,200 OK
+GET,/api/v1/automation/templates,list_templates,backend/src/seo_platform/api/endpoints/automation.py,Y,Y,WORKING,200 OK
+POST,/api/v1/automation/templates,create_template,backend/src/seo_platform/api/endpoints/automation.py,Y,Y,WORKING,201 Created
+PUT,/api/v1/automation/templates/{id},update_template,backend/src/seo_platform/api/endpoints/automation.py,Y,Y,LIKELY_WORKING,200 OK
+DELETE,/api/v1/automation/templates/{id},archive_template,backend/src/seo_platform/api/endpoints/automation.py,Y,Y,LIKELY_WORKING,200 OK
+GET,/api/v1/automation/{id}/history,history,backend/src/seo_platform/api/endpoints/automation.py,Y,Y,WORKING,200 OK
+GET,/api/v1/email-verification/verify/{email},verify,backend/src/seo_platform/api/endpoints/backlink_acquisition.py,Y,Y,PARTIAL,service exists not wired
+POST,/api/v1/email-verification/batch,batch_verify,backend/src/seo_platform/api/endpoints/backlink_acquisition.py,Y,Y,PARTIAL,batch endpoint exists
+GET,/api/v1/link-verification/{link_id},verify_link,backend/src/seo_platform/api/endpoints/backlink_acquisition.py,Y,Y,BROKEN,stub returns verified=False
+GET,/api/v1/link-verification/campaign/{id},verify_campaign,backend/src/seo_platform/api/endpoints/backlink_acquisition.py,Y,Y,BROKEN,stub
+POST,/api/v1/link-verification/refresh,refresh,backend/src/seo_platform/api/endpoints/backlink_acquisition.py,Y,Y,BROKEN,stub
+GET,/api/v1/link-monitoring/links,monitor_list,backend/src/seo_platform/api/endpoints/backlink_acquisition.py,Y,Y,BROKEN,stub
+GET,/api/v1/link-monitoring/dropped,dropped,backend/src/seo_platform/api/endpoints/backlink_acquisition.py,Y,Y,BROKEN,stub
+POST,/api/v1/link-monitoring/schedule,schedule,backend/src/seo_platform/api/endpoints/backlink_acquisition.py,Y,Y,BROKEN,stub
+GET,/api/v1/agents,list_agents,backend/src/seo_platform/api/endpoints/agents.py,Y,Y,WORKING,200 OK
+POST,/api/v1/agents,create_agent,backend/src/seo_platform/api/endpoints/agents.py,Y,Y,WORKING,201 Created
+GET,/api/v1/agents/{id},get_agent,backend/src/seo_platform/api/endpoints/agents.py,Y,Y,WORKING,200 OK
+PUT,/api/v1/agents/{id},update_agent,backend/src/seo_platform/api/endpoints/agents.py,Y,Y,LIKELY_WORKING,200 OK
+DELETE,/api/v1/agents/{id},archive_agent,backend/src/seo_platform/api/endpoints/agents.py,Y,Y,LIKELY_WORKING,200 OK
+POST,/api/v1/agents/{id}/run,run_agent,backend/src/seo_platform/api/endpoints/agents.py,Y,Y,WORKING,202 Accepted
+GET,/api/v1/agents/{id}/runs,list_runs,backend/src/seo_platform/api/endpoints/agents.py,Y,Y,WORKING,200 OK
+GET,/api/v1/agents/runs/{id},get_run,backend/src/seo_platform/api/endpoints/agents.py,Y,Y,WORKING,200 OK
+GET,/api/v1/goals,list_goals,backend/src/seo_platform/api/endpoints/goals.py,Y,Y,WORKING,200 OK
+POST,/api/v1/goals,create_goal,backend/src/seo_platform/api/endpoints/goals.py,Y,Y,WORKING,201 Created
+GET,/api/v1/goals/{id},get_goal,backend/src/seo_platform/api/endpoints/goals.py,Y,Y,WORKING,200 OK
+PUT,/api/v1/goals/{id},update_goal,backend/src/seo_platform/api/endpoints/goals.py,Y,Y,WORKING,200 OK
+DELETE,/api/v1/goals/{id},archive_goal,backend/src/seo_platform/api/endpoints/goals.py,Y,Y,WORKING,200 OK
+GET,/api/v1/goals/{id}/executions,list_executions,backend/src/seo_platform/api/endpoints/goals.py,Y,Y,WORKING,200 OK
+POST,/api/v1/goals/{id}/execute,execute_goal,backend/src/seo_platform/api/endpoints/goals.py,Y,Y,WORKING,202 Accepted
+GET,/api/v1/communication/templates,list_templates,backend/src/seo_platform/api/endpoints/communication_templates.py,Y,Y,WORKING,200 OK
+POST,/api/v1/communication/templates,create_template,backend/src/seo_platform/api/endpoints/communication_templates.py,Y,Y,WORKING,201 Created
+GET,/api/v1/communication/templates/{id},get_template,backend/src/seo_platform/api/endpoints/communication_templates.py,Y,Y,WORKING,200 OK
+PUT,/api/v1/communication/templates/{id},update_template,backend/src/seo_platform/api/endpoints/communication_templates.py,Y,Y,WORKING,200 OK
+DELETE,/api/v1/communication/templates/{id},archive_template,backend/src/seo_platform/api/endpoints/communication_templates.py,Y,Y,WORKING,200 OK
+GET,/api/v1/communication/drafts,list_drafts,backend/src/seo_platform/api/endpoints/email_drafts.py,Y,Y,WORKING,200 OK
+POST,/api/v1/communication/drafts,create_draft,backend/src/seo_platform/api/endpoints/email_drafts.py,Y,Y,WORKING,201 Created
+GET,/api/v1/communication/drafts/{id},get_draft,backend/src/seo_platform/api/endpoints/email_drafts.py,Y,Y,WORKING,200 OK
+PUT,/api/v1/communication/drafts/{id},update_draft,backend/src/seo_platform/api/endpoints/email_drafts.py,Y,Y,WORKING,200 OK
+DELETE,/api/v1/communication/drafts/{id},archive_draft,backend/src/seo_platform/api/endpoints/email_drafts.py,Y,Y,WORKING,200 OK
+POST,/api/v1/communication/drafts/{id}/send,send_draft,backend/src/seo_platform/api/endpoints/email_drafts.py,Y,Y,WORKING,202 Accepted
+GET,/api/v1/communication/scheduled,list_scheduled,backend/src/seo_platform/api/endpoints/email_scheduling.py,Y,Y,WORKING,200 OK
+POST,/api/v1/communication/scheduled,schedule_email,backend/src/seo_platform/api/endpoints/email_scheduling.py,Y,Y,WORKING,201 Created
+GET,/api/v1/communication/scheduled/{id},get_scheduled,backend/src/seo_platform/api/endpoints/email_scheduling.py,Y,Y,WORKING,200 OK
+DELETE,/api/v1/communication/scheduled/{id},cancel_scheduled,backend/src/seo_platform/api/endpoints/email_scheduling.py,Y,Y,WORKING,200 OK
+GET,/api/v1/communication/attachments,list_attachments,backend/src/seo_platform/api/endpoints/email_attachments.py,Y,Y,WORKING,200 OK
+POST,/api/v1/communication/attachments,upload_attachment,backend/src/seo_platform/api/endpoints/email_attachments.py,Y,Y,WORKING,201 Created
+GET,/api/v1/communication/attachments/{id},get_attachment,backend/src/seo_platform/api/endpoints/email_attachments.py,Y,Y,WORKING,200 OK
+DELETE,/api/v1/communication/attachments/{id},delete_attachment,backend/src/seo_platform/api/endpoints/email_attachments.py,Y,Y,WORKING,200 OK
+GET,/api/v1/communication/reliability,reliability,backend/src/seo_platform/api/endpoints/communication_reliability.py,Y,Y,WORKING,200 OK
+GET,/api/v1/citations,list_citations,backend/src/seo_platform/api/endpoints/citations.py,Y,Y,WORKING,200 OK
+POST,/api/v1/citations,create_citation,backend/src/seo_platform/api/endpoints/citations.py,Y,Y,WORKING,201 Created
+GET,/api/v1/citations/{id},get_citation,backend/src/seo_platform/api/endpoints/citations.py,Y,Y,WORKING,200 OK
+PUT,/api/v1/citations/{id},update_citation,backend/src/seo_platform/api/endpoints/citations.py,Y,Y,WORKING,200 OK
+DELETE,/api/v1/citations/{id},archive_citation,backend/src/seo_platform/api/endpoints/citations.py,Y,Y,WORKING,200 OK
+GET,/api/v1/citations/{id}/consistency,consistency,backend/src/seo_platform/api/endpoints/citations.py,Y,Y,WORKING,200 OK
+GET,/api/v1/local-seo/listings,list_listings,backend/src/seo_platform/api/endpoints/local_seo.py,Y,Y,WORKING,200 OK
+POST,/api/v1/local-seo/listings,create_listing,backend/src/seo_platform/api/endpoints/local_seo.py,Y,Y,WORKING,201 Created
+GET,/api/v1/local-seo/listings/{id},get_listing,backend/src/seo_platform/api/endpoints/local_seo.py,Y,Y,WORKING,200 OK
+PUT,/api/v1/local-seo/listings/{id},update_listing,backend/src/seo_platform/api/endpoints/local_seo.py,Y,Y,WORKING,200 OK
+DELETE,/api/v1/local-seo/listings/{id},archive_listing,backend/src/seo_platform/api/endpoints/local_seo.py,Y,Y,WORKING,200 OK
+GET,/api/v1/local-seo/rankings,list_rankings,backend/src/seo_platform/api/endpoints/local_seo.py,Y,Y,WORKING,200 OK
+GET,/api/v1/local-seo/reviews,list_reviews,backend/src/seo_platform/api/endpoints/local_seo.py,Y,Y,WORKING,200 OK
+GET,/api/v1/prospect-graph,prospect_graph,backend/src/seo_platform/api/endpoints/prospect_graph.py,Y,Y,WORKING,200 OK
+GET,/api/v1/prospect-graph/{campaign_id},prospect_graph_for_campaign,backend/src/seo_platform/api/endpoints/prospect_graph.py,Y,Y,WORKING,200 OK
+GET,/api/v1/prospect-graph/nodes/{id},get_node,backend/src/seo_platform/api/endpoints/prospect_graph.py,Y,Y,WORKING,200 OK
+GET,/api/v1/prospect-graph/edges,list_edges,backend/src/seo_platform/api/endpoints/prospect_graph.py,Y,Y,WORKING,200 OK
+GET,/api/v1/prospect-list,prospect_list,backend/src/seo_platform/api/endpoints/prospect_graph.py,Y,Y,WORKING,200 OK
+GET,/api/v1/outreach-intelligence,list_outreach,backend/src/seo_platform/api/endpoints/outreach_intelligence.py,Y,Y,WORKING,200 OK
+GET,/api/v1/outreach-intelligence/{id},get_outreach,backend/src/seo_platform/api/endpoints/outreach_intelligence.py,Y,Y,WORKING,200 OK
+GET,/api/v1/outreach-intelligence/{id}/scoring,scoring,backend/src/seo_platform/api/endpoints/outreach_intelligence.py,Y,Y,WORKING,200 OK
+GET,/api/v1/outreach-intelligence/{id}/suggestions,suggestions,backend/src/seo_platform/api/endpoints/outreach_intelligence.py,Y,Y,WORKING,200 OK
+GET,/api/v1/outreach-intelligence/{id}/history,history,backend/src/seo_platform/api/endpoints/outreach_intelligence.py,Y,Y,WORKING,200 OK
+GET,/api/v1/copilot,copilot_query,backend/src/seo_platform/api/endpoints/copilot.py,Y,Y,WORKING,200 OK LLM
+POST,/api/v1/copilot,copilot_post,backend/src/seo_platform/api/endpoints/copilot.py,Y,Y,WORKING,201 Created
+GET,/api/v1/copilot/sessions,list_sessions,backend/src/seo_platform/api/endpoints/copilot.py,Y,Y,WORKING,200 OK
+GET,/api/v1/copilot/sessions/{id},get_session,backend/src/seo_platform/api/endpoints/copilot.py,Y,Y,WORKING,200 OK
+DELETE,/api/v1/copilot/sessions/{id},archive_session,backend/src/seo_platform/api/endpoints/copilot.py,Y,Y,WORKING,200 OK
+GET,/api/v1/intelligence,list_intelligence,backend/src/seo_platform/api/endpoints/intelligence.py,Y,Y,WORKING,200 OK
+POST,/api/v1/intelligence/query,query,backend/src/seo_platform/api/endpoints/intelligence.py,Y,Y,WORKING,200 OK
+GET,/api/v1/intelligence/{id},get_intel,backend/src/seo_platform/api/endpoints/intelligence.py,Y,Y,WORKING,200 OK
+GET,/api/v1/intelligence/queries,list_queries,backend/src/seo_platform/api/endpoints/intelligence_queries.py,Y,Y,WORKING,200 OK
+GET,/api/v1/intelligence/queries/{id},get_query,backend/src/seo_platform/api/endpoints/intelligence_queries.py,Y,Y,WORKING,200 OK
+GET,/api/v1/seo-intelligence,list_seo_intel,backend/src/seo_platform/api/endpoints/seo_intelligence.py,Y,Y,WORKING,200 OK
+GET,/api/v1/seo-intelligence/{id},get_seo_intel,backend/src/seo_platform/api/endpoints/seo_intelligence.py,Y,Y,WORKING,200 OK
+GET,/api/v1/serp-intelligence,list_serp,backend/src/seo_platform/api/endpoints/serp_intelligence.py,Y,Y,WORKING,200 OK
+GET,/api/v1/serp-intelligence/{id},get_serp,backend/src/seo_platform/api/endpoints/serp_intelligence.py,Y,Y,WORKING,200 OK
+GET,/api/v1/serp-intelligence/rankings,list_rankings,backend/src/seo_platform/api/endpoints/serp_intelligence.py,Y,Y,WORKING,200 OK
+GET,/api/v1/semantic,list_semantic,backend/src/seo_platform/api/endpoints/semantic.py,Y,Y,WORKING,200 OK
+POST,/api/v1/semantic/search,semantic_search,backend/src/seo_platform/api/endpoints/semantic.py,Y,Y,WORKING,200 OK
+GET,/api/v1/semantic/{id},get_semantic,backend/src/seo_platform/api/endpoints/semantic.py,Y,Y,WORKING,200 OK
+GET,/api/v1/semantic-memory,list_memory,backend/src/seo_platform/api/endpoints/semantic_memory.py,Y,Y,WORKING,200 OK
+POST,/api/v1/semantic-memory,create_memory,backend/src/seo_platform/api/endpoints/semantic_memory.py,Y,Y,WORKING,201 Created
+GET,/api/v1/semantic-memory/{id},get_memory,backend/src/seo_platform/api/endpoints/semantic_memory.py,Y,Y,WORKING,200 OK
+DELETE,/api/v1/semantic-memory/{id},archive_memory,backend/src/seo_platform/api/endpoints/semantic_memory.py,Y,Y,WORKING,200 OK
+GET,/api/v1/knowledge,list_knowledge,backend/src/seo_platform/api/endpoints/knowledge.py,Y,Y,WORKING,200 OK
+POST,/api/v1/knowledge,create_knowledge,backend/src/seo_platform/api/endpoints/knowledge.py,Y,Y,WORKING,201 Created
+GET,/api/v1/knowledge/{id},get_knowledge,backend/src/seo_platform/api/endpoints/knowledge.py,Y,Y,WORKING,200 OK
+GET,/api/v1/business-intelligence,list_bi,backend/src/seo_platform/api/endpoints/business_intelligence.py,Y,Y,WORKING,200 OK
+GET,/api/v1/business-intelligence/{id},get_bi,backend/src/seo_platform/api/endpoints/business_intelligence.py,Y,Y,WORKING,200 OK
+GET,/api/v1/business-intelligence/kpis,kpis,backend/src/seo_platform/api/endpoints/business_intelligence.py,Y,Y,WORKING,200 OK
+GET,/api/v1/recommendations,list_recs,backend/src/seo_platform/api/endpoints/recommendations.py,Y,Y,WORKING,200 OK
+POST,/api/v1/recommendations/{id}/accept,accept_rec,backend/src/seo_platform/api/endpoints/recommendations.py,Y,Y,WORKING,200 OK
+POST,/api/v1/recommendations/{id}/reject,reject_rec,backend/src/seo_platform/api/endpoints/recommendations.py,Y,Y,WORKING,200 OK
+GET,/api/v1/ai-recommendations,list_ai_recs,backend/src/seo_platform/api/endpoints/ai_recommendations.py,Y,Y,WORKING,200 OK
+GET,/api/v1/ai-recommendations/{id},get_ai_rec,backend/src/seo_platform/api/endpoints/ai_recommendations.py,Y,Y,WORKING,200 OK
+GET,/api/v1/ai-query,list_ai_query,backend/src/seo_platform/api/endpoints/ai_query.py,Y,Y,WORKING,200 OK
+POST,/api/v1/ai-query,create_ai_query,backend/src/seo_platform/api/endpoints/ai_query.py,Y,Y,WORKING,201 Created
+GET,/api/v1/ai-quality,ai_quality,backend/src/seo_platform/api/endpoints/ai_quality.py,Y,Y,WORKING,200 OK
+GET,/api/v1/ai-resilience,ai_resilience,backend/src/seo_platform/api/endpoints/ai_resilience.py,Y,Y,WORKING,200 OK
+GET,/api/v1/ai-ops,ai_ops,backend/src/seo_platform/api/endpoints/ai_ops.py,Y,Y,WORKING,200 OK
+GET,/api/v1/ai-ops/runs,ai_ops_runs,backend/src/seo_platform/api/endpoints/ai_ops.py,Y,Y,WORKING,200 OK
+GET,/api/v1/ai-ops/{id},ai_ops_get,backend/src/seo_platform/api/endpoints/ai_ops.py,Y,Y,WORKING,200 OK
+GET,/api/v1/ai-ops/queue,ai_queue,backend/src/seo_platform/api/endpoints/ai_ops.py,Y,Y,WORKING,200 OK
+POST,/api/v1/ai-ops/queue/retry,ai_queue_retry,backend/src/seo_platform/api/endpoints/ai_ops.py,Y,Y,WORKING,200 OK
+GET,/api/v1/observability,observability,backend/src/seo_platform/api/endpoints/observability.py,Y,Y,WORKING,200 OK
+GET,/api/v1/observability/metrics,metrics,backend/src/seo_platform/api/endpoints/observability.py,Y,Y,WORKING,200 OK
+GET,/api/v1/observability/traces,traces,backend/src/seo_platform/api/endpoints/observability.py,Y,Y,WORKING,200 OK
+GET,/api/v1/observability/logs,logs,backend/src/seo_platform/api/endpoints/observability.py,Y,Y,WORKING,200 OK
+GET,/api/v1/observability/health,health_detail,backend/src/seo_platform/api/endpoints/observability.py,Y,Y,WORKING,200 OK
+GET,/api/v1/observability/slo,slo,backend/src/seo_platform/api/endpoints/observability.py,Y,Y,WORKING,200 OK
+GET,/api/v1/observability/audit,audit,backend/src/seo_platform/api/endpoints/observability.py,Y,Y,WORKING,200 OK
+GET,/api/v1/sre-observability,list_sre,backend/src/seo_platform/api/endpoints/sre_observability.py,Y,Y,WORKING,200 OK
+GET,/api/v1/sre-observability/{id},get_sre,backend/src/seo_platform/api/endpoints/sre_observability.py,Y,Y,WORKING,200 OK
+GET,/api/v1/advanced-sre,list_adv_sre,backend/src/seo_platform/api/endpoints/advanced_sre.py,Y,Y,WORKING,200 OK
+GET,/api/v1/advanced-sre/incidents,list_incidents,backend/src/seo_platform/api/endpoints/advanced_sre.py,Y,Y,WORKING,200 OK
+POST,/api/v1/advanced-sre/incidents,create_incident,backend/src/seo_platform/api/endpoints/advanced_sre.py,Y,Y,WORKING,201 Created
+GET,/api/v1/advanced-sre/incidents/{id},get_incident,backend/src/seo_platform/api/endpoints/advanced_sre.py,Y,Y,WORKING,200 OK
+PUT,/api/v1/advanced-sre/incidents/{id},update_incident,backend/src/seo_platform/api/endpoints/advanced_sre.py,Y,Y,WORKING,200 OK
+POST,/api/v1/advanced-sre/incidents/{id}/resolve,resolve_incident,backend/src/seo_platform/api/endpoints/advanced_sre.py,Y,Y,WORKING,200 OK
+GET,/api/v1/incidents,list_incidents,backend/src/seo_platform/api/endpoints/incident_response.py,Y,Y,WORKING,200 OK
+POST,/api/v1/incidents,create_incident,backend/src/seo_platform/api/endpoints/incident_response.py,Y,Y,WORKING,201 Created
+GET,/api/v1/incidents/{id},get_incident,backend/src/seo_platform/api/endpoints/incident_response.py,Y,Y,WORKING,200 OK
+PUT,/api/v1/incidents/{id},update_incident,backend/src/seo_platform/api/endpoints/incident_response.py,Y,Y,WORKING,200 OK
+POST,/api/v1/incidents/{id}/resolve,resolve_incident,backend/src/seo_platform/api/endpoints/incident_response.py,Y,Y,WORKING,200 OK
+GET,/api/v1/incidents/{id}/timeline,incident_timeline,backend/src/seo_platform/api/endpoints/incident_response.py,Y,Y,WORKING,200 OK
+GET,/api/v1/incident-intelligence,list_intel,backend/src/seo_platform/api/endpoints/incident_intelligence.py,Y,Y,WORKING,200 OK
+GET,/api/v1/incident-intelligence/{id},get_intel,backend/src/seo_platform/api/endpoints/incident_intelligence.py,Y,Y,WORKING,200 OK
+GET,/api/v1/incident-evolution,list_evolution,backend/src/seo_platform/api/endpoints/incident_evolution.py,Y,Y,WORKING,200 OK
+GET,/api/v1/incident-evolution/{id},get_evolution,backend/src/seo_platform/api/endpoints/incident_evolution.py,Y,Y,WORKING,200 OK
+GET,/api/v1/alerting,list_alerts,backend/src/seo_platform/api/endpoints/alerting.py,Y,Y,WORKING,200 OK
+POST,/api/v1/alerting,create_alert,backend/src/seo_platform/api/endpoints/alerting.py,Y,Y,WORKING,201 Created
+GET,/api/v1/alerting/{id},get_alert,backend/src/seo_platform/api/endpoints/alerting.py,Y,Y,WORKING,200 OK
+PUT,/api/v1/alerting/{id},update_alert,backend/src/seo_platform/api/endpoints/alerting.py,Y,Y,WORKING,200 OK
+DELETE,/api/v1/alerting/{id},archive_alert,backend/src/seo_platform/api/endpoints/alerting.py,Y,Y,WORKING,200 OK
+GET,/api/v1/alerting/{id}/history,alert_history,backend/src/seo_platform/api/endpoints/alerting.py,Y,Y,WORKING,200 OK
+GET,/api/v1/kill-switches,list_ks,backend/src/seo_platform/api/endpoints/kill_switches.py,Y,Y,WORKING,200 OK
+POST,/api/v1/kill-switches,create_ks,backend/src/seo_platform/api/endpoints/kill_switches.py,Y,Y,WORKING,201 Created
+GET,/api/v1/kill-switches/{id},get_ks,backend/src/seo_platform/api/endpoints/kill_switches.py,Y,Y,WORKING,200 OK
+PUT,/api/v1/kill-switches/{id},update_ks,backend/src/seo_platform/api/endpoints/kill_switches.py,Y,Y,WORKING,200 OK
+POST,/api/v1/kill-switches/{id}/activate,activate_ks,backend/src/seo_platform/api/endpoints/kill_switches.py,Y,Y,WORKING,200 OK
+POST,/api/v1/kill-switches/{id}/deactivate,deactivate_ks,backend/src/seo_platform/api/endpoints/kill_switches.py,Y,Y,WORKING,200 OK
+GET,/api/v1/scale,scale,backend/src/seo_platform/api/endpoints/scale.py,Y,Y,WORKING,200 OK
+GET,/api/v1/scale/limits,limits,backend/src/seo_platform/api/endpoints/scale.py,Y,Y,WORKING,200 OK
+GET,/api/v1/scale/metrics,scale_metrics,backend/src/seo_platform/api/endpoints/scale.py,Y,Y,WORKING,200 OK
+GET,/api/v1/scale/recommendations,scale_recs,backend/src/seo_platform/api/endpoints/scale.py,Y,Y,WORKING,200 OK
+GET,/api/v1/scraping,list_scrape,backend/src/seo_platform/api/endpoints/scraping_scaling.py,Y,Y,WORKING,200 OK
+POST,/api/v1/scraping/run,run_scrape,backend/src/seo_platform/api/endpoints/scraping_scaling.py,Y,Y,WORKING,201 Created
+GET,/api/v1/scraping/{id},get_scrape,backend/src/seo_platform/api/endpoints/scraping_scaling.py,Y,Y,WORKING,200 OK
+GET,/api/v1/scraping/{id}/results,scrape_results,backend/src/seo_platform/api/endpoints/scraping_scaling.py,Y,Y,WORKING,200 OK
+GET,/api/v1/scraping-resilience,list_resilience,backend/src/seo_platform/api/endpoints/scraping_resilience.py,Y,Y,WORKING,200 OK
+GET,/api/v1/scraping-resilience/{id},get_resilience,backend/src/seo_platform/api/endpoints/scraping_resilience.py,Y,Y,WORKING,200 OK
+GET,/api/v1/providers,list_providers,backend/src/seo_platform/api/endpoints/providers.py,Y,Y,WORKING,200 OK
+GET,/api/v1/providers/{id},get_provider,backend/src/seo_platform/api/endpoints/providers.py,Y,Y,WORKING,200 OK
+GET,/api/v1/providers/health,provider_health,backend/src/seo_platform/api/endpoints/provider_health.py,Y,Y,WORKING,200 OK
+GET,/api/v1/provider-health,provider_health,backend/src/seo_platform/api/endpoints/provider_health.py,Y,Y,WORKING,200 OK
+GET,/api/v1/provider-health/{id},get_provider_health,backend/src/seo_platform/api/endpoints/provider_health.py,Y,Y,WORKING,200 OK
+GET,/api/v1/webhooks,list_webhooks,backend/src/seo_platform/api/endpoints/webhooks.py,Y,Y,WORKING,200 OK
+POST,/api/v1/webhooks,create_webhook,backend/src/seo_platform/api/endpoints/webhooks.py,Y,Y,WORKING,201 Created
+GET,/api/v1/webhooks/{id},get_webhook,backend/src/seo_platform/api/endpoints/webhooks.py,Y,Y,WORKING,200 OK
+PUT,/api/v1/webhooks/{id},update_webhook,backend/src/seo_platform/api/endpoints/webhooks.py,Y,Y,WORKING,200 OK
+DELETE,/api/v1/webhooks/{id},archive_webhook,backend/src/seo_platform/api/endpoints/webhooks.py,Y,Y,WORKING,200 OK
+POST,/api/v1/webhooks/{id}/test,test_webhook,backend/src/seo_platform/api/endpoints/webhooks.py,Y,Y,WORKING,200 OK
+POST,/api/v1/webhooks/inbound/email,inbound_email,backend/src/seo_platform/api/endpoints/webhooks.py,N,N,PARTIAL,handler exists but not wired to SES
+POST,/api/v1/webhooks/inbound/reply,inbound_reply,backend/src/seo_platform/api/endpoints/webhooks.py,N,N,PARTIAL,handler exists but not wired
+GET,/api/v1/tenants,list_tenants,backend/src/seo_platform/api/endpoints/tenants.py,Y,Y,WORKING,200 OK
+POST,/api/v1/tenants,create_tenant,backend/src/seo_platform/api/endpoints/tenants.py,Y,Y,WORKING,201 Created
+GET,/api/v1/tenants/{id},get_tenant,backend/src/seo_platform/api/endpoints/tenants.py,Y,Y,WORKING,200 OK
+PUT,/api/v1/tenants/{id},update_tenant,backend/src/seo_platform/api/endpoints/tenants.py,Y,Y,WORKING,200 OK
+DELETE,/api/v1/tenants/{id},archive_tenant,backend/src/seo_platform/api/endpoints/tenants.py,Y,Y,WORKING,200 OK
+GET,/api/v1/tenants/{id}/users,list_users,backend/src/seo_platform/api/endpoints/tenants.py,Y,Y,WORKING,200 OK
+POST,/api/v1/tenants/{id}/users,add_user,backend/src/seo_platform/api/endpoints/tenants.py,Y,Y,WORKING,201 Created
+DELETE,/api/v1/tenants/{id}/users/{user_id},remove_user,backend/src/seo_platform/api/endpoints/tenants.py,Y,Y,WORKING,200 OK
+GET,/api/v1/tenants/{id}/stats,tenant_stats,backend/src/seo_platform/api/endpoints/tenants.py,Y,Y,WORKING,200 OK
+GET,/api/v1/customers,list_customers,backend/src/seo_platform/api/endpoints/customers.py,Y,Y,WORKING,200 OK
+POST,/api/v1/customers,create_customer,backend/src/seo_platform/api/endpoints/customers.py,Y,Y,WORKING,201 Created
+GET,/api/v1/customers/{id},get_customer,backend/src/seo_platform/api/endpoints/customers.py,Y,Y,WORKING,200 OK
+PUT,/api/v1/customers/{id},update_customer,backend/src/seo_platform/api/endpoints/customers.py,Y,Y,WORKING,200 OK
+DELETE,/api/v1/customers/{id},archive_customer,backend/src/seo_platform/api/endpoints/customers.py,Y,Y,WORKING,200 OK
+GET,/api/v1/customers/{id}/workspace,workspace,backend/src/seo_platform/api/endpoints/customers.py,Y,Y,WORKING,200 OK
+GET,/api/v1/executive,executive_summary,backend/src/seo_platform/api/endpoints/executive.py,Y,Y,WORKING,200 OK
+GET,/api/v1/executive/insights,list_insights,backend/src/seo_platform/api/endpoints/executive.py,Y,Y,WORKING,200 OK
+GET,/api/v1/executive/risks,list_risks,backend/src/seo_platform/api/endpoints/executive.py,Y,Y,WORKING,200 OK
+GET,/api/v1/executive/forecast,forecast,backend/src/seo_platform/api/endpoints/executive.py,Y,Y,WORKING,200 OK
+GET,/api/v1/forecasting,forecasting,backend/src/seo_platform/api/endpoints/forecasting.py,Y,Y,WORKING,200 OK
+GET,/api/v1/forecasting/{id},get_forecast,backend/src/seo_platform/api/endpoints/forecasting.py,Y,Y,WORKING,200 OK
+GET,/api/v1/anomaly-prediction,anomaly_pred,backend/src/seo_platform/api/endpoints/anomaly_prediction.py,Y,Y,WORKING,200 OK
+GET,/api/v1/anomaly-prediction/{id},get_anomaly,backend/src/seo_platform/api/endpoints/anomaly_prediction.py,Y,Y,WORKING,200 OK
+GET,/api/v1/predictive-intelligence,list_pred,backend/src/seo_platform/api/endpoints/predictive_intelligence.py,Y,Y,WORKING,200 OK
+GET,/api/v1/predictive-intelligence/{id},get_pred,backend/src/seo_platform/api/endpoints/predictive_intelligence.py,Y,Y,WORKING,200 OK
+GET,/api/v1/strategic-growth,strategic_growth,backend/src/seo_platform/api/endpoints/strategic_growth.py,Y,Y,WORKING,200 OK
+GET,/api/v1/strategic-growth/initiatives,list_initiatives,backend/src/seo_platform/api/endpoints/strategic_growth.py,Y,Y,WORKING,200 OK
+GET,/api/v1/strategic-growth/{id},get_initiative,backend/src/seo_platform/api/endpoints/strategic_growth.py,Y,Y,WORKING,200 OK
+GET,/api/v1/strategic-seo,strategic_seo,backend/src/seo_platform/api/endpoints/strategic_seo_cognition.py,Y,Y,WORKING,200 OK
+GET,/api/v1/strategic-seo/{id},get_strategic,backend/src/seo_platform/api/endpoints/strategic_seo_cognition.py,Y,Y,WORKING,200 OK
+GET,/api/v1/strategic,strategic,backend/src/seo_platform/api/endpoints/strategic_seo_cognition.py,Y,Y,WORKING,200 OK
+GET,/api/v1/governance,governance,backend/src/seo_platform/api/endpoints/governance_service.py,Y,Y,WORKING,200 OK
+GET,/api/v1/governance/policies,list_policies,backend/src/seo_platform/api/endpoints/governance_service.py,Y,Y,WORKING,200 OK
+GET,/api/v1/governance/compliance,compliance,backend/src/seo_platform/api/endpoints/governance_service.py,Y,Y,WORKING,200 OK
+GET,/api/v1/platform-stewardship,list_stewardship,backend/src/seo_platform/api/endpoints/platform_stewardship.py,Y,Y,WORKING,200 OK
+GET,/api/v1/platform-stewardship/{id},get_stewardship,backend/src/seo_platform/api/endpoints/platform_stewardship.py,Y,Y,WORKING,200 OK
+GET,/api/v1/maintainability,list_maintain,backend/src/seo_platform/api/endpoints/maintainability_service.py,Y,Y,WORKING,200 OK
+GET,/api/v1/maintainability/{id},get_maintain,backend/src/seo_platform/api/endpoints/maintainability_service.py,Y,Y,WORKING,200 OK
+GET,/api/v1/maintainability-dominance,list_dominance,backend/src/seo_platform/api/endpoints/maintainability_dominance.py,Y,Y,WORKING,200 OK
+GET,/api/v1/maintainability-dominance/{id},get_dominance,backend/src/seo_platform/api/endpoints/maintainability_dominance.py,Y,Y,WORKING,200 OK
+GET,/api/v1/ecosystem-maturity,maturity,backend/src/seo_platform/api/endpoints/ecosystem_maturity.py,Y,Y,WORKING,200 OK
+GET,/api/v1/ecosystem-maturity/{id},get_maturity,backend/src/seo_platform/api/endpoints/ecosystem_maturity.py,Y,Y,WORKING,200 OK
+GET,/api/v1/enterprise-ecosystem,enterprise_eco,backend/src/seo_platform/api/endpoints/enterprise_ecosystem.py,Y,Y,WORKING,200 OK
+GET,/api/v1/enterprise-ecosystem/{id},get_eco,backend/src/seo_platform/api/endpoints/enterprise_ecosystem.py,Y,Y,WORKING,200 OK
+GET,/api/v1/enterprise-lifecycle,lifecycle,backend/src/seo_platform/api/endpoints/enterprise_lifecycle.py,Y,Y,WORKING,200 OK
+GET,/api/v1/enterprise-lifecycle/{id},get_lifecycle,backend/src/seo_platform/api/endpoints/enterprise_lifecycle.py,Y,Y,WORKING,200 OK
+GET,/api/v1/enterprise-cognition,cognition,backend/src/seo_platform/api/endpoints/enterprise_cognition.py,Y,Y,WORKING,200 OK
+GET,/api/v1/enterprise-cognition/{id},get_cog,backend/src/seo_platform/api/endpoints/enterprise_cognition.py,Y,Y,WORKING,200 OK
+GET,/api/v1/autonomy-orchestrator,orchestrator,backend/src/seo_platform/api/endpoints/autonomy_orchestrator.py,Y,Y,WORKING,200 OK
+GET,/api/v1/autonomy-orchestrator/{id},get_orch,backend/src/seo_platform/api/endpoints/autonomy_orchestrator.py,Y,Y,WORKING,200 OK
+POST,/api/v1/autonomy-orchestrator/{id}/pause,pause_orch,backend/src/seo_platform/api/endpoints/autonomy_orchestrator.py,Y,Y,WORKING,200 OK
+POST,/api/v1/autonomy-orchestrator/{id}/resume,resume_orch,backend/src/seo_platform/api/endpoints/autonomy_orchestrator.py,Y,Y,WORKING,200 OK
+GET,/api/v1/autonomous-coordination,auto_coord,backend/src/seo_platform/api/endpoints/autonomous_coordination.py,Y,Y,WORKING,200 OK
+GET,/api/v1/autonomous-coordination/{id},get_coord,backend/src/seo_platform/api/endpoints/autonomous_coordination.py,Y,Y,WORKING,200 OK
+GET,/api/v1/operational-assistant,op_assistant,backend/src/seo_platform/api/endpoints/operational_assistant.py,Y,Y,WORKING,200 OK
+GET,/api/v1/operational-assistant/{id},get_op,backend/src/seo_platform/api/endpoints/operational_assistant.py,Y,Y,WORKING,200 OK
+POST,/api/v1/operational-assistant/{id}/feedback,feedback_op,backend/src/seo_platform/api/endpoints/operational_assistant.py,Y,Y,WORKING,200 OK
+GET,/api/v1/operational-evolution,op_evolution,backend/src/seo_platform/api/endpoints/operational_evolution.py,Y,Y,WORKING,200 OK
+GET,/api/v1/operational-evolution/{id},get_evo,backend/src/seo_platform/api/endpoints/operational_evolution.py,Y,Y,WORKING,200 OK
+GET,/api/v1/operational-lifecycle,op_lifecycle,backend/src/seo_platform/api/endpoints/operational_lifecycle.py,Y,Y,WORKING,200 OK
+GET,/api/v1/operational-lifecycle/{id},get_lc,backend/src/seo_platform/api/endpoints/operational_lifecycle.py,Y,Y,WORKING,200 OK
+GET,/api/v1/operations-feed,ops_feed,backend/src/seo_platform/api/endpoints/operations_feed.py,Y,Y,WORKING,200 OK
+GET,/api/v1/operations-feed/{id},get_feed,backend/src/seo_platform/api/endpoints/operations_feed.py,Y,Y,WORKING,200 OK
+GET,/api/v1/global-orchestration,global_orch,backend/src/seo_platform/api/endpoints/global_orchestration.py,Y,Y,WORKING,200 OK
+GET,/api/v1/global-orchestration/{id},get_global,backend/src/seo_platform/api/endpoints/global_orchestration.py,Y,Y,WORKING,200 OK
+GET,/api/v1/global-infrastructure,global_infra,backend/src/seo_platform/api/endpoints/global_infrastructure.py,Y,Y,WORKING,200 OK
+GET,/api/v1/global-infrastructure/{id},get_infra,backend/src/seo_platform/api/endpoints/global_infrastructure.py,Y,Y,WORKING,200 OK
+GET,/api/v1/distributed-hardening,dist_hardening,backend/src/seo_platform/api/endpoints/distributed_hardening.py,Y,Y,WORKING,200 OK
+GET,/api/v1/distributed-hardening/{id},get_dh,backend/src/seo_platform/api/endpoints/distributed_hardening.py,Y,Y,WORKING,200 OK
+GET,/api/v1/extreme-scale-orchestration,extreme_scale,backend/src/seo_platform/api/endpoints/extreme_scale_orchestration.py,Y,Y,WORKING,200 OK
+GET,/api/v1/extreme-scale-orchestration/{id},get_scale,backend/src/seo_platform/api/endpoints/extreme_scale_orchestration.py,Y,Y,WORKING,200 OK
+GET,/api/v1/overload-protection,overload,backend/src/seo_platform/api/endpoints/overload_protection.py,Y,Y,WORKING,200 OK
+GET,/api/v1/overload-protection/{id},get_overload,backend/src/seo_platform/api/endpoints/overload_protection.py,Y,Y,WORKING,200 OK
+GET,/api/v1/event-infrastructure,event_infra,backend/src/seo_platform/api/endpoints/event_infrastructure.py,Y,Y,WORKING,200 OK
+GET,/api/v1/event-infrastructure/{id},get_event,backend/src/seo_platform/api/endpoints/event_infrastructure.py,Y,Y,WORKING,200 OK
+GET,/api/v1/event-lineage,lineage,backend/src/seo_platform/api/endpoints/event_lineage.py,Y,Y,WORKING,200 OK
+GET,/api/v1/event-lineage/{id},get_lineage,backend/src/seo_platform/api/endpoints/event_lineage.py,Y,Y,WORKING,200 OK
+GET,/api/v1/complexity-management,complexity,backend/src/seo_platform/api/endpoints/complexity_management.py,Y,Y,WORKING,200 OK
+GET,/api/v1/complexity-management/{id},get_complexity,backend/src/seo_platform/api/endpoints/complexity_management.py,Y,Y,WORKING,200 OK
+GET,/api/v1/orchestration-intelligence,orch_intel,backend/src/seo_platform/api/endpoints/orchestration_intelligence.py,Y,Y,WORKING,200 OK
+GET,/api/v1/orchestration-intelligence/{id},get_orch_intel,backend/src/seo_platform/api/endpoints/orchestration_intelligence.py,Y,Y,WORKING,200 OK
+GET,/api/v1/workflow-resilience,workflow_res,backend/src/seo_platform/api/endpoints/workflow_resilience.py,Y,Y,WORKING,200 OK
+GET,/api/v1/workflow-resilience/{id},get_wf_res,backend/src/seo_platform/api/endpoints/workflow_resilience.py,Y,Y,WORKING,200 OK
+GET,/api/v1/infrastructure-self-analysis,infra_self,backend/src/seo_platform/api/endpoints/infrastructure_self_analysis.py,Y,Y,WORKING,200 OK
+GET,/api/v1/infrastructure-self-analysis/{id},get_is,backend/src/seo_platform/api/endpoints/infrastructure_self_analysis.py,Y,Y,WORKING,200 OK
+GET,/api/v1/infrastructure-intelligence,infra_intel,backend/src/seo_platform/api/endpoints/infrastructure_intelligence.py,Y,Y,WORKING,200 OK
+GET,/api/v1/infrastructure-intelligence/{id},get_ii,backend/src/seo_platform/api/endpoints/infrastructure_intelligence.py,Y,Y,WORKING,200 OK
+GET,/api/v1/infrastructure-economics,infra_econ,backend/src/seo_platform/api/endpoints/infrastructure_economics.py,Y,Y,WORKING,200 OK
+GET,/api/v1/infrastructure-economics/{id},get_econ,backend/src/seo_platform/api/endpoints/infrastructure_economics.py,Y,Y,WORKING,200 OK
+GET,/api/v1/production-economics,prod_econ,backend/src/seo_platform/api/endpoints/production_economics.py,Y,Y,WORKING,200 OK
+GET,/api/v1/production-economics/{id},get_pe,backend/src/seo_platform/api/endpoints/production_economics.py,Y,Y,WORKING,200 OK
+GET,/api/v1/economics,economics,backend/src/seo_platform/api/endpoints/production_economics.py,Y,Y,WORKING,200 OK
+GET,/api/v1/deployment,list_deploy,backend/src/seo_platform/api/endpoints/deployment.py,Y,Y,WORKING,200 OK
+POST,/api/v1/deployment,create_deploy,backend/src/seo_platform/api/endpoints/deployment.py,Y,Y,WORKING,201 Created
+GET,/api/v1/deployment/{id},get_deploy,backend/src/seo_platform/api/endpoints/deployment.py,Y,Y,WORKING,200 OK
+PUT,/api/v1/deployment/{id},update_deploy,backend/src/seo_platform/api/endpoints/deployment.py,Y,Y,WORKING,200 OK
+GET,/api/v1/deployment/{id}/history,deploy_history,backend/src/seo_platform/api/endpoints/deployment.py,Y,Y,WORKING,200 OK
+GET,/api/v1/search,search,backend/src/seo_platform/api/endpoints/search.py,Y,Y,WORKING,200 OK
+GET,/api/v1/search/global,global_search,backend/src/seo_platform/api/endpoints/search_global.py,Y,Y,WORKING,200 OK
+GET,/api/v1/realtime/events,realtime_events,backend/src/seo_platform/api/endpoints/realtime/events.py,N,N,WORKING,SSE
+GET,/api/v1/realtime/operational,realtime_op,backend/src/seo_platform/api/endpoints/realtime/operational.py,N,N,WORKING,SSE
+GET,/api/v1/realtime/sse,sse,backend/src/seo_platform/api/endpoints/realtime/sse.py,N,N,WORKING,SSE
+GET,/api/v1/realtime-telemetry,realtime_tel,backend/src/seo_platform/api/endpoints/realtime_telemetry.py,Y,Y,WORKING,200 OK
+GET,/api/v1/realtime-telemetry/{id},get_rtt,backend/src/seo_platform/api/endpoints/realtime_telemetry.py,Y,Y,WORKING,200 OK
+GET,/api/v1/action-registry,list_actions,backend/src/seo_platform/api/endpoints/action_registry.py,Y,Y,WORKING,200 OK
+GET,/api/v1/action-registry/{id},get_action,backend/src/seo_platform/api/endpoints/action_registry.py,Y,Y,WORKING,200 OK
+GET,/api/v1/adaptive-optimization,adaptive_opt,backend/src/seo_platform/api/endpoints/adaptive_optimization.py,Y,Y,WORKING,200 OK
+GET,/api/v1/adaptive-optimization/{id},get_ao,backend/src/seo_platform/api/endpoints/adaptive_optimization.py,Y,Y,WORKING,200 OK
+GET,/api/v1/cross-tenant-intelligence,cti,backend/src/seo_platform/api/endpoints/cross_tenant_intelligence.py,Y,Y,WORKING,200 OK
+GET,/api/v1/cross-tenant-intelligence/{id},get_cti,backend/src/seo_platform/api/endpoints/cross_tenant_intelligence.py,Y,Y,WORKING,200 OK
+GET,/api/v1/organizational-intelligence,org_intel,backend/src/seo_platform/api/endpoints/organizational_intelligence.py,Y,Y,WORKING,200 OK
+GET,/api/v1/organizational-intelligence/{id},get_oi,backend/src/seo_platform/api/endpoints/organizational_intelligence.py,Y,Y,WORKING,200 OK
+GET,/api/v1/demo-scenarios,list_demos,backend/src/seo_platform/api/endpoints/demo_scenarios.py,Y,Y,UNUSED,registered but no handler
+GET,/demo-scenarios,list_demos_legacy,backend/src/seo_platform/api/endpoints/demo_scenarios.py,N,N,UNUSED,no handler returns 404
+GET,/api/v1/approvals-v2,list_approvals_v2,backend/src/seo_platform/api/endpoints/approvals_v2.py,Y,Y,LIKELY_WORKING,v2 surface
+GET,/api/v1/approvals-v2/{id},get_approval_v2,backend/src/seo_platform/api/endpoints/approvals_v2.py,Y,Y,LIKELY_WORKING,v2 surface
+POST,/api/v1/approvals-v2/{id}/approve,approve_v2,backend/src/seo_platform/api/endpoints/approvals_v2.py,Y,Y,LIKELY_WORKING,v2 surface
+POST,/api/v1/approvals-v2/{id}/reject,reject_v2,backend/src/seo_platform/api/endpoints/approvals_v2.py,Y,Y,LIKELY_WORKING,v2 surface
+GET,/api/v1/campaign-agent,list_campaign_agent,backend/src/seo_platform/api/endpoints/campaign_agent.py,Y,Y,WORKING,200 OK
+POST,/api/v1/campaign-agent,create_campaign_agent,backend/src/seo_platform/api/endpoints/campaign_agent.py,Y,Y,WORKING,201 Created
+GET,/api/v1/campaign-agent/{id},get_campaign_agent,backend/src/seo_platform/api/endpoints/campaign_agent.py,Y,Y,WORKING,200 OK
+PUT,/api/v1/campaign-agent/{id},update_campaign_agent,backend/src/seo_platform/api/endpoints/campaign_agent.py,Y,Y,WORKING,200 OK
+GET,/api/v1/campaign-portfolio,list_portfolio,backend/src/seo_platform/api/endpoints/campaign_portfolio.py,Y,Y,WORKING,200 OK
+GET,/api/v1/campaign-portfolio/{id},get_portfolio,backend/src/seo_platform/api/endpoints/campaign_portfolio.py,Y,Y,WORKING,200 OK
+GET,/api/v1/campaign-timeline,list_timeline,backend/src/seo_platform/api/endpoints/campaign_timeline.py,Y,Y,WORKING,200 OK
+GET,/api/v1/campaign-timeline/{id},get_timeline,backend/src/seo_platform/api/endpoints/campaign_timeline.py,Y,Y,WORKING,200 OK

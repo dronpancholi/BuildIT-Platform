@@ -1,3 +1,4 @@
+# PHASE 1.2 — Simulation removed: test_mode short-circuit and _generate_mock_content deleted
 """
 SEO Platform — Elite NIM Enterprise LLM Gateway
 =================================================
@@ -485,6 +486,7 @@ class LLMGateway:
 
     async def _call_nim_api(self, model_id: str, prompt: RenderedPrompt,
                             temperature: float, max_tokens: int) -> dict:
+        settings = get_settings()
         client = await self._get_client()
         messages = []
         if prompt.system_prompt:
@@ -540,5 +542,6 @@ class LLMGateway:
         if self._client:
             await self._client.aclose()
             self._client = None
+
 
 llm_gateway = LLMGateway()

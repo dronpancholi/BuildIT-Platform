@@ -6,6 +6,7 @@ REST endpoints for operational incident management.
 
 from __future__ import annotations
 
+from seo_platform.core.auth import get_validated_tenant_id
 from fastapi import APIRouter, Body, Query
 
 from seo_platform.services.incident_response import incident_response
@@ -13,7 +14,7 @@ from seo_platform.services.incident_response import incident_response
 router = APIRouter()
 
 
-@router.post("/incident/incidents")
+@router.post("/incidents")
 async def create_incident(
     title: str = Body(..., description="Incident title"),
     severity: str = Body(..., description="critical/high/medium/low"),
@@ -34,7 +35,7 @@ async def create_incident(
     return {"success": True, "data": incident.model_dump()}
 
 
-@router.post("/incident/incidents/{incident_id}/timeline")
+@router.post("/incidents/{incident_id}/timeline")
 async def add_timeline_entry(
     incident_id: str,
     action: str = Body(..., description="Action performed"),
@@ -51,7 +52,7 @@ async def add_timeline_entry(
     return {"success": True, "data": entry.model_dump()}
 
 
-@router.post("/incident/incidents/{incident_id}/resolve")
+@router.post("/incidents/{incident_id}/resolve")
 async def resolve_incident(
     incident_id: str,
     summary: str = Body(..., description="Resolution summary"),
@@ -66,14 +67,14 @@ async def resolve_incident(
     return {"success": True, "data": incident.model_dump()}
 
 
-@router.get("/incident/incidents")
+@router.get("/incidents")
 async def list_active_incidents() -> dict:
     """List all active incidents."""
     incident_list = await incident_response.get_active_incidents()
     return {"success": True, "data": incident_list.model_dump()}
 
 
-@router.get("/incident/incidents/{incident_id}/timeline")
+@router.get("/incidents/{incident_id}/timeline")
 async def get_incident_timeline(incident_id: str) -> dict:
     """Get full timeline for an incident."""
     timeline = await incident_response.get_incident_timeline(
@@ -82,7 +83,7 @@ async def get_incident_timeline(incident_id: str) -> dict:
     return {"success": True, "data": timeline.model_dump()}
 
 
-@router.get("/incident/rollback-checklist")
+@router.get("/rollback-checklist")
 async def get_rollback_checklist(
     deployment_id: str = Query(..., description="Deployment ID (service:version)"),
 ) -> dict:
@@ -93,7 +94,7 @@ async def get_rollback_checklist(
     return {"success": True, "data": checklist.model_dump()}
 
 
-@router.get("/incident/queue-intervention")
+@router.get("/queue-intervention")
 async def plan_queue_intervention(
     queue_name: str = Query(..., description="Queue name to intervene on"),
 ) -> dict:
@@ -104,7 +105,7 @@ async def plan_queue_intervention(
     return {"success": True, "data": intervention.model_dump()}
 
 
-@router.get("/incident/workflow-recovery")
+@router.get("/workflow-recovery")
 async def plan_workflow_recovery(
     workflow_id: str = Query(..., description="Workflow ID to recover"),
 ) -> dict:
@@ -115,7 +116,7 @@ async def plan_workflow_recovery(
     return {"success": True, "data": plan.model_dump()}
 
 
-@router.post("/incident/worker-action")
+@router.post("/worker-action")
 async def orchestrate_worker_action(
     worker_id: str = Body(..., description="Worker ID"),
     action: str = Body(..., description="drain/throttle/restart/scale_up"),
@@ -128,7 +129,7 @@ async def orchestrate_worker_action(
     return {"success": True, "data": action_plan.model_dump()}
 
 
-@router.get("/incident/replay-debug")
+@router.get("/replay-debug")
 async def analyze_replay_debug(
     workflow_id: str = Query(..., description="Workflow ID to debug"),
 ) -> dict:
@@ -139,7 +140,7 @@ async def analyze_replay_debug(
     return {"success": True, "data": session.model_dump()}
 
 
-@router.get("/incident/diagnostics")
+@router.get("/diagnostics")
 async def generate_diagnostics() -> dict:
     """Comprehensive system diagnostics report."""
     report = await incident_response.generate_diagnostics()

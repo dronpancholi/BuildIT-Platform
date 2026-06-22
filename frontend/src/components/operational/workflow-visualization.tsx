@@ -7,6 +7,7 @@ import {
   ArrowRight, Loader2,
 } from "lucide-react";
 import { useRealtimeStore, type WorkflowState } from "@/hooks/use-realtime";
+import { safeArr, safeNum, safeSlice, safeTime } from "@/lib/safe";
 
 const WORKFLOW_STATUS_CONFIG: Record<string, { color: string; bg: string; icon: React.ReactNode }> = {
   running: { color: "text-emerald-400", bg: "bg-emerald-500/10 border-emerald-500/20", icon: <Radio className="w-3 h-3" /> },
@@ -24,20 +25,20 @@ export function WorkflowVisualization() {
   const queues = useRealtimeStore((s) => s.queues);
 
   const activeWorkflows = useMemo(() =>
-    workflows.filter((w) => w.status === "running" || w.status === "active" || w.status === "started"),
+    safeArr<WorkflowState>(workflows).filter((w) => w.status === "running" || w.status === "active" || w.status === "started"),
     [workflows],
   );
 
   const recentCompleted = useMemo(() =>
-    workflows.filter((w) => w.status === "completed").slice(0, 5),
+    safeArr<WorkflowState>(workflows).filter((w) => w.status === "completed").slice(0, 5),
     [workflows],
   );
 
   const queueEntries = useMemo(() =>
     TASK_QUEUES.map((name) => ({
       name,
-      depth: (queues[name] as number) || 0,
-      count: activeWorkflows.filter((w) => w.task_queue === name).length,
+      depth: safeNum(queues[name] as unknown),
+      count: safeArr<WorkflowState>(activeWorkflows).filter((w) => w.task_queue === name).length,
     })),
     [queues, activeWorkflows],
   );
@@ -108,10 +109,10 @@ export function WorkflowVisualization() {
                       </motion.div>
                       <div className="flex-1 min-w-0">
                         <p className="text-[10px] font-mono text-slate-300 truncate">
-                          {wf.type || wf.workflow_id.slice(0, 12)}...
+                          {wf.type || safeSlice(wf.workflow_id, 0, 12, "unknown") + "..."}
                         </p>
                         <p className="text-[8px] font-mono text-slate-600">
-                          {wf.task_queue || "default"} · {new Date(wf.started_at).toLocaleTimeString()}
+                          {wf.task_queue || "default"} · {safeTime(wf.started_at)}
                         </p>
                       </div>
                       <span className={`px-1.5 py-0.5 rounded text-[8px] font-mono font-bold border ${config.bg} ${config.color}`}>
@@ -133,8 +134,8 @@ export function WorkflowVisualization() {
               {recentCompleted.map((wf) => (
                 <div key={wf.workflow_id} className="flex items-center gap-2 text-[9px] font-mono text-slate-600">
                   <CheckCircle2 className="w-2.5 h-2.5 text-emerald-500/50" />
-                  <span className="truncate">{wf.type || wf.workflow_id.slice(0, 12)}...</span>
-                  <span className="ml-auto">{new Date(wf.started_at).toLocaleTimeString()}</span>
+                  <span className="truncate">{wf.type || safeSlice(wf.workflow_id, 0, 12, "unknown") + "..."}</span>
+                  <span className="ml-auto">{safeTime(wf.started_at)}</span>
                 </div>
               ))}
             </div>

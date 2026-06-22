@@ -135,13 +135,57 @@ class ErrorHandlerMiddleware(BaseHTTPMiddleware):
                 path=request.url.path,
                 traceback=traceback.format_exc(),
             )
+
+            # Map known error types to actionable messages
+            error_msg = str(e)
+            error_code = "INTERNAL_ERROR"
+            action = "Contact support if this persists"
+
+            if "connect" in error_msg.lower() and "temporal" in error_msg.lower():
+                error_code = "TEMPORAL_UNAVAILABLE"
+                error_msg = "Temporal workflow engine is not running"
+                action = "Start Temporal server on port 7233. Run: temporal server start-dev"
+            elif "connect" in error_msg.lower() and "redis" in error_msg.lower():
+                error_code = "REDIS_UNAVAILABLE"
+                error_msg = "Redis cache is not running"
+                action = "Start Redis server on port 6379"
+            elif "connect" in error_msg.lower() and "kafka" in error_msg.lower():
+                error_code = "KAFKA_UNAVAILABLE"
+                error_msg = "Kafka event broker is not running"
+                action = "Start Kafka on port 9092"
+            elif "relation" in error_msg.lower() and "does not exist" in error_msg.lower():
+                error_code = "DATABASE_SCHEMA_ERROR"
+                error_msg = "Database table missing — run migrations"
+                action = "Run: alembic upgrade head"
+            elif "role" in error_msg.lower() and "does not exist" in error_msg.lower():
+                error_code = "DATABASE_AUTH_ERROR"
+                error_msg = "Database role not found"
+                action = "Create the database role: CREATE ROLE seo_platform WITH LOGIN"
+            elif "ProviderUnavailableError" in type(e).__name__:
+                error_code = "PROVIDER_UNAVAILABLE"
+                error_msg = "External API provider is not configured"
+                action = "Open Provider Center and configure the required API key"
+            elif "EmailProviderUnavailableError" in type(e).__name__:
+                error_code = "EMAIL_PROVIDER_UNAVAILABLE"
+                error_msg = "No email delivery provider configured"
+                action = "Open Provider Center → Configure Resend, SendGrid, or Mailgun API key"
+            elif "AhrefsAuthError" in type(e).__name__:
+                error_code = "AHREFS_AUTH_FAILED"
+                error_msg = "Ahrefs API key is missing or invalid"
+                action = "Open Provider Center → Configure Ahrefs API key"
+            elif "httpx" in type(e).__name__.lower() or "httpcore" in type(e).__name__.lower():
+                error_code = "UPSTREAM_ERROR"
+                error_msg = f"External service connection failed: {error_msg[:100]}"
+                action = "Check network connectivity and API key configuration"
+
             return JSONResponse(
                 status_code=500,
                 content=APIResponse(
                     success=False,
                     error=ErrorDetail(
-                        error_code="INTERNAL_ERROR",
-                        message="An internal error occurred",
+                        error_code=error_code,
+                        message=error_msg,
+                        details={"action": action, "error_type": type(e).__name__},
                         retryable=False,
                     ),
                 ).model_dump(),
@@ -149,10 +193,19 @@ class ErrorHandlerMiddleware(BaseHTTPMiddleware):
 
 
 def register_middleware(app: FastAPI) -> None:
-    """Register all middleware in correct order (outermost first)."""
-    # Order matters: outermost middleware wraps innermost
-    # Execution: ErrorHandler → Timing → RequestID → TenantContext → Route
+    """Register all middleware in correct order (outermost first).
+
+    Execution order (outermost wraps innermost):
+    ErrorHandler → PrometheusMetrics → Timing → RequestID → TenantContext → RateLimit → Route
+    """
+    from seo_platform.core.prometheus_middleware import PrometheusMetricsMiddleware
+    from seo_platform.core.rate_limiter import RateLimitMiddleware
+    from seo_platform.core.audit_log import AuditLogMiddleware
+
     app.add_middleware(TenantContextMiddleware)
     app.add_middleware(RequestIDMiddleware)
     app.add_middleware(TimingMiddleware)
+    app.add_middleware(PrometheusMetricsMiddleware)
+    app.add_middleware(RateLimitMiddleware)
+    app.add_middleware(AuditLogMiddleware)
     app.add_middleware(ErrorHandlerMiddleware)

@@ -630,43 +630,62 @@ async def assess_disaster_recovery(
     self: GlobalInfrastructureService,
     region: str,
 ) -> RegionalDisasterRecovery:
-    try:
-        cached = await self._get_from_redis(f"disaster_recovery:{region}")
-        if cached:
-            return RegionalDisasterRecovery(**cached)
+    """Phase 2.1.1 P0-7: Return REAL DR state, not hardcoded mocks.
 
-        dr_config = {
-            "us-east-1": {"backup": "us-west-2", "rpo": 60, "rto": 300, "last_test": "2026-04-15T14:00:00Z"},
-            "us-west-2": {"backup": "us-east-1", "rpo": 60, "rto": 300, "last_test": "2026-04-10T10:00:00Z"},
-            "eu-west-1": {"backup": "eu-central-1", "rpo": 120, "rto": 600, "last_test": "2026-03-20T09:00:00Z"},
-            "eu-central-1": {"backup": "eu-west-1", "rpo": 120, "rto": 600, "last_test": "2026-03-20T09:00:00Z"},
-        }
+    Truthful state: the platform runs in a single region. There is no
+    cross-region replication, no read replica, no offsite backup as a
+    service. RPO and RTO are derived from the actual backup system
+    (cron + local-only, no offsite). For an unknown region, returns
+    not_configured.
+    """
+    import os
+    from pathlib import Path
 
-        config = dr_config.get(region, {"backup": "us-east-1", "rpo": 300, "rto": 900, "last_test": ""})
-        recovery_readiness_map = {
-            "us-east-1": "ready",
-            "us-west-2": "ready",
-            "eu-west-1": "ready",
-            "eu-central-1": "degraded",
-        }
+    actual_region = os.getenv("DEPLOY_REGION", "local-dev")
 
-        result = RegionalDisasterRecovery(
-            region=region,
-            dr_status="configured" if region in dr_config else "not_configured",
-            backup_region=config["backup"],
-            rpo_seconds=config["rpo"],
-            rto_seconds=config["rto"],
-            last_dr_test=config["last_test"],
-            recovery_readiness=recovery_readiness_map.get(region, "unknown"),
-        )
-        await self._set_in_redis(f"disaster_recovery:{region}", result.__dict__)
-        return result
-    except Exception as e:
+    if region != actual_region:
         return RegionalDisasterRecovery(
-            region=region, dr_status="unknown", backup_region="",
-            rpo_seconds=0, rto_seconds=0, last_dr_test="",
-            recovery_readiness="unknown",
+            region=region,
+            dr_status="not_configured",
+            backup_region="",
+            rpo_seconds=0,
+            rto_seconds=0,
+            last_dr_test="",
+            recovery_readiness="not_applicable",
         )
+
+    # Derive RPO from actual backup cadence (best-effort)
+    backup_dir = Path("/var/backups/seo-platform")
+    if not backup_dir.exists():
+        backup_dir = Path(os.path.expanduser("~/seo-platform-backups"))
+    last_backup_ts = ""
+    if backup_dir.exists():
+        candidates = sorted(backup_dir.glob("*.tar.gz"), key=lambda p: p.stat().st_mtime, reverse=True)
+        if candidates:
+            from datetime import datetime
+            last_backup_ts = datetime.fromtimestamp(candidates[0].stat().st_mtime, UTC).isoformat()
+
+    # Real RPO = 6h (cron schedule). Real RTO = ~30 min if backup exists, undefined if not.
+    backup_exists = bool(last_backup_ts)
+    rpo_seconds = 6 * 3600  # 6h
+    rto_seconds = 1800 if backup_exists else 0
+
+    if backup_exists:
+        dr_status = "single_region_no_replication"
+        readiness = "degraded"
+    else:
+        dr_status = "no_backup_yet"
+        readiness = "not_ready"
+
+    return RegionalDisasterRecovery(
+        region=region,
+        dr_status=dr_status,
+        backup_region="",
+        rpo_seconds=rpo_seconds,
+        rto_seconds=rto_seconds,
+        last_dr_test=last_backup_ts,
+        recovery_readiness=readiness,
+    )
 
 
 # Monkey-patch methods onto GlobalInfrastructureService

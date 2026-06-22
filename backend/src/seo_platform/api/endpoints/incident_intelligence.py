@@ -6,6 +6,7 @@ REST endpoints for AI-assisted operational incident intelligence.
 
 from __future__ import annotations
 
+from seo_platform.core.auth import get_validated_tenant_id
 from fastapi import APIRouter, Body, Query
 
 from seo_platform.services.incident_intelligence import incident_intelligence
@@ -13,7 +14,7 @@ from seo_platform.services.incident_intelligence import incident_intelligence
 router = APIRouter()
 
 
-@router.get("/incident-intelligence/predictions")
+@router.get("/predictions")
 async def predict_incidents(
     lookahead_minutes: int = Query(60, ge=5, le=1440, description="Minutes to look ahead"),
 ) -> dict:
@@ -24,7 +25,7 @@ async def predict_incidents(
     return {"success": True, "data": [p.model_dump() for p in predictions]}
 
 
-@router.post("/incident-intelligence/cluster")
+@router.post("/cluster")
 async def cluster_incidents(
     incidents: list[dict] = Body(..., description="Incidents to cluster"),
 ) -> dict:
@@ -35,7 +36,7 @@ async def cluster_incidents(
     return {"success": True, "data": [c.model_dump() for c in clusters]}
 
 
-@router.post("/incident-intelligence/severity-score")
+@router.post("/severity-score")
 async def score_incident_severity(
     incident_id: str = Body(..., description="Incident ID"),
     incident_data: dict = Body(..., description="Incident data for scoring"),
@@ -48,7 +49,7 @@ async def score_incident_severity(
     return {"success": True, "data": score.model_dump()}
 
 
-@router.post("/incident-intelligence/analyze")
+@router.post("/analyze")
 async def analyze_incident(
     incident_id: str = Body(..., description="Incident ID"),
     incident_data: dict = Body(..., description="Incident data for analysis"),
@@ -61,7 +62,7 @@ async def analyze_incident(
     return {"success": True, "data": analysis.model_dump()}
 
 
-@router.get("/incident-intelligence/correlations")
+@router.get("/correlations")
 async def correlate_anomalies(
     time_window_hours: int = Query(2, ge=1, le=48, description="Time window in hours"),
 ) -> dict:
@@ -72,7 +73,7 @@ async def correlate_anomalies(
     return {"success": True, "data": [c.model_dump() for c in correlations]}
 
 
-@router.post("/incident-intelligence/root-cause")
+@router.post("/root-cause")
 async def suggest_root_cause(
     incident_id: str = Body(..., description="Incident ID"),
     incident_data: dict = Body(..., description="Incident data"),

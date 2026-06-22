@@ -1,0 +1,149 @@
+# Prometheus Alert Rules — Phase 2.1.1 P0 Closure
+# ====================================================
+# Alert rules for the SEO platform. These complement the in-process
+# AlertManager; Prometheus fires the alert, AlertManager performs
+# correlation/dedup and dispatches to notification sinks.
+
+groups:
+  # -----------------------------------------------------------------
+  # Service availability
+  # -----------------------------------------------------------------
+  - name: service_availability
+    interval: 30s
+    rules:
+      - alert: BackendUnreachable
+        expr: probe_success{job="seo-platform-api"} == 0
+        for: 2m
+        labels:
+          severity: critical
+          component: backend
+        annotations:
+          summary: "Backend is unreachable"
+          description: "The SEO platform API has been unreachable for 2+ minutes."
+
+      - alert: Backend5xxSpike
+        expr: |
+          sum(rate(seo_http_requests_total{status_code=~"5.."}[5m])) > 0.05
+        for: 5m
+        labels:
+          severity: high
+          component: backend
+        annotations:
+          summary: "5xx error rate >5%"
+          description: "5xx rate is {{ $value | humanizePercentage }} over 5 minutes."
+
+      - alert: HighLatency
+        expr: |
+          histogram_quantile(0.95,
+            sum by (le) (rate(seo_http_request_duration_seconds_bucket[5m]))
+          ) > 0.5
+        for: 10m
+        labels:
+          severity: medium
+          component: backend
+        annotations:
+          summary: "p95 latency >500ms"
+          description: "p95 latency is {{ $value }}s for 10+ minutes."
+
+  # -----------------------------------------------------------------
+  # Database
+  # -----------------------------------------------------------------
+  - name: database
+    interval: 30s
+    rules:
+      - alert: PostgreSQLDown
+        expr: up{job="postgresql"} == 0
+        for: 1m
+        labels:
+          severity: critical
+          component: postgresql
+        annotations:
+          summary: "PostgreSQL is down"
+          description: "Cannot reach PostgreSQL."
+
+      - alert: DatabasePoolExhausted
+        expr: pg_stat_activity_count / pg_settings_max_connections > 0.8
+        for: 5m
+        labels:
+          severity: high
+          component: postgresql
+        annotations:
+          summary: "DB pool >80% utilized"
+          description: "Active connections: {{ $value }}%"
+
+  # -----------------------------------------------------------------
+  # Cache / Queue
+  # -----------------------------------------------------------------
+  - name: cache_queue
+    interval: 30s
+    rules:
+      - alert: RedisDown
+        expr: up{job="redis"} == 0
+        for: 1m
+        labels:
+          severity: high
+          component: redis
+        annotations:
+          summary: "Redis is down"
+
+      - alert: KafkaConsumerLag
+        expr: sum(kafka_consumergroup_lag) > 5000
+        for: 10m
+        labels:
+          severity: high
+          component: kafka
+        annotations:
+          summary: "Kafka consumer lag >5000"
+          description: "Total lag across all consumer groups: {{ $value }}"
+
+  # -----------------------------------------------------------------
+  # Host
+  # -----------------------------------------------------------------
+  - name: host
+    interval: 60s
+    rules:
+      - alert: DiskSpaceHigh
+        expr: |
+          (node_filesystem_avail_bytes{mountpoint="/"} / node_filesystem_size_bytes{mountpoint="/"}) * 100 < 20
+        for: 10m
+        labels:
+          severity: high
+          component: host
+        annotations:
+          summary: "Disk usage >80%"
+          description: "Available: {{ $value }}%"
+
+      - alert: MemoryPressure
+        expr: |
+          (1 - (node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes)) * 100 > 90
+        for: 10m
+        labels:
+          severity: high
+          component: host
+        annotations:
+          summary: "Memory usage >90%"
+
+  # -----------------------------------------------------------------
+  # Backup freshness
+  # -----------------------------------------------------------------
+  - name: backup
+    interval: 5m
+    rules:
+      - alert: BackupMissing
+        expr: time() - seo_backup_last_success_seconds > 86400
+        for: 1h
+        labels:
+          severity: critical
+          component: backup
+        annotations:
+          summary: "No backup in 24h"
+          description: "Last backup timestamp is older than 24h."
+
+      - alert: BackupVerifyFailed
+        expr: increase(seo_backup_verify_failures_total[1h]) > 0
+        for: 5m
+        labels:
+          severity: high
+          component: backup
+        annotations:
+          summary: "Backup verification failing"

@@ -16,11 +16,13 @@ logger = get_logger(__name__)
 
 class DomainHealthScore(BaseModel):
     domain: str
-    reputation_score: float  # 0.0 to 1.0
-    spam_rate: float
-    bounce_rate: float
-    is_blacklisted: bool
-    recommended_hourly_limit: int
+    reputation_score: float | None = None  # 0.0 to 1.0, None if not checked
+    spam_rate: float | None = None
+    bounce_rate: float | None = None
+    is_blacklisted: bool | None = None
+    recommended_hourly_limit: int = 50
+    status: str = "not_checked"
+    message: str | None = None
 
 class DeliverabilityEngine:
     """
@@ -29,18 +31,18 @@ class DeliverabilityEngine:
     """
 
     async def get_domain_health(self, tenant_id: UUID, domain: str) -> DomainHealthScore:
-        # In a real enterprise system, this aggregates signals from MXToolbox,
-        # Google Postmaster API, SendGrid Deliverability metrics, and internal tracking.
-        logger.info("checking_domain_health", domain=domain, tenant_id=tenant_id)
+        """Returns domain health status. Currently returns 'not checked' — requires external API integration."""
+        logger.info("domain_health_not_checked", domain=domain, tenant_id=tenant_id)
 
-        # Mocking an excellent domain health for now
         return DomainHealthScore(
             domain=domain,
-            reputation_score=0.98,
-            spam_rate=0.001,
-            bounce_rate=0.015,
-            is_blacklisted=False,
-            recommended_hourly_limit=250
+            reputation_score=None,
+            spam_rate=None,
+            bounce_rate=None,
+            is_blacklisted=None,
+            recommended_hourly_limit=50,
+            status="not_checked",
+            message="Domain health checking requires MXToolbox or Google Postmaster API integration",
         )
 
     async def check_spam_heuristics(self, email_body: str, subject: str) -> dict[str, Any]:

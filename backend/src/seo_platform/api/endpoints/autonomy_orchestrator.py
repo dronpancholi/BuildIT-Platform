@@ -1,16 +1,17 @@
 from __future__ import annotations
 
+from seo_platform.core.auth import get_validated_tenant_id
 from uuid import UUID
 
-from fastapi import APIRouter, Query
+from fastapi import APIRouter, Depends, Query
 
 from seo_platform.services.autonomy_orchestrator import autonomy_orchestrator
 
 router = APIRouter()
 
 
-@router.get("/autonomy/workflow-suggestions")
-async def get_workflow_suggestions(tenant_id: UUID = Query(...)) -> dict:
+@router.get("/workflow-suggestions")
+async def get_workflow_suggestions(tenant_id: UUID = Depends(get_validated_tenant_id)) -> dict:
     suggestions = await autonomy_orchestrator.get_autonomous_workflow_suggestions(tenant_id)
     return {
         "success": True,
@@ -19,7 +20,7 @@ async def get_workflow_suggestions(tenant_id: UUID = Query(...)) -> dict:
     }
 
 
-@router.get("/autonomy/infra-recommendations")
+@router.get("/infra-recommendations")
 async def get_infra_recommendations() -> dict:
     recommendations = await autonomy_orchestrator.get_adaptive_infra_recommendations()
     return {
@@ -29,14 +30,14 @@ async def get_infra_recommendations() -> dict:
     }
 
 
-@router.post("/autonomy/self-analysis")
+@router.post("/self-analysis")
 async def run_self_analysis() -> dict:
     report = await autonomy_orchestrator.run_self_analysis()
     return {"success": True, "data": report.model_dump()}
 
 
-@router.get("/autonomy/optimization-intelligence")
-async def get_optimization_intelligence(tenant_id: UUID = Query(...)) -> dict:
+@router.get("/optimization-intelligence")
+async def get_optimization_intelligence(tenant_id: UUID = Depends(get_validated_tenant_id)) -> dict:
     suggestions = await autonomy_orchestrator.get_optimization_intelligence(tenant_id)
     return {
         "success": True,
@@ -45,7 +46,7 @@ async def get_optimization_intelligence(tenant_id: UUID = Query(...)) -> dict:
     }
 
 
-@router.get("/autonomy/strategic-guidance")
-async def get_strategic_guidance(tenant_id: UUID = Query(...)) -> dict:
+@router.get("/strategic-guidance")
+async def get_strategic_guidance(tenant_id: UUID = Depends(get_validated_tenant_id)) -> dict:
     guidance = await autonomy_orchestrator.get_strategic_guidance(tenant_id)
     return {"success": True, "data": guidance.model_dump()}

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from seo_platform.core.auth import get_validated_tenant_id
 from fastapi import APIRouter, Query
 
 from seo_platform.services.autonomous_coordination import autonomous_coordination
@@ -7,7 +8,7 @@ from seo_platform.services.autonomous_coordination import autonomous_coordinatio
 router = APIRouter()
 
 
-@router.get("/autonomous-coordination/orchestration-optimizations")
+@router.get("/orchestration-optimizations")
 async def get_orchestration_optimizations() -> dict:
     optimizations = await autonomous_coordination.get_orchestration_optimizations()
     return {
@@ -17,7 +18,7 @@ async def get_orchestration_optimizations() -> dict:
     }
 
 
-@router.get("/autonomous-coordination/allocation-recommendations")
+@router.get("/allocation-recommendations")
 async def get_allocation_recommendations() -> dict:
     recommendations = await autonomous_coordination.get_infra_allocation_recommendations()
     return {
@@ -27,7 +28,7 @@ async def get_allocation_recommendations() -> dict:
     }
 
 
-@router.get("/autonomous-coordination/workflow-coordination")
+@router.get("/workflow-coordination")
 async def get_workflow_coordination(
     workflow_type: str = Query(..., description="Workflow type to analyze"),
 ) -> dict:
@@ -35,7 +36,7 @@ async def get_workflow_coordination(
     return {"success": True, "data": intelligence.model_dump()}
 
 
-@router.get("/autonomous-coordination/strategic-recommendations")
+@router.get("/strategic-recommendations")
 async def get_strategic_recommendations() -> dict:
     recommendations = await autonomous_coordination.get_strategic_operational_recommendations()
     return {
@@ -45,7 +46,7 @@ async def get_strategic_recommendations() -> dict:
     }
 
 
-@router.get("/autonomous-coordination/enterprise-optimizations")
+@router.get("/enterprise-optimizations")
 async def get_enterprise_optimizations() -> dict:
     suggestions = await autonomous_coordination.get_enterprise_optimization_suggestions()
     return {

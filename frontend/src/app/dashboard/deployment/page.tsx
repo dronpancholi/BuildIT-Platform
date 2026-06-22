@@ -7,6 +7,7 @@ import {
 } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { fetchApi } from "@/lib/api";
+import { safeArr, safeStr, safeUpper, safeFixed, safeReplace, safeNum } from "@/lib/safe";
 
 interface ServiceInstance {
   id: string;
@@ -98,7 +99,7 @@ export default function DeploymentPage() {
     refetchInterval: 15000,
   });
 
-  const instances = topology || [];
+  const instances = safeArr<ServiceInstance>(topology);
 
   return (
     <div className="space-y-6">
@@ -109,7 +110,7 @@ export default function DeploymentPage() {
         </div>
         {intelligence && (
           <span className="px-3 py-1.5 rounded-md bg-surface-darker border border-surface-border text-xs font-mono text-slate-400">
-            {intelligence.total_deployments} DEPLOYS
+            {safeStr(intelligence.total_deployments)} DEPLOYS
           </span>
         )}
       </div>
@@ -145,8 +146,8 @@ export default function DeploymentPage() {
                   </div>
                   <div className="flex items-center gap-3">
                     <span className="text-[10px] font-mono text-slate-500">{inst.region}</span>
-                    <span className={`text-[10px] font-mono ${inst.uptime_pct >= 99 ? "text-emerald-400" : "text-amber-400"}`}>
-                      {inst.uptime_pct.toFixed(1)}%
+                    <span className={`text-[10px] font-mono ${safeNum(inst.uptime_pct) >= 99 ? "text-emerald-400" : "text-amber-400"}`}>
+                      {safeFixed(inst.uptime_pct, 1)}%
                     </span>
                   </div>
                 </motion.div>
@@ -169,38 +170,38 @@ export default function DeploymentPage() {
             <div className="space-y-4">
               <div className="flex items-center justify-between">
                 <div className="text-center flex-1">
-                  <span className="text-3xl font-bold font-mono text-slate-100">{autoscaling.current_replicas}</span>
+                  <span className="text-3xl font-bold font-mono text-slate-100">{safeStr(autoscaling.current_replicas)}</span>
                   <p className="text-[10px] font-mono text-slate-500">Current</p>
                 </div>
                 <span className="text-slate-600 text-lg">/</span>
                 <div className="text-center flex-1">
-                  <span className="text-3xl font-bold font-mono text-slate-100">{autoscaling.max_replicas}</span>
+                  <span className="text-3xl font-bold font-mono text-slate-100">{safeStr(autoscaling.max_replicas)}</span>
                   <p className="text-[10px] font-mono text-slate-500">Max</p>
                 </div>
               </div>
               <div className="w-full h-3 bg-surface-darker rounded-full overflow-hidden">
                 <motion.div
                   initial={{ width: 0 }}
-                  animate={{ width: `${(autoscaling.current_replicas / Math.max(autoscaling.max_replicas, 1)) * 100}%` }}
+                  animate={{ width: `${(safeNum(autoscaling.current_replicas) / Math.max(safeNum(autoscaling.max_replicas), 1)) * 100}%` }}
                   className="h-full rounded-full bg-platform-500"
                   transition={{ duration: 0.5 }}
                 />
               </div>
               <div className="grid grid-cols-2 gap-3 pt-2">
                 <div className="p-2 rounded bg-surface-darker/50 border border-surface-border/50 text-center">
-                  <p className="text-xs font-mono text-slate-300">{autoscaling.current_cpu_utilization.toFixed(1)}%</p>
+                  <p className="text-xs font-mono text-slate-300">{safeFixed(autoscaling.current_cpu_utilization, 1)}%</p>
                   <p className="text-[9px] font-mono text-slate-500">CPU Util</p>
                 </div>
                 <div className="p-2 rounded bg-surface-darker/50 border border-surface-border/50 text-center">
-                  <p className="text-xs font-mono text-slate-300">Target {autoscaling.target_cpu_utilization}%</p>
+                  <p className="text-xs font-mono text-slate-300">Target {safeStr(autoscaling.target_cpu_utilization)}%</p>
                   <p className="text-[9px] font-mono text-slate-500">Target CPU</p>
                 </div>
               </div>
-              {autoscaling.recommendations.length > 0 && (
+              {safeArr<string>(autoscaling.recommendations).length > 0 && (
                 <div className="pt-3 border-t border-surface-border space-y-1">
                   <p className="text-[10px] font-mono text-amber-400 uppercase">Recommendations</p>
-                  {autoscaling.recommendations.map((r, i) => (
-                    <p key={i} className="text-[10px] font-mono text-slate-400">&gt; {r.replace(/_/g, " ")}</p>
+                  {safeArr<string>(autoscaling.recommendations).map((r, i) => (
+                    <p key={i} className="text-[10px] font-mono text-slate-400">&gt; {safeReplace(r, /_/g, " ")}</p>
                   ))}
                 </div>
               )}
@@ -223,20 +224,20 @@ export default function DeploymentPage() {
           ) : (
             <div className="space-y-4">
               <div className="text-center">
-                <span className={`text-3xl font-bold font-mono ${multiRegion.failover_readiness >= 80 ? "text-emerald-400" : multiRegion.failover_readiness >= 50 ? "text-amber-400" : "text-red-400"}`}>
-                  {Math.round(multiRegion.failover_readiness)}%
+                <span className={`text-3xl font-bold font-mono ${safeNum(multiRegion.failover_readiness) >= 80 ? "text-emerald-400" : safeNum(multiRegion.failover_readiness) >= 50 ? "text-amber-400" : "text-red-400"}`}>
+                  {Math.round(safeNum(multiRegion.failover_readiness))}%
                 </span>
                 <p className="text-xs font-mono text-slate-500 mt-1">Failover Readiness</p>
               </div>
               <div className="space-y-2">
-                {multiRegion.regions.map((r, i) => (
+                {safeArr<MultiRegionReadiness["regions"][number]>(multiRegion.regions).map((r, i) => (
                   <div key={r.name || i} className="flex items-center justify-between p-2.5 rounded bg-surface-darker/50 border border-surface-border/50">
                     <div className="flex items-center gap-2">
                       <span className={`w-2 h-2 rounded-full ${r.status === "healthy" ? "bg-emerald-500" : r.status === "degraded" ? "bg-amber-500" : "bg-red-500"}`} />
                       <span className="text-xs font-mono text-slate-300">{r.name}</span>
                     </div>
                     <div className="flex items-center gap-2">
-                      <span className="text-[10px] font-mono text-slate-500">{Math.round(r.health_score)}%</span>
+                      <span className="text-[10px] font-mono text-slate-500">{Math.round(safeNum(r.health_score))}%</span>
                       {r.failover_ready ? (
                         <CheckCircle2 className="w-3 h-3 text-emerald-500" />
                       ) : (
@@ -270,7 +271,7 @@ export default function DeploymentPage() {
             <div className="text-center py-8 text-sm font-mono text-slate-500">No rollback data</div>
           ) : (
             <div className="space-y-2">
-              {rollback.checks.map((c, i) => (
+              {safeArr<RollbackSafety["checks"][number]>(rollback.checks).map((c, i) => (
                 <motion.div
                   key={c.check || i}
                   initial={{ opacity: 0, y: 5 }}
@@ -286,7 +287,7 @@ export default function DeploymentPage() {
                     ) : (
                       <AlertTriangle className="w-4 h-4 text-amber-500" />
                     )}
-                    <span className="text-xs font-mono text-slate-300">{c.check.replace(/_/g, " ")}</span>
+                    <span className="text-xs font-mono text-slate-300">{safeReplace(c.check, /_/g, " ")}</span>
                   </div>
                   <span className={`text-[10px] font-mono ${
                     c.status === "pass" ? "text-emerald-400" : c.status === "fail" ? "text-red-400" : "text-amber-400"
@@ -307,7 +308,7 @@ export default function DeploymentPage() {
                 canary.recommendation === "promote" ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/20" :
                 canary.recommendation === "rollback" ? "bg-red-500/10 text-red-400 border-red-500/20" :
                 "bg-amber-500/10 text-amber-400 border-amber-500/20"
-              }`}>{canary.recommendation.toUpperCase()}</span>
+              }`}>{safeUpper(canary.recommendation)}</span>
             )}
           </div>
           {loadingCanary ? (
@@ -319,15 +320,15 @@ export default function DeploymentPage() {
               <div className="flex items-center justify-between">
                 <span className="text-xs font-mono text-slate-500 uppercase">Status</span>
                 <span className={`text-xs font-mono ${canary.status === "running" ? "text-blue-400" : canary.status === "completed" ? "text-emerald-400" : "text-amber-400"}`}>
-                  {canary.status.toUpperCase()}
+                  {safeUpper(canary.status)}
                 </span>
               </div>
-              {canary.metrics.map((m, i) => (
+              {safeArr<CanaryAnalysis["metrics"][number]>(canary.metrics).map((m, i) => (
                 <div key={m.metric || i} className="p-2.5 rounded bg-surface-darker/50 border border-surface-border/50">
                   <div className="flex items-center justify-between mb-1">
-                    <span className="text-[10px] font-mono text-slate-400 uppercase">{m.metric.replace(/_/g, " ")}</span>
-                    <span className={`text-[10px] font-mono font-bold ${Math.abs(m.deviation_pct) > 10 ? "text-red-400" : Math.abs(m.deviation_pct) > 5 ? "text-amber-400" : "text-emerald-400"}`}>
-                      {m.deviation_pct > 0 ? "+" : ""}{m.deviation_pct.toFixed(1)}%
+                    <span className="text-[10px] font-mono text-slate-400 uppercase">{safeReplace(m.metric, /_/g, " ")}</span>
+                    <span className={`text-[10px] font-mono font-bold ${Math.abs(safeNum(m.deviation_pct)) > 10 ? "text-red-400" : Math.abs(safeNum(m.deviation_pct)) > 5 ? "text-amber-400" : "text-emerald-400"}`}>
+                      {safeNum(m.deviation_pct) > 0 ? "+" : ""}{safeFixed(m.deviation_pct, 1)}%
                     </span>
                   </div>
                   <div className="flex justify-between text-[9px] font-mono text-slate-600">
@@ -354,22 +355,22 @@ export default function DeploymentPage() {
         ) : (
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             <div className="p-4 rounded-md bg-surface-darker/50 border border-surface-border/50 text-center">
-              <p className="text-2xl font-bold font-mono text-slate-100">{intelligence.total_deployments}</p>
+              <p className="text-2xl font-bold font-mono text-slate-100">{safeStr(intelligence.total_deployments)}</p>
               <p className="text-[10px] font-mono text-slate-500">Total Deployments</p>
             </div>
             <div className="p-4 rounded-md bg-surface-darker/50 border border-surface-border/50 text-center">
-              <p className={`text-2xl font-bold font-mono ${intelligence.failure_rate > 10 ? "text-red-400" : "text-emerald-400"}`}>
-                {intelligence.failure_rate.toFixed(1)}%
+              <p className={`text-2xl font-bold font-mono ${safeNum(intelligence.failure_rate) > 10 ? "text-red-400" : "text-emerald-400"}`}>
+                {safeFixed(intelligence.failure_rate, 1)}%
               </p>
               <p className="text-[10px] font-mono text-slate-500">Failure Rate</p>
             </div>
             <div className="p-4 rounded-md bg-surface-darker/50 border border-surface-border/50 text-center">
-              <p className="text-2xl font-bold font-mono text-amber-400">{Math.round(intelligence.mttr_minutes)}m</p>
+              <p className="text-2xl font-bold font-mono text-amber-400">{Math.round(safeNum(intelligence.mttr_minutes))}m</p>
               <p className="text-[10px] font-mono text-slate-500">MTTR</p>
             </div>
             <div className="p-4 rounded-md bg-surface-darker/50 border border-surface-border/50 text-center">
               <p className={`text-2xl font-bold font-mono ${intelligence.trend === "improving" ? "text-emerald-400" : intelligence.trend === "degrading" ? "text-red-400" : "text-amber-400"}`}>
-                {intelligence.trend.toUpperCase()}
+                {safeUpper(intelligence.trend)}
               </p>
               <p className="text-[10px] font-mono text-slate-500">Trend</p>
             </div>

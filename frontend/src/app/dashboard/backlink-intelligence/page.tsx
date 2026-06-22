@@ -1,8 +1,9 @@
 "use client";
 
-import { BarChart3, Network, Target, MessageSquare, GitBranch, Link2, Loader2, TrendingUp, Activity } from "lucide-react";
+import { BarChart3, Network, Target, MessageSquare, GitBranch, Link2, Loader2, TrendingUp, Activity, Search } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { fetchApi, MOCK_TENANT_ID } from "@/lib/api";
+import { PageGuide } from "@/components/ui/page-guide";
 
 interface ProspectScore {
   domain: string;
@@ -112,6 +113,11 @@ export default function BacklinkIntelligencePage() {
         </div>
       </div>
 
+      <PageGuide title="About Backlink Intelligence">
+        <p>This page shows <strong>prospect scoring</strong>, <strong>authority propagation</strong>, <strong>outreach predictions</strong>, and <strong>broken link opportunities</strong> for link building.</p>
+        <p>Data populates as campaigns run and the system discovers outreach prospects. Start by launching a campaign or running prospect discovery.</p>
+      </PageGuide>
+
       {/* Prospect Quality Score Distribution */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <div className="glass-panel p-6">
@@ -124,7 +130,10 @@ export default function BacklinkIntelligencePage() {
               <Loader2 className="w-8 h-8 text-platform-500 animate-spin" />
             </div>
           ) : prospectList.length === 0 ? (
-            <div className="text-center py-12 text-slate-500 font-mono">NO_PROSPECT_DATA</div>
+            <div className="text-center py-12">
+              <Search className="w-8 h-8 text-slate-600 mx-auto mb-2" />
+              <p className="text-xs font-mono text-slate-500">No prospects yet. Prospects are identified as campaigns run and discover link-building targets.</p>
+            </div>
           ) : (
             <div className="space-y-3">
               {prospectList.slice(0, 15).map((p, i) => (
@@ -160,7 +169,10 @@ export default function BacklinkIntelligencePage() {
               <Loader2 className="w-8 h-8 text-platform-500 animate-spin" />
             </div>
           ) : authorityList.length === 0 ? (
-            <div className="text-center py-12 text-slate-500 font-mono">NO_AUTHORITY_DATA</div>
+            <div className="text-center py-12">
+              <Network className="w-8 h-8 text-slate-600 mx-auto mb-2" />
+              <p className="text-xs font-mono text-slate-500">No authority propagation data yet. Data builds as the prospect graph grows.</p>
+            </div>
           ) : (
             <div className="space-y-3">
               {authorityList.slice(0, 10).map((a, i) => (
@@ -196,7 +208,10 @@ export default function BacklinkIntelligencePage() {
               <Loader2 className="w-6 h-6 text-platform-500 animate-spin" />
             </div>
           ) : predictionList.length === 0 ? (
-            <div className="text-center py-8 text-slate-500 font-mono">NO_PREDICTION_DATA</div>
+            <div className="text-center py-8">
+              <Target className="w-6 h-6 text-slate-600 mx-auto mb-2" />
+              <p className="text-xs font-mono text-slate-500">No predictions yet. Predictions require scored prospects.</p>
+            </div>
           ) : (
             <div className="space-y-2 max-h-[300px] overflow-auto">
               {predictionList.map((p, i) => (
@@ -222,7 +237,10 @@ export default function BacklinkIntelligencePage() {
               <Loader2 className="w-6 h-6 text-platform-500 animate-spin" />
             </div>
           ) : responseList.length === 0 ? (
-            <div className="text-center py-8 text-slate-500 font-mono">NO_RESPONSE_DATA</div>
+            <div className="text-center py-8">
+              <MessageSquare className="w-6 h-6 text-slate-600 mx-auto mb-2" />
+              <p className="text-xs font-mono text-slate-500">No response data yet. Response probabilities require sent outreach emails.</p>
+            </div>
           ) : (
             <div className="space-y-2 max-h-[300px] overflow-auto">
               {responseList.map((r, i) => (
@@ -254,7 +272,10 @@ export default function BacklinkIntelligencePage() {
               <Loader2 className="w-6 h-6 text-platform-500 animate-spin" />
             </div>
           ) : brokenList.length === 0 ? (
-            <div className="text-center py-8 text-slate-500 font-mono">NO_BROKEN_LINKS</div>
+            <div className="text-center py-8">
+              <Link2 className="w-6 h-6 text-slate-600 mx-auto mb-2" />
+              <p className="text-xs font-mono text-slate-500">No broken links found. The system scans periodically for broken link opportunities.</p>
+            </div>
           ) : (
             <div className="space-y-2 max-h-[300px] overflow-auto">
               {brokenList.map((b, i) => (

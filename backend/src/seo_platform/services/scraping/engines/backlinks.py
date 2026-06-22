@@ -126,40 +126,9 @@ class BacklinkScraperEngine(BaseScraper):
         except Exception as e:
             logger.debug("ahrefs_intersect_api_unavailable_using_fallback", error=str(e))
 
-        # 2. Fallback / Demo Mode Path: Elite Simulated Link Intersect Matrix
-        # Models how an elite SEO discovers un-farmed, highly relevant domains
-        logger.info("generating_simulated_link_intersect_matrix", niche=topical_niche)
-
-        niche_slug = (topical_niche or "enterprise").lower().replace(" ", "")
-        simulated_authorities = [
-            (f"{niche_slug}insights.com", 78, 0.92, ["editorial", "news"]),
-            (f"{niche_slug}journal.org", 82, 0.95, ["research", "academic"]),
-            (f"tech{niche_slug}review.com", 74, 0.88, ["product_review", "expert_analysis"]),
-            (f"global{niche_slug}trends.net", 68, 0.84, ["industry_report", "market_analysis"]),
-            (f"the{niche_slug}report.com", 71, 0.89, ["news", "opinion"]),
-            (f"{niche_slug}strategist.co", 65, 0.82, ["thought_leadership", "executive"]),
-            (f"top{niche_slug}tools.io", 62, 0.79, ["directory", "resource_page"]),
-            (f"enterprise{niche_slug}hub.com", 75, 0.91, ["knowledge_base", "whitepapers"]),
-            (f"{niche_slug}weekly.com", 69, 0.85, ["magazine", "syndication"]),
-            (f"inside{niche_slug}.net", 64, 0.81, ["community", "interviews"]),
-        ]
-
-        for dom, dr, rel, intent_tags in simulated_authorities:
-            if dom not in seen_domains and dom != client_domain:
-                seen_domains.add(dom)
-                intersect_prospects.append({
-                    "domain": dom,
-                    "url": f"https://{dom}/",
-                    "source_competitor": competitor_domains[0] if competitor_domains else "topical_cluster",
-                    "domain_rating": dr,
-                    "intersect_match_count": min(3, max(1, len(competitor_domains))),
-                    "topical_relevance": rel,
-                    "intent_tags": intent_tags,
-                    "discovery_source": "simulated_link_intersect_engine",
-                })
-
-        logger.info("link_intersect_matrix_generated", count=len(intersect_prospects))
-        return intersect_prospects
+        # 2. No fake data — return empty when all real sources fail
+        logger.warning("link_intersect_all_sources_failed", competitor=competitor_domains)
+        return []
 
 
 backlink_scraper = BacklinkScraperEngine()

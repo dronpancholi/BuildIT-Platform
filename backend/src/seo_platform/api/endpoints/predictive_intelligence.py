@@ -1,8 +1,9 @@
 from __future__ import annotations
 
+from seo_platform.core.auth import get_validated_tenant_id
 from uuid import UUID
 
-from fastapi import APIRouter, Query, Body
+from fastapi import APIRouter, Depends, Query, Body
 from pydantic import BaseModel
 
 from seo_platform.services.predictive_intelligence import predictive_intelligence
@@ -66,7 +67,7 @@ async def predict_ai_confidence_degradation(
 
 @router.get("/communication-failure")
 async def predict_communication_failure(
-    tenant_id: UUID = Query(...),
+    tenant_id: UUID = Depends(get_validated_tenant_id),
     campaign_id: UUID = Query(...),
 ) -> dict:
     prediction = await predictive_intelligence.predict_communication_failure(

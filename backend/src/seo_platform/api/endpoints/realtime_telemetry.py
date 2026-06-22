@@ -7,6 +7,7 @@ All data originates from real infrastructure state — no simulation.
 
 from __future__ import annotations
 
+from seo_platform.core.auth import get_validated_tenant_id
 import subprocess
 import time
 from typing import Any
@@ -59,7 +60,7 @@ async def _get_temporal_workflows() -> dict[str, Any]:
                 "timestamp": time.time(),
             },
         }
-    except Exception:
+    except Exception as e:
         return {
             "success": False,
             "error": str(e)[:200],

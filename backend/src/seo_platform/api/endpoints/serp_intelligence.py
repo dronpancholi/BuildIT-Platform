@@ -8,10 +8,11 @@ overlap, and dominance scoring.
 
 from __future__ import annotations
 
+from seo_platform.core.auth import get_validated_tenant_id
 from typing import Any
 from uuid import UUID  # noqa: TC003
 
-from fastapi import APIRouter, Query
+from fastapi import Depends,  APIRouter, Query
 from pydantic import BaseModel, Field
 
 from seo_platform.schemas import APIResponse
@@ -116,7 +117,7 @@ async def capture_serp_snapshot(
 async def get_serp_snapshot_history(
     keyword: str = Query(..., min_length=1, description="Target keyword"),
     geo: str = Query("US", max_length=10, description="Geo target"),
-    tenant_id: UUID = Query(..., description="Tenant UUID"),
+    tenant_id: UUID = Depends(get_validated_tenant_id),
     days: int = Query(30, ge=1, le=365, description="Days of history"),
 ) -> APIResponse[list[dict]]:
     """Retrieve historical SERP snapshots."""
@@ -138,7 +139,7 @@ async def get_serp_snapshot_history(
 async def get_serp_volatility(
     keyword: str = Query(..., min_length=1, description="Target keyword"),
     geo: str = Query("US", max_length=10, description="Geo target"),
-    tenant_id: UUID = Query(..., description="Tenant UUID"),
+    tenant_id: UUID = Depends(get_validated_tenant_id),
     days: int = Query(7, ge=1, le=90, description="Lookback days"),
 ) -> APIResponse[dict]:
     """Measure SERP volatility across historical snapshots."""

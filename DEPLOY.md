@@ -2,6 +2,18 @@
 
 Deploy the full BuildIT platform on a single VPS with Docker Compose.
 
+> **Looking for the full operator runbook?**
+> This file is the **5-minute quick start** for getting the stack up.
+> For the complete production runbook (pre-flight checks, secret
+> management, the 12-step deploy, post-deploy smoke test, operational
+> procedures, rollback), see
+> **[`DEPLOYMENT_RUNBOOK.md`](./DEPLOYMENT_RUNBOOK.md)**.
+>
+> For closing the one remaining open certification item (provider API
+> keys) and promoting the platform from
+> **CONDITIONALLY CERTIFIED → REAL WORLD CERTIFIED**, see
+> **[`PROVIDER_PROVISIONING_CHECKLIST.md`](./PROVIDER_PROVISIONING_CHECKLIST.md)**.
+
 ---
 
 ## Prerequisites

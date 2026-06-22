@@ -6,11 +6,13 @@ Tenant management API (admin-only).
 
 from __future__ import annotations
 
+from seo_platform.core.auth import get_validated_tenant_id
 from uuid import UUID
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field
 
+from seo_platform.core.rbac import RequirePermission
 from seo_platform.schemas import APIResponse
 
 router = APIRouter()
@@ -31,7 +33,10 @@ class TenantResponse(BaseModel):
 
 
 @router.post("", response_model=APIResponse[TenantResponse], status_code=201)
-async def create_tenant(request: CreateTenantRequest) -> APIResponse[TenantResponse]:
+async def create_tenant(
+    request: CreateTenantRequest,
+    _auth: None = Depends(RequirePermission("system:write")),
+) -> APIResponse[TenantResponse]:
     """Create a new tenant (super_admin only)."""
     from seo_platform.core.database import get_session
     from seo_platform.models.tenant import Tenant, TenantPlan
@@ -58,7 +63,10 @@ async def create_tenant(request: CreateTenantRequest) -> APIResponse[TenantRespo
 
 
 @router.get("/{tenant_id}", response_model=APIResponse[TenantResponse])
-async def get_tenant(tenant_id: UUID) -> APIResponse[TenantResponse]:
+async def get_tenant(
+    tenant_id: UUID,
+    _auth: None = Depends(RequirePermission("system:read")),
+) -> APIResponse[TenantResponse]:
     """Get tenant by ID."""
     from sqlalchemy import select
 

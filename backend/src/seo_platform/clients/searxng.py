@@ -6,15 +6,15 @@ Type-safe HTTP client wrapper for querying local SearXNG search aggregators.
 
 from __future__ import annotations
 
-import logging
 from typing import Any
 
 import httpx
 from pydantic import BaseModel, Field
 
+from seo_platform.core.logging import get_logger
 from seo_platform.core.reliability import CircuitBreaker
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 _searxng_circuit_breaker = CircuitBreaker("searxng_client", failure_threshold=3, recovery_timeout=30)
 

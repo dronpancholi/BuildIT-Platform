@@ -1,16 +1,17 @@
 from __future__ import annotations
 
+from seo_platform.core.auth import get_validated_tenant_id
 from typing import Any
 from uuid import UUID
 
-from fastapi import APIRouter, Body, Query
+from fastapi import Depends,  APIRouter, Body, Query
 
 from seo_platform.services.ai_quality import ai_quality_service
 
 router = APIRouter()
 
 
-@router.post("/ai-quality/recommendation-confidence")
+@router.post("/recommendation-confidence")
 async def score_recommendation_confidence(
     recommendation_type: str = Body(..., embed=True),
     signals: dict[str, Any] = Body(..., embed=True),
@@ -19,7 +20,7 @@ async def score_recommendation_confidence(
     return {"success": True, "data": result.model_dump()}
 
 
-@router.post("/ai-quality/hallucination-risk")
+@router.post("/hallucination-risk")
 async def score_hallucination_risk(
     llm_output: str = Body(..., embed=True),
     validation_context: dict[str, Any] = Body(..., embed=True),
@@ -28,7 +29,7 @@ async def score_hallucination_risk(
     return {"success": True, "data": result.model_dump()}
 
 
-@router.get("/ai-quality/recommendation-quality")
+@router.get("/recommendation-quality")
 async def get_recommendation_quality(
     time_window_hours: int = Query(168, description="Time window in hours"),
 ) -> dict:
@@ -36,7 +37,7 @@ async def get_recommendation_quality(
     return {"success": True, "data": result.model_dump()}
 
 
-@router.post("/ai-quality/clustering-quality")
+@router.post("/clustering-quality")
 async def score_clustering_quality(
     clusters: list[dict[str, Any]] = Body(..., embed=True),
 ) -> dict:
@@ -44,7 +45,7 @@ async def score_clustering_quality(
     return {"success": True, "data": result.model_dump()}
 
 
-@router.post("/ai-quality/outreach-quality")
+@router.post("/outreach-quality")
 async def score_outreach_quality(
     email_content: str = Body(..., embed=True),
     prospect_data: dict[str, Any] = Body(..., embed=True),
@@ -53,9 +54,9 @@ async def score_outreach_quality(
     return {"success": True, "data": result.model_dump()}
 
 
-@router.get("/ai-quality/dashboard")
+@router.get("/dashboard")
 async def get_ai_quality_dashboard(
-    tenant_id: UUID = Query(..., description="Tenant UUID"),
+    tenant_id: UUID = Depends(get_validated_tenant_id),
 ) -> dict:
     result = await ai_quality_service.get_ai_quality_dashboard(tenant_id)
     return {"success": True, "data": result.model_dump()}

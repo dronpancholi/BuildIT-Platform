@@ -5,6 +5,7 @@ Real operational metrics derived from actual execution state.
 NO fake KPIs - all metrics come from real database and runtime state.
 """
 
+import json
 from datetime import UTC, datetime
 from typing import Any
 from uuid import UUID
@@ -114,7 +115,8 @@ class OperationalTelemetry:
                         "pending_tasks": info.pending_tasks,
                         "running_tasks": info.run_id,
                     }
-                except:
+                except Exception as e:
+                    logger.debug("queue_metrics_failed", queue=queue, error=str(e))
                     queue_stats[queue] = {"pending_tasks": 0, "running_tasks": 0}
 
             return {"queues": queue_stats}
@@ -147,7 +149,8 @@ class OperationalTelemetry:
                         metrics["total_scrapes"] += data.get("total", 0)
                         metrics["successful_scrapes"] += data.get("success", 0)
                         metrics["failed_scrapes"] += data.get("failed", 0)
-                    except:
+                    except json.JSONDecodeError:
+                        logger.debug("scraping_metrics_parse_failed", key=key)
                         pass
 
             return metrics

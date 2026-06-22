@@ -505,32 +505,46 @@ class DistributedHardeningService:
             )
 
     async def recover_postgres_pool(self) -> PgRecoveryResult:
+        disposed = 0
         try:
-            from seo_platform.core.database import get_engine, close_database
-            engine = get_engine()
-            disposed = getattr(engine.pool, "size", 0) or 0
+            from seo_platform.core.database import get_engine, close_database, get_session_factory
+            try:
+                engine = get_engine()
+                pool = getattr(engine, "pool", None)
+                if pool is not None:
+                    disposed = (
+                        getattr(pool, "size", lambda: 0)()
+                        if callable(getattr(pool, "size", None))
+                        else int(getattr(pool, "size", 0) or 0)
+                    )
+            except Exception:
+                disposed = 0
 
             await close_database()
 
-            from seo_platform.core.database import get_engine, get_session_factory
+            # Re-acquire engine and verify a SELECT 1
             engine = get_engine()
             factory = get_session_factory()
 
+            from sqlalchemy import text
             async with engine.connect() as conn:
-                from sqlalchemy import text
-                await conn.execute(text("SELECT 1"))
+                result = await conn.execute(text("SELECT 1"))
+                val = result.scalar()
+                if val != 1:
+                    raise RuntimeError(f"Post-recovery SELECT 1 returned {val!r}")
 
             logger.info("postgres_pool_recovered", connections_disposed=disposed)
             return PgRecoveryResult(
                 success=True,
-                connections_disposed=disposed,
+                connections_disposed=int(disposed),
                 pool_reinitialized=True,
                 message="Connection pool disposed and reinitialized",
             )
         except Exception as e:
-            logger.error("postgres_recovery_failed", error=str(e)[:100])
+            logger.error("postgres_recovery_failed", error=str(e)[:200])
             return PgRecoveryResult(
-                success=False, connections_disposed=0,
+                success=False,
+                connections_disposed=0,
                 pool_reinitialized=False,
                 message=f"Recovery failed: {str(e)[:150]}",
             )

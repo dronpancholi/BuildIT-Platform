@@ -1,12 +1,17 @@
 "use client";
 
-import { useQuery } from "@tanstack/react-query";
+import { useState } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { motion } from "framer-motion";
 import {
   Server, Shield, Activity, Clock, Loader2,
   Cpu, Radio, ArrowRight, AlertTriangle, CheckCircle2,
+  Key, Save, Trash2, X, Check,
 } from "lucide-react";
 import { fetchApi } from "@/lib/api";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { toast } from "sonner";
 
 interface ProviderEntry {
   provider: string;
@@ -16,6 +21,7 @@ interface ProviderEntry {
   success_count_24h: number;
   circuit_breaker_state: string;
   healthy: boolean;
+  not_configured?: boolean;
 }
 
 interface ProviderHealthData {
@@ -23,7 +29,26 @@ interface ProviderHealthData {
   overall_uptime_pct: number;
   healthy_providers: number;
   total_providers: number;
+  not_configured_providers?: number;
+  configured_providers?: number;
   fallback_chain: Record<string, string[]>;
+}
+
+interface KeyCatalogEntry {
+  provider: string;
+  label: string;
+  category: string;
+  fields: string[];
+  configured: boolean;
+  is_active: boolean;
+  updated_at?: string;
+  updated_by?: string | null;
+}
+
+interface KeyCatalogData {
+  catalog: KeyCatalogEntry[];
+  configured_count: number;
+  total_in_catalog: number;
 }
 
 const PROVIDER_ICONS: Record<string, React.ReactNode> = {
@@ -43,7 +68,7 @@ function getProviderIcon(name: string): React.ReactNode {
 export default function ProvidersPage() {
   const { data, isLoading, refetch } = useQuery<ProviderHealthData>({
     queryKey: ["provider-health"],
-    queryFn: () => fetchApi("/providers/status"),
+    queryFn: () => fetchApi("/provider-health"),
     refetchInterval: 5000,
   });
 
@@ -55,7 +80,7 @@ export default function ProvidersPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-slate-100 tracking-tight font-mono">PROVIDER_HEALTH</h1>
+          <h1 className="text-3xl font-bold text-slate-100 tracking-tight">Providers</h1>
           <p className="text-slate-400 mt-1 font-mono text-sm uppercase tracking-wider">Real-time provider status & fallback paths</p>
         </div>
         <div className="flex items-center gap-3">
@@ -63,6 +88,12 @@ export default function ProvidersPage() {
             <CheckCircle2 className="w-4 h-4 text-emerald-400" />
             {data?.healthy_providers ?? 0}/{data?.total_providers ?? 0} HEALTHY
           </div>
+          {(data?.not_configured_providers ?? 0) > 0 && (
+            <div className="px-3 py-1.5 rounded-md bg-surface-darker border border-amber-500/30 text-xs font-mono text-amber-400 flex items-center gap-2">
+              <AlertTriangle className="w-4 h-4" />
+              {data?.not_configured_providers} NOT CONFIGURED
+            </div>
+          )}
           <button onClick={() => refetch()} className="px-3 py-1.5 rounded-md bg-platform-600 hover:bg-platform-500 text-white text-xs font-mono font-bold transition-colors flex items-center gap-1.5">
             <Activity className="w-3.5 h-3.5" /> REFRESH
           </button>
@@ -107,6 +138,7 @@ export default function ProvidersPage() {
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: i * 0.05 }}
                 className={`glass-panel p-5 border-l-2 ${
+                  prov.not_configured ? "border-l-slate-500 opacity-60" :
                   prov.circuit_breaker_state === "OPEN" ? "border-l-red-500" :
                   prov.circuit_breaker_state === "HALF_OPEN" ? "border-l-amber-500" :
                   prov.healthy ? "border-l-emerald-500" : "border-l-amber-500"
@@ -130,21 +162,23 @@ export default function ProvidersPage() {
                     </div>
                   </div>
                   <div className={`px-2 py-1 rounded text-[10px] font-mono font-bold border ${
-                    prov.healthy
+                    prov.not_configured
+                      ? "bg-slate-500/10 text-slate-400 border-slate-500/20"
+                      : prov.healthy
                       ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/20"
                       : "bg-red-500/10 text-red-400 border-red-500/20"
                   }`}>
-                    {prov.healthy ? "HEALTHY" : "DEGRADED"}
+                    {prov.not_configured ? "NOT CONFIGURED" : prov.healthy ? "HEALTHY" : "DEGRADED"}
                   </div>
                 </div>
 
                 <div className="grid grid-cols-3 gap-3 mb-3">
                   <div className="p-2 bg-surface-darker/50 rounded border border-surface-border/50 text-center">
-                    <p className="text-lg font-bold font-mono text-slate-200">{prov.uptime_pct}%</p>
+                    <p className="text-lg font-bold font-mono text-slate-200">{prov.not_configured ? "—" : `${prov.uptime_pct}%`}</p>
                     <p className="text-[8px] font-mono text-slate-600 uppercase">Uptime</p>
                   </div>
                   <div className="p-2 bg-surface-darker/50 rounded border border-surface-border/50 text-center">
-                    <p className="text-lg font-bold font-mono text-slate-200">{prov.avg_latency_ms.toFixed(0)}ms</p>
+                    <p className="text-lg font-bold font-mono text-slate-200">{prov.not_configured ? "—" : `${prov.avg_latency_ms.toFixed(0)}ms`}</p>
                     <p className="text-[8px] font-mono text-slate-600 uppercase">Latency</p>
                   </div>
                   <div className="p-2 bg-surface-darker/50 rounded border border-surface-border/50 text-center">
@@ -155,17 +189,21 @@ export default function ProvidersPage() {
 
                 <div className="flex items-center gap-2">
                   <div className="flex-1 h-2 bg-surface-darker rounded-full overflow-hidden">
-                    <motion.div
-                      initial={{ width: 0 }}
-                      animate={{ width: `${prov.uptime_pct}%` }}
-                      className={`h-full rounded-full ${
-                        prov.uptime_pct >= 95 ? "bg-emerald-500" :
-                        prov.uptime_pct >= 80 ? "bg-amber-500" : "bg-red-500"
-                      }`}
-                      transition={{ duration: 0.5 }}
-                    />
+                    {prov.not_configured ? (
+                      <div className="h-full w-full bg-slate-700/50" />
+                    ) : (
+                      <motion.div
+                        initial={{ width: 0 }}
+                        animate={{ width: `${prov.uptime_pct}%` }}
+                        className={`h-full rounded-full ${
+                          prov.uptime_pct >= 95 ? "bg-emerald-500" :
+                          prov.uptime_pct >= 80 ? "bg-amber-500" : "bg-red-500"
+                        }`}
+                        transition={{ duration: 0.5 }}
+                      />
+                    )}
                   </div>
-                  <span className="text-[10px] font-mono text-slate-500 w-10 text-right">{prov.success_count_24h}/{prov.total_calls_24h}</span>
+                  <span className="text-[10px] font-mono text-slate-500 w-10 text-right">{prov.not_configured ? "0/0" : `${prov.success_count_24h}/${prov.total_calls_24h}`}</span>
                 </div>
               </motion.div>
             ))}
@@ -279,6 +317,263 @@ export default function ProvidersPage() {
               </div>
             </div>
           </div>
+        </div>
+      )}
+
+      {/* Provider Key Management Section */}
+      <ProviderKeyManager />
+    </div>
+  );
+}
+
+
+function ProviderKeyManager() {
+  const queryClient = useQueryClient();
+  const [editingProvider, setEditingProvider] = useState<string | null>(null);
+  const [formValues, setFormValues] = useState<Record<string, string>>({});
+
+  const { data, isLoading, isError, refetch } = useQuery<KeyCatalogData>({
+    queryKey: ["provider-keys-catalog"],
+    queryFn: () => fetchApi<KeyCatalogData>("/provider-keys"),
+  });
+
+  const saveMutation = useMutation({
+    mutationFn: async ({ provider, values }: { provider: string; values: Record<string, string> }) => {
+      return fetchApi(`/provider-keys/${provider}`, {
+        method: "PUT",
+        body: JSON.stringify(values),
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["provider-keys-catalog"] });
+      queryClient.invalidateQueries({ queryKey: ["provider-health"] });
+      setEditingProvider(null);
+      setFormValues({});
+    },
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: async (provider: string) => {
+      return fetchApi(`/provider-keys/${provider}`, { method: "DELETE" });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["provider-keys-catalog"] });
+      queryClient.invalidateQueries({ queryKey: ["provider-health"] });
+    },
+  });
+
+  const toggleMutation = useMutation({
+    mutationFn: async ({ provider, enable }: { provider: string; enable: boolean }) => {
+      const action = enable ? "enable" : "disable";
+      return fetchApi(`/providers/keys/${provider}/${action}`, { method: "POST" });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["provider-keys-catalog"] });
+      queryClient.invalidateQueries({ queryKey: ["provider-health"] });
+    },
+  });
+
+  const testMutation = useMutation({
+    mutationFn: async (provider: string) => {
+      return fetchApi<{ healthy: boolean; status_code?: number; error?: string }>(`/providers/keys/${provider}/test`, { method: "POST" });
+    },
+    onSuccess: (data: any) => {
+      if (data.healthy) {
+        toast.success(`${data.provider || "Provider"} is healthy`, {
+          description: data.status_code ? `HTTP ${data.status_code}` : "Connection successful",
+        });
+      } else {
+        toast.error(`${data.provider || "Provider"} is unhealthy`, {
+          description: data.error || `HTTP ${data.status_code}`,
+        });
+      }
+    },
+    onError: (error: any) => {
+      toast.error("Test failed", { description: error?.detail || error?.message || "Unknown error" });
+    },
+  });
+
+  const handleStartEdit = (entry: KeyCatalogEntry) => {
+    setEditingProvider(entry.provider);
+    const initial: Record<string, string> = {};
+    for (const f of entry.fields) initial[f] = "";
+    setFormValues(initial);
+  };
+
+  const handleCancelEdit = () => {
+    setEditingProvider(null);
+    setFormValues({});
+  };
+
+  const handleSave = (provider: string) => {
+    saveMutation.mutate({ provider, values: formValues });
+  };
+
+  const fieldLabel = (f: string) => f.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
+  const fieldType = (f: string) => (f.includes("password") || f.includes("api_key")) ? "password" : "text";
+
+  return (
+    <div className="glass-panel p-6 mt-6">
+      <div className="flex items-center justify-between mb-4">
+        <div>
+          <h2 className="text-lg font-medium text-slate-200 flex items-center gap-2 font-mono">
+            <Key className="w-5 h-5 text-platform-500" />
+            API_KEYS
+          </h2>
+          <p className="text-xs text-slate-500 font-mono mt-1">
+            Configure provider credentials at runtime. Keys are encrypted at rest (AES-256-GCM). {data?.configured_count ?? 0}/{data?.total_in_catalog ?? 0} configured.
+          </p>
+        </div>
+        <button
+          onClick={() => refetch()}
+          className="px-3 py-1.5 rounded-md bg-surface-darker border border-surface-border text-xs font-mono text-slate-400 hover:text-slate-200 transition-colors"
+        >
+          REFRESH
+        </button>
+      </div>
+
+      {isLoading ? (
+        <div className="flex items-center justify-center py-12">
+          <Loader2 className="w-6 h-6 text-platform-500 animate-spin" />
+        </div>
+      ) : isError ? (
+        <div className="text-sm text-red-400 font-mono">Failed to load key catalog. Check console for details.</div>
+      ) : (
+        <div className="space-y-3">
+          {data?.catalog.map((entry) => {
+            const isEditing = editingProvider === entry.provider;
+            return (
+              <div
+                key={entry.provider}
+                className={`p-4 rounded-md border ${
+                  entry.configured
+                    ? "bg-emerald-500/5 border-emerald-500/20"
+                    : "bg-surface-darker/30 border-surface-border/50"
+                }`}
+              >
+                <div className="flex items-center justify-between gap-3">
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2">
+                      <h3 className="text-sm font-mono font-semibold text-slate-200">{entry.label}</h3>
+                      <span className="text-[10px] font-mono text-slate-500 px-1.5 py-0.5 rounded bg-surface-darker border border-surface-border uppercase">
+                        {entry.category}
+                      </span>
+                      {entry.configured ? (
+                        <span className={`text-[10px] font-mono flex items-center gap-1 ${entry.is_active ? "text-emerald-400" : "text-slate-500"}`}>
+                          <span className={`w-1.5 h-1.5 rounded-full ${entry.is_active ? "bg-emerald-500" : "bg-slate-500"}`} />
+                          {entry.is_active ? "ENABLED" : "DISABLED"}
+                        </span>
+                      ) : (
+                        <span className="text-[10px] font-mono text-amber-400 flex items-center gap-1">
+                          <AlertTriangle className="w-3 h-3" /> NOT CONFIGURED
+                        </span>
+                      )}
+                    </div>
+                    {entry.configured && entry.updated_at && (
+                      <p className="text-[10px] font-mono text-slate-500 mt-1">
+                        Last updated: {new Date(entry.updated_at).toLocaleString()}
+                      </p>
+                    )}
+                  </div>
+                  <div className="flex items-center gap-2 flex-shrink-0">
+                    {entry.configured && !isEditing && (
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => toggleMutation.mutate({ provider: entry.provider, enable: !entry.is_active })}
+                        disabled={toggleMutation.isPending}
+                        className={entry.is_active ? "text-emerald-400 border-emerald-500/30 hover:bg-emerald-500/10" : "text-slate-400 border-slate-500/30 hover:bg-slate-500/10"}
+                      >
+                        {entry.is_active ? "ENABLED" : "DISABLED"}
+                      </Button>
+                    )}
+                    {entry.configured && !isEditing && (
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => testMutation.mutate(entry.provider)}
+                        disabled={testMutation.isPending}
+                      >
+                        TEST
+                      </Button>
+                    )}
+                    {!isEditing && (
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => handleStartEdit(entry)}
+                        disabled={deleteMutation.isPending}
+                      >
+                        {entry.configured ? "ROTATE" : "ADD"}
+                      </Button>
+                    )}
+                    {entry.configured && !isEditing && (
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => {
+                          if (confirm(`Remove the configured key for ${entry.label}?`)) {
+                            deleteMutation.mutate(entry.provider);
+                          }
+                        }}
+                        disabled={deleteMutation.isPending}
+                        className="text-red-400 border-red-500/30 hover:bg-red-500/10"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </Button>
+                    )}
+                  </div>
+                </div>
+
+                {isEditing && (
+                  <div className="mt-4 pt-4 border-t border-surface-border/50 space-y-3">
+                    {entry.fields.map((field) => (
+                      <div key={field}>
+                        <label className="text-[11px] font-mono text-slate-400 uppercase tracking-wider">
+                          {fieldLabel(field)}
+                        </label>
+                        <Input
+                          type={fieldType(field)}
+                          value={formValues[field] || ""}
+                          onChange={(e) => setFormValues({ ...formValues, [field]: e.target.value })}
+                          placeholder={`Enter ${fieldLabel(field).toLowerCase()}`}
+                          className="mt-1 font-mono"
+                          autoComplete="off"
+                        />
+                      </div>
+                    ))}
+                    <div className="flex items-center justify-end gap-2">
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={handleCancelEdit}
+                        disabled={saveMutation.isPending}
+                      >
+                        <X className="w-3.5 h-3.5" /> CANCEL
+                      </Button>
+                      <Button
+                        size="sm"
+                        onClick={() => handleSave(entry.provider)}
+                        disabled={saveMutation.isPending || entry.fields.some((f) => !formValues[f])}
+                      >
+                        {saveMutation.isPending ? (
+                          <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                        ) : (
+                          <Save className="w-3.5 h-3.5" />
+                        )}
+                        SAVE
+                      </Button>
+                    </div>
+                    {saveMutation.isError && (
+                      <p className="text-xs text-red-400 font-mono">
+                        Failed: {(saveMutation.error as Error)?.message || "unknown"}
+                      </p>
+                    )}
+                  </div>
+                )}
+              </div>
+            );
+          })}
         </div>
       )}
     </div>

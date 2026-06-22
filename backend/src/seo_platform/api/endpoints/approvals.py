@@ -6,13 +6,15 @@ Approval queue management and decision submission.
 
 from __future__ import annotations
 
+from seo_platform.core.auth import get_validated_tenant_id
 from datetime import UTC
 from uuid import UUID
 
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel, Field
 
 from seo_platform.schemas import APIResponse
+from seo_platform.core.rbac import RequirePermission
 
 router = APIRouter()
 
@@ -40,8 +42,9 @@ class SubmitDecisionRequest(BaseModel):
 
 @router.get("", response_model=APIResponse[list[ApprovalRequestResponse]])
 async def list_pending_approvals(
-    tenant_id: UUID = Query(...),
+    tenant_id: UUID = Depends(get_validated_tenant_id),
     risk_level: str | None = Query(default=None),
+    user = Depends(RequirePermission("approvals:read")),
 ) -> APIResponse[list[ApprovalRequestResponse]]:
     """List pending approval requests for a tenant, sorted by priority."""
     from sqlalchemy import select
@@ -82,7 +85,8 @@ async def list_pending_approvals(
 async def submit_decision(
     request_id: UUID,
     body: SubmitDecisionRequest,
-    tenant_id: UUID = Query(...),
+    tenant_id: UUID = Depends(get_validated_tenant_id),
+    user = Depends(RequirePermission("approvals:approve")),
 ) -> APIResponse[dict]:
     """Submit an approval decision. Signals the waiting Temporal workflow."""
     from datetime import datetime
@@ -93,6 +97,7 @@ async def submit_decision(
     from seo_platform.models.approval import ApprovalRequestModel, ApprovalStatusEnum
     from seo_platform.services.approval import ApprovalDecision as ServiceApprovalDecision
     from seo_platform.services.approval import approval_service
+    from seo_platform.services.audit_logger import audit_logger
 
     async with get_tenant_session(tenant_id) as session:
         result = await session.execute(
@@ -113,6 +118,15 @@ async def submit_decision(
         request.decision_reason = body.reason
         request.modifications = body.modifications
 
+        try:
+            from seo_platform.core.metrics import approval_decisions_total
+            approval_decisions_total.labels(
+                category=str(request.category or "unknown"),
+                decision=body.decision,
+            ).inc()
+        except Exception:
+            pass
+
         decision = ServiceApprovalDecision(
             request_id=request_id,
             decision=ApprovalStatusEnum(body.decision).value,
@@ -122,6 +136,19 @@ async def submit_decision(
         )
 
         await approval_service.decide(decision, request.workflow_run_id, tenant_id)
+
+        # Audit log
+        user_id = str(body.decided_by) if body.decided_by else "system"
+        await audit_logger.log(
+            tenant_id=str(tenant_id),
+            user_id=user_id,
+            action=f"approval.{body.decision}",
+            entity_type="approval",
+            entity_id=str(request_id),
+            before={"status": "pending"},
+            after={"status": body.decision, "reason": body.reason},
+            reason=body.reason,
+        )
 
         return APIResponse(
             data={

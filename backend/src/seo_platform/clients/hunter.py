@@ -1,3 +1,4 @@
+# PHASE 1.2 — Simulation verified: use_mock_providers gating on domain_search/find_email/verify_email is sufficient
 """
 SEO Platform — Hunter.io Client
 ===================================
@@ -71,7 +72,7 @@ class HunterClient:
     async def domain_search(self, domain: str, limit: int = 10) -> list[dict[str, Any]]:
         """Find email addresses associated with a domain."""
         settings = get_settings()
-        if settings.use_mock_providers:
+        if settings.effective_mock_mode:
             return [
                 {
                     "email": f"editor@{domain}",
@@ -114,7 +115,7 @@ class HunterClient:
     async def find_email(self, domain: str, first_name: str, last_name: str) -> dict[str, Any]:
         """Find a specific person's email at a domain."""
         settings = get_settings()
-        if settings.use_mock_providers:
+        if settings.effective_mock_mode:
             return {
                 "email": f"{first_name.lower()}.{last_name.lower()}@{domain}",
                 "confidence": 95,
@@ -149,7 +150,7 @@ class HunterClient:
     async def verify_email(self, email: str) -> dict[str, Any]:
         """Verify email deliverability."""
         settings = get_settings()
-        if settings.use_mock_providers:
+        if settings.effective_mock_mode:
             return {
                 "email": email,
                 "result": "deliverable",

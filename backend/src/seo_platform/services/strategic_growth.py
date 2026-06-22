@@ -15,6 +15,7 @@ from typing import Any
 from uuid import UUID
 
 from pydantic import BaseModel, Field
+from sqlalchemy import func
 
 from seo_platform.core.logging import get_logger
 

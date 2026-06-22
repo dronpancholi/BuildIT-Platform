@@ -8,6 +8,7 @@ import {
 } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { fetchApi, MOCK_TENANT_ID } from "@/lib/api";
+import { safeArr, safeStr, safeNum, safeUpper, safeLower, safeFixed, safeLocale, safePct, safeDate, safeDateTime, safeTime, safeReplace, safeSplit, safeSlice, safeStartsWith, safeFind, safeIncludes, safeSort, safeObj, safeKeys, safeValues, safeEntries, safeInitials } from "@/lib/safe";
 
 interface TracePhase {
   name: string;
@@ -85,8 +86,8 @@ export default function TracesPage() {
   });
 
   const filteredTraces = useMemo(() => {
-    return traces.filter((t) => {
-      if (searchQuery && !t.workflow_id.toLowerCase().includes(searchQuery.toLowerCase()) && !t.type.toLowerCase().includes(searchQuery.toLowerCase())) return false;
+    return safeArr<TraceEntry>(traces).filter((t) => {
+      if (searchQuery && !safeLower(t.workflow_id, "").includes(safeLower(searchQuery, "")) && !safeLower(t.type, "").includes(safeLower(searchQuery, ""))) return false;
       if (typeFilter !== "all" && t.type !== typeFilter) return false;
       if (statusFilter !== "all" && t.status !== statusFilter) return false;
       return true;
@@ -94,7 +95,7 @@ export default function TracesPage() {
   }, [traces, searchQuery, typeFilter, statusFilter]);
 
   const maxDuration = useMemo(() => {
-    return Math.max(...traces.map((t) => t.duration_ms), 1);
+    return Math.max(...safeArr<TraceEntry>(traces).map((t) => t.duration_ms), 1);
   }, [traces]);
 
   return (
@@ -105,7 +106,7 @@ export default function TracesPage() {
           <p className="text-slate-400 mt-1 font-mono text-sm uppercase tracking-wider">Distributed Workflow Execution Traces</p>
         </div>
         <div className="flex items-center gap-3">
-          <span className="text-xs text-slate-500 font-mono">{traces.length} traces</span>
+          <span className="text-xs text-slate-500 font-mono">{safeArr<TraceEntry>(traces).length} traces</span>
           <div className="flex gap-2">
             <div className="relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
@@ -176,7 +177,7 @@ export default function TracesPage() {
                           : "bg-surface-darker border-surface-border text-slate-500 hover:text-slate-300"
                       }`}
                     >
-                      {s.toUpperCase()}
+                        {safeUpper(s)}
                     </button>
                   ))}
                 </div>
@@ -208,7 +209,7 @@ export default function TracesPage() {
                     <Loader2 className="w-8 h-8 text-platform-500 animate-spin mx-auto" />
                   </td>
                 </tr>
-              ) : filteredTraces.length === 0 ? (
+              ) : safeArr<TraceEntry>(filteredTraces).length === 0 ? (
                 <tr>
                   <td colSpan={7} className="px-6 py-16 text-center">
                     <div className="flex flex-col items-center">
@@ -221,7 +222,7 @@ export default function TracesPage() {
                   </td>
                 </tr>
               ) : (
-                filteredTraces.map((trace) => {
+                safeArr<TraceEntry>(filteredTraces).map((trace) => {
                   const isExpanded = expandedTrace === trace.workflow_id;
                   return (
                     <tr key={trace.workflow_id}>
@@ -281,13 +282,13 @@ export default function TracesPage() {
             >
               <div className="p-6 bg-surface-darker/30">
                 {(() => {
-                  const trace = traces.find((t) => t.workflow_id === expandedTrace);
+                  const trace = safeArr<TraceEntry>(traces).find((t) => t.workflow_id === expandedTrace);
                   if (!trace) return null;
-                  const maxPhaseDuration = Math.max(...trace.phases.map((p) => p.duration_ms), 1);
+                  const maxPhaseDuration = Math.max(...safeArr<TracePhase>(trace.phases).map((p) => p.duration_ms), 1);
                   return (
                     <div className="space-y-3">
                       <h4 className="text-xs font-mono text-slate-500 uppercase tracking-widest mb-3">PHASE WATERFALL</h4>
-                      {trace.phases.map((phase, i) => (
+                      {safeArr<TracePhase>(trace.phases).map((phase, i) => (
                         <div key={phase.name} className="flex items-center gap-4">
                           <div className="flex items-center gap-2 w-40">
                             {PHASE_ICONS[phase.status] || <Clock className="w-3 h-3 text-slate-500" />}

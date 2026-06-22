@@ -6,6 +6,7 @@ REST endpoints for operational anomaly prediction.
 
 from __future__ import annotations
 
+from seo_platform.core.auth import get_validated_tenant_id
 from typing import Optional
 from uuid import UUID
 

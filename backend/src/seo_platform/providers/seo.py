@@ -1,3 +1,4 @@
+# PHASE 1.2 — Simulation removed: SimulatedSEOProvider class, all registrations, and fallback calls
 """
 SEO Platform — Universal SEO Data Provider Layer
 ====================================================
@@ -15,6 +16,7 @@ from uuid import UUID
 from seo_platform.clients.scrapling import SERPItem, ScraplingClient
 from seo_platform.clients.scrapling_cache import ScraplingCache
 from seo_platform.clients.searxng import SearXNGClient
+from seo_platform.core.errors import ProviderUnavailableError
 from seo_platform.core.logging import get_logger
 
 
@@ -112,49 +114,6 @@ class SEODataProvider(ABC):
 
 
 # ---------------------------------------------------------------------------
-# Simulated Provider (fallback)
-# ---------------------------------------------------------------------------
-class SimulatedSEOProvider(SEODataProvider):
-    """Hash-based fallback when no real SEO APIs are configured."""
-
-    name = "simulated"
-
-    async def get_keyword_metrics(self, keywords: list[str]) -> list[KeywordMetrics]:
-        import hashlib
-        results = []
-        for kw in keywords:
-            h = int(hashlib.md5(kw.encode()).hexdigest()[:8], 16)
-            results.append(KeywordMetrics(
-                keyword=kw,
-                search_volume=200 + (h % 4800),
-                difficulty=round(20 + (h % 6000) / 100, 1),
-                cpc=round(0.5 + (h % 950) / 100, 2),
-                competition=round(0.3 + (h % 60) / 100, 2),
-                intent="informational",
-            ))
-        return results
-
-    async def get_domain_authority(self, domain: str) -> DomainAuthority:
-        import hashlib
-        h = int(hashlib.md5(domain.encode()).hexdigest()[:8], 16)
-        return DomainAuthority(
-            domain=domain,
-            authority=round(20 + (h % 60), 1),
-            trust=round(30 + (h % 40), 1),
-            referring_domains=h % 500,
-            backlinks=h % 5000,
-            organic_traffic=h % 10000,
-            source="simulated",
-        )
-
-    async def discover_backlink_prospects(self, domain: str, limit: int = 20) -> list[BacklinkProspect]:
-        return []
-
-    async def get_serp_data(self, keyword: str, geo: str = "us") -> dict[str, Any]:
-        return {"keyword": keyword, "success": False, "error": "Simulated provider has no SERP data"}
-
-
-# ---------------------------------------------------------------------------
 # DataForSEO Provider
 # ---------------------------------------------------------------------------
 class DataForSEOProvider(SEODataProvider):
@@ -188,11 +147,17 @@ class DataForSEOProvider(SEODataProvider):
                 ))
             return results
         except Exception as e:
-            logger.warning("dataforseo_failed_falling_back", error=str(e))
-            return await SimulatedSEOProvider().get_keyword_metrics(keywords)
+            logger.warning("dataforseo_failed", error=str(e))
+            raise ProviderUnavailableError(
+                provider="dataforseo",
+                message=f"DataForSEO keyword metrics unavailable: {e}",
+            ) from e
 
     async def get_domain_authority(self, domain: str) -> DomainAuthority:
-        return await SimulatedSEOProvider().get_domain_authority(domain)
+        raise ProviderUnavailableError(
+            provider="dataforseo",
+            message="DataForSEO domain authority endpoint is not available; configure an alternative provider.",
+        )
 
     async def discover_backlink_prospects(self, domain: str, limit: int = 20) -> list[BacklinkProspect]:
         return []
@@ -217,7 +182,10 @@ class ScraplingSEOProvider(SEODataProvider):
         self.client = ScraplingClient()
 
     async def get_keyword_metrics(self, keywords: list[str]) -> list[KeywordMetrics]:
-        return await SimulatedSEOProvider().get_keyword_metrics(keywords)
+        raise ProviderUnavailableError(
+            provider="scrapling",
+            message="Scrapling does not provide keyword metrics; configure a real keyword metrics provider.",
+        )
 
     async def get_domain_authority(self, domain: str) -> DomainAuthority:
         from seo_platform.clients.openpagerank import OpenPageRankClient
@@ -347,7 +315,10 @@ class SearXNGSEOProvider(SEODataProvider):
         self.client = SearXNGClient(base_url=base_url)
 
     async def get_keyword_metrics(self, keywords: list[str]) -> list[KeywordMetrics]:
-        return await SimulatedSEOProvider().get_keyword_metrics(keywords)
+        raise ProviderUnavailableError(
+            provider="searxng",
+            message="SearXNG does not provide keyword metrics; configure a real keyword metrics provider.",
+        )
 
     async def get_domain_authority(self, domain: str) -> DomainAuthority:
         from seo_platform.clients.openpagerank import OpenPageRankClient
@@ -449,7 +420,10 @@ class SEOProviderRegistry:
     def get_active(self) -> SEODataProvider:
         provider = self._providers.get(self._active)
         if provider is None:
-            provider = self._providers.get("simulated", SimulatedSEOProvider())
+            raise ProviderUnavailableError(
+                provider="seo_registry",
+                message=f"No active SEO provider configured (requested: '{self._active}').",
+            )
         return provider
 
     @property
@@ -463,7 +437,6 @@ class SEOProviderRegistry:
 
 # Global registry
 seo_provider_registry = SEOProviderRegistry()
-seo_provider_registry.register(SimulatedSEOProvider())
 seo_provider_registry.register(DataForSEOProvider())
 seo_provider_registry.register(ScraplingSEOProvider())
 seo_provider_registry.register(SearXNGSEOProvider())

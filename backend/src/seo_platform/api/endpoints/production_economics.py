@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from seo_platform.core.auth import get_validated_tenant_id
 from fastapi import APIRouter, Query
 
 from seo_platform.services.production_economics import production_economics
@@ -7,7 +8,7 @@ from seo_platform.services.production_economics import production_economics
 router = APIRouter()
 
 
-@router.get("/production-economics/cost-forecast")
+@router.get("/cost-forecast")
 async def get_cost_forecast(
     horizon_days: int = Query(30, ge=7, le=365, description="Forecast horizon in days"),
 ):
@@ -15,7 +16,7 @@ async def get_cost_forecast(
     return {"success": True, "data": forecast.model_dump()}
 
 
-@router.get("/production-economics/ai-inference-optimization")
+@router.get("/ai-inference-optimization")
 async def get_ai_inference_optimization(
     service_id: str = Query(..., description="Service ID to optimize"),
 ):
@@ -23,7 +24,7 @@ async def get_ai_inference_optimization(
     return {"success": True, "data": opt.model_dump()}
 
 
-@router.get("/production-economics/queue-efficiency")
+@router.get("/queue-efficiency")
 async def get_queue_efficiency(
     queue_name: str = Query(..., description="Queue name to analyze"),
 ):
@@ -31,7 +32,7 @@ async def get_queue_efficiency(
     return {"success": True, "data": efficiency.model_dump()}
 
 
-@router.get("/production-economics/scraping-cost-optimization")
+@router.get("/scraping-cost-optimization")
 async def get_scraping_cost_optimization(
     source_type: str = Query(..., description="Source type to optimize"),
 ):
@@ -39,7 +40,7 @@ async def get_scraping_cost_optimization(
     return {"success": True, "data": opt.model_dump()}
 
 
-@router.get("/production-economics/worker-allocation")
+@router.get("/worker-allocation")
 async def get_worker_allocation(
     workflow_type: str = Query(..., description="Workflow type to analyze"),
 ):
@@ -47,7 +48,7 @@ async def get_worker_allocation(
     return {"success": True, "data": alloc.model_dump()}
 
 
-@router.get("/production-economics/operational-roi")
+@router.get("/operational-roi")
 async def get_operational_roi(
     initiative_id: str = Query(..., description="Initiative ID to calculate ROI for"),
 ):
@@ -55,7 +56,7 @@ async def get_operational_roi(
     return {"success": True, "data": roi.model_dump()}
 
 
-@router.get("/production-economics/dynamic-infra-recommendations")
+@router.get("/dynamic-infra-recommendations")
 async def get_dynamic_infra_recommendations(
     scope: str = Query("platform", description="Scope for recommendations"),
 ):
@@ -63,7 +64,7 @@ async def get_dynamic_infra_recommendations(
     return {"success": True, "data": [r.model_dump() for r in recs]}
 
 
-@router.get("/production-economics/efficiency-score")
+@router.get("/efficiency-score")
 async def get_efficiency_score(
     service_id: str = Query(..., description="Service ID to score"),
 ):
@@ -71,7 +72,7 @@ async def get_efficiency_score(
     return {"success": True, "data": score.model_dump()}
 
 
-@router.get("/production-economics/sustainability-analysis")
+@router.get("/sustainability-analysis")
 async def get_sustainability_analysis(
     service_id: str = Query(..., description="Service ID to analyze"),
 ):

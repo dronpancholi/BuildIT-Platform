@@ -599,6 +599,22 @@ class KeywordResearchWorkflow:
             )
 
         except Exception as e:
+            try:
+                from seo_platform.workflows.backlink_campaign import raise_workflow_failure_alert_activity
+                await workflow.execute_activity(
+                    raise_workflow_failure_alert_activity,
+                    args=[
+                        str(input_data.tenant_id),
+                        str(input_data.client_id or "N/A"),
+                        "KeywordResearchWorkflow",
+                        str(e),
+                    ],
+                    task_queue=TaskQueue.AI_ORCHESTRATION,
+                    start_to_close_timeout=timedelta(seconds=30),
+                    retry_policy=RetryPreset.DATABASE,
+                )
+            except Exception as alert_err:
+                logger.warning("failed_to_raise_workflow_failure_alert", error=str(alert_err))
             output.errors.append(str(e))
             logger.error("keyword_research_failed", error=str(e),
                          tenant_id=str(input_data.tenant_id))

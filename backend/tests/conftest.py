@@ -44,3 +44,27 @@ async def unique_tenant_id():
 async def unique_client_id():
     """Generate a unique client ID for each test."""
     return uuid4()
+
+import unittest.mock as _mock
+
+import pytest
+
+@pytest.fixture
+def mocker(request):
+    class Mocker:
+        def __init__(self):
+            self._patchers = []
+        def patch(self, *args, **kwargs):
+            p = _mock.patch(*args, **kwargs)
+            mock_obj = p.start()
+            self._patchers.append(p)
+            return mock_obj
+        def stopall(self):
+            for p in self._patchers:
+                p.stop()
+            self._patchers.clear()
+    m = Mocker()
+    def _fin():
+        m.stopall()
+    request.addfinalizer(_fin)
+    return m

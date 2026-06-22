@@ -1,8 +1,9 @@
 from __future__ import annotations
 
+from seo_platform.core.auth import get_validated_tenant_id
 from uuid import UUID
 
-from fastapi import APIRouter, Query, Body
+from fastapi import APIRouter, Depends, Query, Body
 from pydantic import BaseModel
 
 from seo_platform.services.adaptive_optimization import adaptive_optimization
@@ -10,7 +11,7 @@ from seo_platform.services.adaptive_optimization import adaptive_optimization
 router = APIRouter()
 
 
-@router.get("/adaptive-optimization/queue-prioritization")
+@router.get("/queue-prioritization")
 async def suggest_queue_prioritization() -> dict:
     suggestions = await adaptive_optimization.suggest_queue_prioritization()
     return {
@@ -20,7 +21,7 @@ async def suggest_queue_prioritization() -> dict:
     }
 
 
-@router.get("/adaptive-optimization/retry-tuning")
+@router.get("/retry-tuning")
 async def get_retry_tuning(
     activity_type: str | None = Query(None),
 ) -> dict:
@@ -32,7 +33,7 @@ async def get_retry_tuning(
         return {"success": True, "data": report.model_dump()}
 
 
-@router.get("/adaptive-optimization/workflow")
+@router.get("/workflow")
 async def suggest_workflow_optimization(
     workflow_type: str = Query(...),
 ) -> dict:
@@ -42,13 +43,13 @@ async def suggest_workflow_optimization(
     return {"success": True, "data": suggestion.model_dump()}
 
 
-@router.get("/adaptive-optimization/scraping")
+@router.get("/scraping")
 async def suggest_scraping_optimization() -> dict:
     suggestion = await adaptive_optimization.suggest_scraping_optimization()
     return {"success": True, "data": suggestion.model_dump()}
 
 
-@router.get("/adaptive-optimization/worker-allocation")
+@router.get("/worker-allocation")
 async def suggest_worker_allocation() -> dict:
     suggestions = await adaptive_optimization.suggest_worker_allocation()
     return {
@@ -58,15 +59,15 @@ async def suggest_worker_allocation() -> dict:
     }
 
 
-@router.get("/adaptive-optimization/event-propagation")
+@router.get("/event-propagation")
 async def suggest_event_propagation_tuning() -> dict:
     suggestion = await adaptive_optimization.suggest_event_propagation_tuning()
     return {"success": True, "data": suggestion.model_dump()}
 
 
-@router.get("/adaptive-optimization/communication-timing")
+@router.get("/communication-timing")
 async def suggest_communication_timing(
-    tenant_id: UUID = Query(...),
+    tenant_id: UUID = Depends(get_validated_tenant_id),
     campaign_id: UUID = Query(...),
 ) -> dict:
     suggestion = await adaptive_optimization.suggest_communication_timing(

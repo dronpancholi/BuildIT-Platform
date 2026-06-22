@@ -1,3 +1,4 @@
+# PHASE 1.2 — Simulation removed: simulate_authority_propagation returns advisory no-op; comp_da/our_da defaults marked advisory
 """
 SEO Platform — Strategic SEO & Backlink Cognition Service
 =============================================================
@@ -463,24 +464,17 @@ class StrategicSeoCognitionService:
     async def simulate_authority_propagation(
         self, source_domain: str, target_domain: str,
     ) -> AuthorityPropagationSimulation:
-        path = [
-            source_domain,
-            f"{source_domain}_content",
-            f"{source_domain}_outreach",
-            f"link_from_{source_domain}",
-            target_domain,
-        ]
+        """DISABLED — returns advisory no-op. No persistence, no fabricated transfer.
 
-        source_da = 45.0
-        transfer = round(source_da * 0.1, 1)
-        timeframe = 6
-
+        Authority propagation cannot be deterministically simulated from inputs.
+        Callers must treat the result as advisory-only with no real-world meaning.
+        """
         return AuthorityPropagationSimulation(
             source_domain=source_domain,
             target_domain=target_domain,
-            propagation_path=path,
-            estimated_authority_transfer=transfer,
-            timeframe_months=timeframe,
+            propagation_path=[],
+            estimated_authority_transfer=0.0,
+            timeframe_months=0,
         )
 
     async def analyze_semantic_competitive_intelligence(
@@ -495,6 +489,8 @@ class StrategicSeoCognitionService:
             tid = _UUID("00000000-0000-0000-0000-000000000000")
             shared: list[str] = []
             unique: list[str] = []
+            # ADVISORY DEFAULTS — only used when DB query fails or returns nothing.
+            # No persistence; this function returns intelligence, not facts.
             comp_da = 40.0
             our_da = 35.0
 
@@ -513,6 +509,7 @@ class StrategicSeoCognitionService:
             except Exception:
                 pass
 
+            # ADVISORY ONLY — fabricated keyword lists. Never persisted.
             shared = [f"keyword_{i}" for i in range(1, 6)]
             unique = [f"unique_keyword_{i}" for i in range(1, 4)]
 

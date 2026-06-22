@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from seo_platform.core.auth import get_validated_tenant_id
 from uuid import UUID
 
 from fastapi import APIRouter, Body, Query
@@ -9,7 +10,7 @@ from seo_platform.services.ai_operationalization import ai_operationalization
 router = APIRouter()
 
 
-@router.get("/ai-ops/inference-analytics")
+@router.get("/inference-analytics")
 async def get_inference_analytics(
     time_window_hours: int = Query(24, description="Time window in hours"),
 ) -> dict:
@@ -17,7 +18,7 @@ async def get_inference_analytics(
     return {"success": True, "data": analytics.model_dump()}
 
 
-@router.get("/ai-ops/prompt-performance")
+@router.get("/prompt-performance")
 async def get_prompt_performance() -> dict:
     results = await ai_operationalization.analyze_prompt_performance()
     return {
@@ -27,7 +28,7 @@ async def get_prompt_performance() -> dict:
     }
 
 
-@router.post("/ai-ops/detect-hallucinations")
+@router.post("/detect-hallucinations")
 async def detect_hallucinations(
     tenant_id: UUID = Body(..., embed=True),
 ) -> dict:
@@ -35,7 +36,7 @@ async def detect_hallucinations(
     return {"success": True, "data": result.model_dump()}
 
 
-@router.get("/ai-ops/confidence-drift")
+@router.get("/confidence-drift")
 async def get_confidence_drift(
     time_window_hours: int = Query(48, description="Time window in hours"),
 ) -> dict:
@@ -47,7 +48,7 @@ async def get_confidence_drift(
     }
 
 
-@router.get("/ai-ops/operational-metrics")
+@router.get("/operational-metrics")
 async def get_operational_metrics() -> dict:
     metrics = await ai_operationalization.get_operational_metrics()
     return {"success": True, "data": metrics.model_dump()}

@@ -552,12 +552,12 @@ class BusinessStateEvolutionEngine:
                             text("""
                             INSERT INTO business_intelligence_events (
                                 tenant_id, event_type, domain, severity,
-                                title, description, entity_id, entity_type, delta, action_required
+                                title, description, entity_id, entity_type, delta, action_required, acknowledged
                             ) VALUES (
                                 :tenant_id, 'campaign_health_changed', 'campaign',
                                 CASE WHEN :direction = 'up' THEN 'success' ELSE 'warning' END,
                                 :title, :description, :entity_id, 'campaign',
-                                CAST(:delta AS jsonb), :action
+                                CAST(:delta AS jsonb), :action, false
                             )
                             """),
                             {
@@ -697,10 +697,10 @@ class BusinessStateEvolutionEngine:
                                     text("""
                                     INSERT INTO business_intelligence_events (
                                         tenant_id, event_type, domain, severity,
-                                        title, description, entity_id, entity_type, delta
+                                        title, description, entity_id, entity_type, delta, action_required, acknowledged
                                     ) VALUES (
                                         :tenant_id, 'new_opportunities_discovered', 'backlink', 'info',
-                                        :title, :description, :entity_id, 'campaign', CAST(:delta AS jsonb)
+                                        :title, :description, :entity_id, 'campaign', CAST(:delta AS jsonb), false, false
                                     )
                                     """),
                                     {
@@ -777,10 +777,10 @@ class BusinessStateEvolutionEngine:
                 text("""
                 INSERT INTO business_intelligence_events (
                     tenant_id, event_type, domain, severity,
-                    title, description, entity_id, entity_type, delta
+                    title, description, entity_id, entity_type, delta, action_required, acknowledged
                 ) VALUES (
                     :tenant_id, 'keyword_prospects_generated', 'backlink', 'info',
-                    :title, :description, :entity_id, 'campaign', CAST(:delta AS jsonb)
+                    :title, :description, :entity_id, 'campaign', CAST(:delta AS jsonb), false, false
                 )
                 """),
                 {
@@ -897,6 +897,9 @@ class BusinessStateEvolutionEngine:
         return min(1.0, base * 0.3)
 
     async def _scrape_real_serps(self) -> int:
+        from sqlalchemy import text
+
+        from seo_platform.core.database import get_tenant_session
         from seo_platform.services.serp_intelligence import serp_intelligence
 
         try:
@@ -1031,10 +1034,10 @@ class BusinessStateEvolutionEngine:
                         text("""
                         INSERT INTO business_intelligence_events (
                             tenant_id, event_type, domain, severity,
-                            title, description, delta
+                            title, description, delta, action_required, acknowledged
                         ) VALUES (
                             :tenant_id, 'prospecting_active', 'backlink', 'info',
-                            :title, :description, CAST(:delta AS jsonb)
+                            :title, :description, CAST(:delta AS jsonb), false, false
                         )
                         """),
                         {
@@ -1051,10 +1054,10 @@ class BusinessStateEvolutionEngine:
                         text("""
                         INSERT INTO business_intelligence_events (
                             tenant_id, event_type, domain, severity,
-                            title, description, delta, action_required
+                            title, description, delta, action_required, acknowledged
                         ) VALUES (
                             :tenant_id, 'outreach_replies_received', 'communication', 'warning',
-                            :title, :description, CAST(:delta AS jsonb), true
+                            :title, :description, CAST(:delta AS jsonb), true, false
                         )
                         """),
                         {
@@ -1071,10 +1074,10 @@ class BusinessStateEvolutionEngine:
                         text("""
                         INSERT INTO business_intelligence_events (
                             tenant_id, event_type, domain, severity,
-                            title, description, delta
+                            title, description, delta, action_required, acknowledged
                         ) VALUES (
                             :tenant_id, 'links_verified', 'backlink', 'success',
-                            :title, :description, CAST(:delta AS jsonb)
+                            :title, :description, CAST(:delta AS jsonb), false, false
                         )
                         """),
                         {
@@ -1091,10 +1094,10 @@ class BusinessStateEvolutionEngine:
                         text("""
                         INSERT INTO business_intelligence_events (
                             tenant_id, event_type, domain, severity,
-                            title, description, delta
+                            title, description, delta, action_required, acknowledged
                         ) VALUES (
                             :tenant_id, 'intelligence_pulse', 'platform', 'info',
-                            :title, :description, CAST(:delta AS jsonb)
+                            :title, :description, CAST(:delta AS jsonb), false, false
                         )
                         """),
                         {
@@ -1140,8 +1143,8 @@ class BusinessStateEvolutionEngine:
                 await session.execute(
                     _text("""
                     INSERT INTO recommendations (id, tenant_id, recommendation_type, title, description,
-                           priority, status, confidence, impact_score, created_at)
-                    VALUES (:id, :tenant, 'campaign_launch', :title, :description, 'P2', 'active', 0.9, 0.8, :now)
+                           priority, status, confidence, impact_score, effort_score, supporting_data, created_at)
+                    VALUES (:id, :tenant, 'campaign_launch', :title, :description, 'P2', 'active', 0.9, 0.8, 0.3, '{}'::jsonb, :now)
                     """),
                     {
                         "id": key_hash, "tenant": str(TENANT_ID),
@@ -1175,8 +1178,8 @@ class BusinessStateEvolutionEngine:
                 await session.execute(
                     _text("""
                     INSERT INTO recommendations (id, tenant_id, recommendation_type, title, description,
-                           priority, status, confidence, impact_score, created_at)
-                    VALUES (:id, :tenant, 'campaign_stalled', :title, :description, 'P1', 'active', 0.7, 0.6, :now)
+                           priority, status, confidence, impact_score, effort_score, supporting_data, created_at)
+                    VALUES (:id, :tenant, 'campaign_stalled', :title, :description, 'P1', 'active', 0.7, 0.6, 0.6, '{}'::jsonb, :now)
                     """),
                     {
                         "id": key_hash, "tenant": str(TENANT_ID),
@@ -1207,8 +1210,8 @@ class BusinessStateEvolutionEngine:
                     await session.execute(
                         _text("""
                         INSERT INTO recommendations (id, tenant_id, recommendation_type, title, description,
-                               priority, status, confidence, impact_score, created_at)
-                        VALUES (:id, :tenant, 'prospect_pipeline', :title, :description, 'P2', 'active', 0.8, 0.7, :now)
+                               priority, status, confidence, impact_score, effort_score, supporting_data, created_at)
+                        VALUES (:id, :tenant, 'prospect_pipeline', :title, :description, 'P2', 'active', 0.8, 0.7, 0.4, '{}'::jsonb, :now)
                         """),
                         {
                             "id": key_hash, "tenant": str(TENANT_ID),

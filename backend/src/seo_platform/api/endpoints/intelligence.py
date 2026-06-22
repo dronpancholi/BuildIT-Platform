@@ -7,38 +7,39 @@ workflow bottlenecks, and optimization recommendations.
 
 from __future__ import annotations
 
+from seo_platform.core.auth import get_validated_tenant_id
 from uuid import UUID
 
-from fastapi import APIRouter, Query
+from fastapi import Depends,  APIRouter, Query
 
 from seo_platform.services.operational_intelligence import operational_intelligence
 
 router = APIRouter()
 
 
-@router.get("/intelligence/anomalies")
-async def get_anomalies(tenant_id: UUID = Query(..., description="Tenant UUID")) -> dict:
+@router.get("/anomalies")
+async def get_anomalies(tenant_id: UUID = Depends(get_validated_tenant_id)) -> dict:
     """Return current anomalies across all monitored components."""
     anomalies = await operational_intelligence.detect_anomalies(tenant_id)
     return {"success": True, "data": [a.model_dump() for a in anomalies]}
 
 
-@router.get("/intelligence/congestion")
+@router.get("/congestion")
 async def get_congestion() -> dict:
     """Return queue congestion analysis."""
     congestion = await operational_intelligence.analyze_queue_congestion()
     return {"success": True, "data": [c.model_dump() for c in congestion]}
 
 
-@router.get("/intelligence/recommendations")
-async def get_recommendations(tenant_id: UUID = Query(..., description="Tenant UUID")) -> dict:
+@router.get("/recommendations")
+async def get_recommendations(tenant_id: UUID = Depends(get_validated_tenant_id)) -> dict:
     """Return AI-generated optimization recommendations."""
     recommendations = await operational_intelligence.generate_recommendations(tenant_id)
     return {"success": True, "data": [r.model_dump() for r in recommendations]}
 
 
-@router.get("/intelligence/bottlenecks")
-async def get_bottlenecks(tenant_id: UUID = Query(..., description="Tenant UUID")) -> dict:
+@router.get("/bottlenecks")
+async def get_bottlenecks(tenant_id: UUID = Depends(get_validated_tenant_id)) -> dict:
     """Return workflow bottleneck analysis."""
     bottlenecks = await operational_intelligence.analyze_workflow_bottlenecks(tenant_id)
     return {"success": True, "data": [b.model_dump() for b in bottlenecks]}
@@ -47,7 +48,7 @@ async def get_bottlenecks(tenant_id: UUID = Query(..., description="Tenant UUID"
 @router.post("/recommendations/{recommendation_id}/dismiss")
 async def dismiss_recommendation(
     recommendation_id: str,
-    tenant_id: UUID = Query(..., description="Tenant UUID"),
+    tenant_id: UUID = Depends(get_validated_tenant_id),
 ) -> dict:
     """Dismiss a recommendation (stores dismissal state in Redis)."""
     try:
@@ -64,7 +65,7 @@ async def dismiss_recommendation(
 @router.post("/recommendations/{recommendation_id}/implement")
 async def implement_recommendation(
     recommendation_id: str,
-    tenant_id: UUID = Query(..., description="Tenant UUID"),
+    tenant_id: UUID = Depends(get_validated_tenant_id),
 ) -> dict:
     """Mark a recommendation as implemented (stores implementation state in Redis)."""
     try:
@@ -79,7 +80,7 @@ async def implement_recommendation(
 
 
 @router.get("/recommendations")
-async def get_recommendations_dashboard(tenant_id: UUID = Query(..., description="Tenant UUID")) -> dict:
+async def get_recommendations_dashboard(tenant_id: UUID = Depends(get_validated_tenant_id)) -> dict:
     """Return all recommendations with their dismiss/implement state from Redis."""
     recs = await operational_intelligence.generate_recommendations(tenant_id)
     try:

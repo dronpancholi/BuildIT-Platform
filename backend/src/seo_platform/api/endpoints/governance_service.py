@@ -1,31 +1,35 @@
 from __future__ import annotations
 
-from fastapi import APIRouter, Query
+from seo_platform.core.auth import get_validated_tenant_id
+from fastapi import APIRouter, Depends, Query
 
+from seo_platform.core.rbac import RequirePermission
 from seo_platform.services.governance_service import governance_service
 
 router = APIRouter()
 
 
-@router.get("/governance/audit-export")
+@router.get("/audit-export")
 async def export_audit_log(
     time_window_hours: int = Query(24, ge=1, le=720),
     export_format: str = Query("json", pattern="^(json|csv)$"),
+    _auth: None = Depends(RequirePermission("system:read")),
 ) -> dict:
     export = await governance_service.export_audit_log(time_window_hours, export_format)
     return {"success": True, "data": export.model_dump()}
 
 
-@router.get("/governance/compliance-report")
+@router.get("/compliance-report")
 async def generate_compliance_report(
     standards: str | None = Query(None, description="Comma-separated standards"),
+    _auth: None = Depends(RequirePermission("system:read")),
 ) -> dict:
     standards_list = standards.split(",") if standards else None
     report = await governance_service.generate_compliance_report(standards_list)
     return {"success": True, "data": report.model_dump()}
 
 
-@router.get("/governance/lineage")
+@router.get("/lineage")
 async def get_governance_lineage(
     entity_type: str = Query(...),
     entity_id: str = Query(...),
@@ -34,7 +38,7 @@ async def get_governance_lineage(
     return {"success": True, "data": lineage.model_dump()}
 
 
-@router.get("/governance/trace")
+@router.get("/trace")
 async def trace_operational_decision(
     decision_id: str = Query(...),
     workflow_id: str = Query(...),
@@ -43,19 +47,23 @@ async def trace_operational_decision(
     return {"success": True, "data": trace.model_dump()}
 
 
-@router.get("/governance/rbac-hardening")
-async def harden_rbac() -> dict:
+@router.get("/rbac-hardening")
+async def harden_rbac(
+    _auth: None = Depends(RequirePermission("system:read")),
+) -> dict:
     report = await governance_service.harden_rbac()
     return {"success": True, "data": report.model_dump()}
 
 
-@router.get("/governance/infra-access-control")
-async def assess_infra_access_controls() -> dict:
+@router.get("/infra-access-control")
+async def assess_infra_access_controls(
+    _auth: None = Depends(RequirePermission("system:read")),
+) -> dict:
     control = await governance_service.assess_infra_access_controls()
     return {"success": True, "data": control.model_dump()}
 
 
-@router.get("/governance/workflow-authorization")
+@router.get("/workflow-authorization")
 async def assess_workflow_authorization_boundaries() -> dict:
     boundary = await governance_service.assess_workflow_authorization_boundaries()
     return {"success": True, "data": boundary.model_dump()}

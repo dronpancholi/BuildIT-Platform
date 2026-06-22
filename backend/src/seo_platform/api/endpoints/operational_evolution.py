@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from seo_platform.core.auth import get_validated_tenant_id
 from fastapi import APIRouter, Query
 
 from seo_platform.services.operational_evolution import operational_evolution
@@ -7,7 +8,7 @@ from seo_platform.services.operational_evolution import operational_evolution
 router = APIRouter()
 
 
-@router.post("/operational-evolution/learn-pattern")
+@router.post("/learn-pattern")
 async def learn_operational_pattern(
     workflow_id: str = Query(..., description="Workflow ID to learn from"),
 ):
@@ -15,7 +16,7 @@ async def learn_operational_pattern(
     return {"success": True, "data": pattern.model_dump()}
 
 
-@router.get("/operational-evolution/workflow-optimization-memory")
+@router.get("/workflow-optimization-memory")
 async def get_workflow_optimization_memory(
     workflow_type: str = Query(..., description="Workflow type to recall"),
 ):
@@ -23,7 +24,7 @@ async def get_workflow_optimization_memory(
     return {"success": True, "data": memory.model_dump()}
 
 
-@router.post("/operational-evolution/record-tuning")
+@router.post("/record-tuning")
 async def record_infra_tuning(
     service_id: str = Query(..., description="Service ID tuned"),
     action: str = Query(..., description="Tuning action performed"),
@@ -32,7 +33,7 @@ async def record_infra_tuning(
     return {"success": True, "data": record.model_dump()}
 
 
-@router.get("/operational-evolution/historical-anomaly-learning")
+@router.get("/historical-anomaly-learning")
 async def get_historical_anomaly_learning(
     anomaly_type: str = Query(..., description="Anomaly type to learn from"),
 ):
@@ -40,7 +41,7 @@ async def get_historical_anomaly_learning(
     return {"success": True, "data": learning.model_dump()}
 
 
-@router.get("/operational-evolution/recommendation-evolution")
+@router.get("/recommendation-evolution")
 async def get_recommendation_evolution(
     recommendation_id: str = Query(..., description="Recommendation ID to track"),
 ):
@@ -48,7 +49,7 @@ async def get_recommendation_evolution(
     return {"success": True, "data": evolution.model_dump()}
 
 
-@router.get("/operational-evolution/improvement-recommendations")
+@router.get("/improvement-recommendations")
 async def get_improvement_recommendations(
     scope: str = Query("platform", description="Scope for recommendations"),
 ):
@@ -56,7 +57,7 @@ async def get_improvement_recommendations(
     return {"success": True, "data": [r.model_dump() for r in recs]}
 
 
-@router.get("/operational-evolution/recommendation-confidence")
+@router.get("/recommendation-confidence")
 async def get_recommendation_confidence(
     recommendation_id: str = Query(..., description="Recommendation ID"),
 ):
@@ -64,7 +65,7 @@ async def get_recommendation_confidence(
     return {"success": True, "data": confidence.model_dump()}
 
 
-@router.get("/operational-evolution/recommendation-explanation")
+@router.get("/recommendation-explanation")
 async def get_recommendation_explanation(
     recommendation_id: str = Query(..., description="Recommendation ID"),
 ):

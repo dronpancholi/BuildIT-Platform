@@ -8,6 +8,30 @@ from seo_platform.core.database import Base
 from seo_platform.models.approval import (
     ApprovalRequestModel,
 )
+from seo_platform.models.approval_policy import (
+    ApprovalPolicy,
+    ApprovalRequest,
+)
+from seo_platform.models.action import (
+    ActionDefinition,
+    ActionExecution,
+)
+from seo_platform.models.audit_ledger import (
+    AuditLedgerEntry,
+)
+from seo_platform.models.provider_key import (
+    ProviderKey,
+)
+from seo_platform.models.operational_memory import (
+    MemoryEntry,
+)
+# Agent orchestration models
+from seo_platform.models.agent import (
+    AgentDefinition,
+    AgentInstance,
+    AgentTask,
+    AgentConflict,
+)
 from seo_platform.models.backlink import (
     AcquiredLink,
     BacklinkCampaign,
@@ -23,9 +47,25 @@ from seo_platform.models.business_memory import (
     RecommendationModel,
     SerpVolatilitySnapshot,
 )
-from seo_platform.models.citation import (
+from seo_platform.models.business_profile import (
     BusinessProfile,
-    CitationSubmission,
+)
+from seo_platform.models.citation_v2 import (
+    CitationSite,
+    CitationProject,
+    CitationSubmissionV2,
+)
+from seo_platform.models.credential_vault import (
+    DirectoryCredential,
+    CredentialAuditLog,
+)
+from seo_platform.models.rate_limiting import (
+    ProxyPool,
+    RateLimitConfig,
+)
+from seo_platform.models.recommendations import (
+    CitationRecommendation,
+    CompetitorCitation,
 )
 from seo_platform.models.communication import (
     EmailTemplate,
@@ -42,6 +82,10 @@ from seo_platform.models.seo import (
     Keyword,
     KeywordCluster,
 )
+from seo_platform.models.knowledge_graph import (
+    GraphEntity,
+    GraphEdge,
+)
 from seo_platform.models.tenant import (
     AuditLog,
     Client,
@@ -49,6 +93,11 @@ from seo_platform.models.tenant import (
     User,
     WorkflowEvent,
 )
+from seo_platform.models.contact import Contact
+# Goal orchestration models
+from seo_platform.models.goal import GoalDefinition, GoalExecution
+from seo_platform.models.planning import ExecutionPlan, PlanNode, NodeDependency, PlanForecast
+from seo_platform.models.seo_task import SEOTask, TaskStatus, TaskPriority, TaskSource
 
 __all__ = [
     "Base",
@@ -62,6 +111,8 @@ __all__ = [
     "CampaignTimelineEvent",
     "ComplianceResult",
     "ProviderHealthMetric",
+    "GraphEntity",
+    "GraphEdge",
     "Client",
     "Tenant",
     "User",
@@ -70,6 +121,7 @@ __all__ = [
     "Keyword",
     "KeywordCluster",
     "KeywordResearch",
+    "ProviderKey",
     # Backlink Engine
     "AcquiredLink",
     "BacklinkCampaign",
@@ -77,19 +129,22 @@ __all__ = [
     "BusinessIntelligenceEvent",
     "BusinessProfile",
     "CampaignHealthSnapshot",
-    "CitationSubmission",
-    "Client",
+    "CitationSite",
+    "CitationProject",
+    "CitationSubmissionV2",
+    "DirectoryCredential",
+    "CredentialAuditLog",
+    "ProxyPool",
+    "RateLimitConfig",
     "EmailTemplate",
-    "Keyword",
-    "KeywordCluster",
     "KeywordMetricSnapshot",
-    "KeywordResearch",
     "OutreachEmail",
     "OutreachThread",
     "ProspectScoreHistory",
     "RecommendationModel",
     "SerpVolatilitySnapshot",
-    "Tenant",
-    "User",
-    "WorkflowEvent",
+    "Contact",
+    "GoalDefinition",
+    "GoalExecution", "ExecutionPlan", "PlanNode", "NodeDependency", "PlanForecast",
+    "SEOTask", "TaskStatus", "TaskPriority", "TaskSource",
 ]

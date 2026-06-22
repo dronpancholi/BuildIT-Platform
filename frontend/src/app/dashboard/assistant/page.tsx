@@ -8,6 +8,7 @@ import {
 } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { fetchApi, MOCK_TENANT_ID } from "@/lib/api";
+import { safeArr } from "@/lib/safe";
 
 interface WorkflowRecommendation {
   category: string;
@@ -167,7 +168,7 @@ export default function AssistantPage() {
     refetchInterval: 15000,
   });
 
-  const workflowRecs = workflowAssistance || [];
+  const workflowRecs = safeArr<WorkflowRecommendation>(workflowAssistance);
 
   return (
     <div className="space-y-6">
@@ -190,11 +191,11 @@ export default function AssistantPage() {
         onToggle={() => setExpandedSection(expandedSection === "workflow" ? "" : "workflow")}
         loading={loadingWorkflow}
       >
-        {workflowRecs.length === 0 ? (
+        {safeArr<WorkflowRecommendation>(workflowRecs).length === 0 ? (
           <p className="text-sm font-mono text-slate-500 py-4 text-center">No workflow recommendations</p>
         ) : (
           <div className="space-y-3">
-            {workflowRecs.map((r, i) => (
+            {safeArr<WorkflowRecommendation>(workflowRecs).map((r, i) => (
               <motion.div
                 key={i}
                 initial={{ opacity: 0, y: 5 }}
@@ -226,11 +227,11 @@ export default function AssistantPage() {
         onToggle={() => setExpandedSection(expandedSection === "campaign" ? "" : "campaign")}
         loading={loadingCampaign}
       >
-        {campaignAssistance.length === 0 ? (
+        {safeArr<CampaignAssistanceItem>(campaignAssistance).length === 0 ? (
           <p className="text-sm font-mono text-slate-500 py-4 text-center">No campaign recommendations</p>
         ) : (
           <div className="space-y-2">
-            {campaignAssistance.map((r, i) => (
+            {safeArr<CampaignAssistanceItem>(campaignAssistance).map((r, i) => (
               <motion.div
                 key={i}
                 initial={{ opacity: 0, y: 5 }}
@@ -261,11 +262,11 @@ export default function AssistantPage() {
         onToggle={() => setExpandedSection(expandedSection === "queue" ? "" : "queue")}
         loading={loadingQueue}
       >
-        {queueAssistance.length === 0 ? (
+        {safeArr<QueueAssistanceItem>(queueAssistance).length === 0 ? (
           <p className="text-sm font-mono text-slate-500 py-4 text-center">No queue recommendations</p>
         ) : (
           <div className="space-y-3">
-            {queueAssistance.map((r, i) => (
+            {safeArr<QueueAssistanceItem>(queueAssistance).map((r, i) => (
               <motion.div
                 key={i}
                 initial={{ opacity: 0, y: 5 }}
@@ -295,11 +296,11 @@ export default function AssistantPage() {
         onToggle={() => setExpandedSection(expandedSection === "scraping" ? "" : "scraping")}
         loading={loadingScraping}
       >
-        {scrapingAssistance.length === 0 ? (
+        {safeArr<ScrapingAssistanceItem>(scrapingAssistance).length === 0 ? (
           <p className="text-sm font-mono text-slate-500 py-4 text-center">No scraping recommendations</p>
         ) : (
           <div className="space-y-3">
-            {scrapingAssistance.map((r, i) => (
+            {safeArr<ScrapingAssistanceItem>(scrapingAssistance).map((r, i) => (
               <motion.div
                 key={i}
                 initial={{ opacity: 0, y: 5 }}
@@ -328,11 +329,11 @@ export default function AssistantPage() {
         onToggle={() => setExpandedSection(expandedSection === "infrastructure" ? "" : "infrastructure")}
         loading={loadingInfra}
       >
-        {infraAssistance.length === 0 ? (
+        {safeArr<InfrastructureAssistanceItem>(infraAssistance).length === 0 ? (
           <p className="text-sm font-mono text-slate-500 py-4 text-center">No infrastructure recommendations</p>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-            {infraAssistance.map((r, i) => (
+            {safeArr<InfrastructureAssistanceItem>(infraAssistance).map((r, i) => (
               <motion.div
                 key={i}
                 initial={{ opacity: 0, y: 5 }}
