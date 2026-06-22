@@ -1,8 +1,9 @@
 from __future__ import annotations
 
+from seo_platform.core.auth import get_validated_tenant_id
 from uuid import UUID
 
-from fastapi import APIRouter, Body, Query
+from fastapi import Depends,  APIRouter, Body, Query
 
 from seo_platform.services.strategic_seo_cognition import strategic_seo_cognition
 
@@ -53,7 +54,7 @@ async def get_ranking_prediction(
 
 @router.get("/operational-seo-strategy")
 async def get_operational_seo_strategy(
-    tenant_id: UUID = Query(..., description="Tenant ID"),
+    tenant_id: UUID = Depends(get_validated_tenant_id),
 ) -> dict:
     strategy = await strategic_seo_cognition.generate_operational_seo_strategy(tenant_id)
     return {"success": True, "data": strategy.model_dump()}

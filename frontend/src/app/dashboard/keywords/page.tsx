@@ -1,223 +1,551 @@
 "use client";
 
 import { useState, useMemo } from "react";
-import { motion } from "framer-motion";
+import { useApiList, useApiCreate } from "@/services/hooks";
+import { ENDPOINTS } from "@/services/endpoints";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
+import { EmptyState } from "@/components/ui/empty-state";
+import { LoadingSpinner } from "@/components/ui/loading-spinner";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Label } from "@/components/ui/label";
+import { formatDate, formatNumber } from "@/lib/utils";
 import {
-  Search, Sparkles, Loader2, Target,
-  Globe, ArrowUpRight,
+  Search,
+  Sparkles,
+  ArrowUpDown,
+  CheckSquare,
+  Square,
+  Globe,
+  DollarSign,
+  Target,
+  TrendingUp,
 } from "lucide-react";
-import { useQuery } from "@tanstack/react-query";
-import { useRouter } from "next/navigation";
-import { fetchApi, MOCK_TENANT_ID } from "@/lib/api";
-import { useCommandCenter } from "@/hooks/use-command-center";
-import { KeywordIntelligencePanel } from "@/components/operational/keyword-intelligence-panel";
-import type { KeywordOpportunity } from "@/types/business-intelligence";
+import type { Keyword } from "@/types/models";
+
+interface KeywordResearch extends Keyword {
+  search_volume: number;
+  difficulty: number;
+  cpc: number;
+  intent: string;
+  cluster: string;
+}
+
+type SortField = "keyword" | "volume" | "difficulty" | "cpc" | "intent" | "cluster";
+type SortDir = "asc" | "desc";
+type DifficultyFilter = "" | "easy" | "medium" | "hard";
+
+const DIFFICULTY_VARIANT: Record<string, "default" | "success" | "warning" | "destructive"> = {
+  easy: "success",
+  medium: "warning",
+  hard: "destructive",
+};
+
+function getDifficultyLevel(score: number): "easy" | "medium" | "hard" {
+  if (score <= 30) return "easy";
+  if (score <= 60) return "medium";
+  return "hard";
+}
 
 export default function KeywordsPage() {
-  const { openCommand } = useCommandCenter();
-  const router = useRouter();
-  const [viewMode, setViewMode] = useState<"intelligence" | "history">("intelligence");
+  const [activeTab, setActiveTab] = useState<"results" | "clusters" | "insights">("results");
+  const [seedKeywords, setSeedKeywords] = useState("");
+  const [domain, setDomain] = useState("");
+  const [selectedClientId, setSelectedClientId] = useState<string>("");
+  const [sortField, setSortField] = useState<SortField>("keyword");
+  const [sortDir, setSortDir] = useState<SortDir>("asc");
+  const [difficultyFilter, setDifficultyFilter] = useState<DifficultyFilter>("");
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [hasSearched, setHasSearched] = useState(false);
 
-  const { data: opportunities = [], isLoading: loadingOpps } = useQuery<KeywordOpportunity[]>({
-    queryKey: ["keyword-opportunities"],
-    queryFn: () => fetchApi<any>("/business-intelligence/intelligence/keyword-opportunities")
-      .then((d) => d?.opportunities ?? []),
-    refetchInterval: 30000,
-  });
+  const { data: clients } = useApiList<{ id: string; name: string }>(ENDPOINTS.CLIENTS, {});
 
-  const { data: history = [], isLoading: loadingHistory } = useQuery<any[]>({
-    queryKey: ["keywords", "research"],
-    queryFn: () => fetchApi(`/keywords/research?tenant_id=${MOCK_TENANT_ID}`),
-    enabled: viewMode === "history",
-  });
+  const researchMutation = useApiCreate<KeywordResearch[], { seed_keywords: string[]; domain: string; client_id: string }>(
+    ENDPOINTS.KEYWORDS_RESEARCH,
+    {
+      invalidateKeys: [ENDPOINTS.KEYWORDS],
+      successMessage: "Keyword research completed",
+    }
+  );
 
-  const topOpportunities = useMemo(() =>
-    [...opportunities].sort((a, b) => b.opportunity_score - a.opportunity_score).slice(0, 20),
-    [opportunities],
+  const { data: keywords, isLoading } = useApiList<KeywordResearch>(
+    ENDPOINTS.KEYWORDS,
+    {},
+    { enabled: hasSearched }
+  );
+
+  const handleResearch = () => {
+    if (!seedKeywords.trim() || !selectedClientId) return;
+    setHasSearched(true);
+    researchMutation.mutate({
+      seed_keywords: seedKeywords.split(",").map((s) => s.trim()).filter(Boolean),
+      domain,
+      client_id: selectedClientId,
+    });
+  };
+
+  const toggleSort = (field: SortField) => {
+    if (sortField === field) {
+      setSortDir(sortDir === "asc" ? "desc" : "asc");
+    } else {
+      setSortField(field);
+      setSortDir("asc");
+    }
+  };
+
+  const toggleSelect = (id: string) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  const toggleSelectAll = () => {
+    if (!filteredKeywords) return;
+    if (selectedIds.size === filteredKeywords.length) {
+      setSelectedIds(new Set());
+    } else {
+      setSelectedIds(new Set(filteredKeywords.map((k) => k.id)));
+    }
+  };
+
+  const filteredKeywords = useMemo(() => {
+    if (!keywords) return null;
+    let result = [...keywords];
+
+    if (difficultyFilter) {
+      result = result.filter((k) => {
+        const level = getDifficultyLevel(k.difficulty || 0);
+        return level === difficultyFilter;
+      });
+    }
+
+    result.sort((a, b) => {
+      const aVal = a[sortField] ?? "";
+      const bVal = b[sortField] ?? "";
+      const cmp = typeof aVal === "number" && typeof bVal === "number"
+        ? aVal - bVal
+        : String(aVal).localeCompare(String(bVal));
+      return sortDir === "asc" ? cmp : -cmp;
+    });
+
+    return result;
+  }, [keywords, sortField, sortDir, difficultyFilter]);
+
+  const clusters = useMemo(() => {
+    if (!filteredKeywords) return [];
+    const map = new Map<string, KeywordResearch[]>();
+    filteredKeywords.forEach((k) => {
+      const cluster = k.cluster || "Uncategorized";
+      if (!map.has(cluster)) map.set(cluster, []);
+      map.get(cluster)!.push(k);
+    });
+    return Array.from(map.entries()).sort((a, b) => b[1].length - a[1].length);
+  }, [filteredKeywords]);
+
+  const insights = useMemo(() => {
+    if (!filteredKeywords || filteredKeywords.length === 0) return null;
+    const total = filteredKeywords.length;
+    const avgVolume = filteredKeywords.reduce((sum, k) => sum + (k.volume || 0), 0) / total;
+    const avgDifficulty = filteredKeywords.reduce((sum, k) => sum + (k.difficulty || 0), 0) / total;
+    const avgCpc = filteredKeywords.reduce((sum, k) => sum + (k.cpc || 0), 0) / total;
+    const easy = filteredKeywords.filter((k) => getDifficultyLevel(k.difficulty || 0) === "easy").length;
+    const medium = filteredKeywords.filter((k) => getDifficultyLevel(k.difficulty || 0) === "medium").length;
+    const hard = filteredKeywords.filter((k) => getDifficultyLevel(k.difficulty || 0) === "hard").length;
+    const intents = new Map<string, number>();
+    filteredKeywords.forEach((k) => {
+      if (k.intent) intents.set(k.intent, (intents.get(k.intent) || 0) + 1);
+    });
+    return { total, avgVolume, avgDifficulty, avgCpc, easy, medium, hard, intents };
+  }, [filteredKeywords]);
+
+  const SortHeader = ({ field, children }: { field: SortField; children: React.ReactNode }) => (
+    <th
+      className="px-4 py-3 text-xs font-medium text-slate-400 uppercase tracking-wider cursor-pointer hover:text-slate-200 select-none"
+      onClick={() => toggleSort(field)}
+    >
+      <span className="flex items-center gap-1">
+        {children}
+        <ArrowUpDown className="w-3 h-3" />
+        {sortField === field && (
+          <span className="text-platform-400">{sortDir === "asc" ? "↑" : "↓"}</span>
+        )}
+      </span>
+    </th>
   );
 
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-slate-100 tracking-tight font-mono">INTELLIGENCE</h1>
-          <p className="text-slate-400 mt-1 font-mono text-xs uppercase tracking-widest">
-            Live keyword intelligence &amp; semantic clustering
-          </p>
-        </div>
-        <div className="flex items-center gap-3">
-          <div className="flex items-center gap-1 bg-surface-darker rounded-lg border border-surface-border p-0.5">
-            <button
-              onClick={() => setViewMode("intelligence")}
-              className={`px-3 py-1.5 text-[10px] font-mono rounded-md transition-all ${
-                viewMode === "intelligence"
-                  ? "bg-platform-500/10 text-platform-400 border border-platform-500/20"
-                  : "text-slate-500 hover:text-slate-300"
-              }`}
-            >
-              INTELLIGENCE
-            </button>
-            <button
-              onClick={() => setViewMode("history")}
-              className={`px-3 py-1.5 text-[10px] font-mono rounded-md transition-all ${
-                viewMode === "history"
-                  ? "bg-platform-500/10 text-platform-400 border border-platform-500/20"
-                  : "text-slate-500 hover:text-slate-300"
-              }`}
-            >
-              HISTORY
-            </button>
-          </div>
-          <button
-            onClick={() => openCommand("keyword_discovery")}
-            className="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-md text-xs font-bold font-mono transition-colors shadow-lg shadow-emerald-900/20 flex items-center gap-2"
-          >
-            <Sparkles className="w-4 h-4" />
-            DISCOVERY
-          </button>
+          <h1 className="text-3xl font-bold text-slate-100">Keyword Research</h1>
+          <p className="text-slate-400 mt-1">Discover and analyze keyword opportunities</p>
         </div>
       </div>
 
-      {viewMode === "intelligence" ? (
-        <>
-          {loadingOpps ? (
-            <div className="flex justify-center py-20">
-              <Loader2 className="w-8 h-8 text-platform-500 animate-spin" />
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Sparkles className="w-5 h-5 text-platform-400" />
+            Research
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="md:col-span-2 space-y-2">
+              <Label htmlFor="seed-keywords">Seed Keywords</Label>
+              <Input
+                id="seed-keywords"
+                placeholder="Enter seed keywords, comma separated..."
+                value={seedKeywords}
+                onChange={(e) => setSeedKeywords(e.target.value)}
+                onKeyDown={(e) => e.key === "Enter" && handleResearch()}
+              />
             </div>
-          ) : (
-            <>
-              <KeywordIntelligencePanel />
+            <div className="space-y-2">
+              <Label htmlFor="client">Client *</Label>
+              <select
+                id="client"
+                value={selectedClientId}
+                onChange={(e) => setSelectedClientId(e.target.value)}
+                className="w-full bg-surface-darker border border-surface-border rounded-lg px-3 py-2 text-sm text-slate-200 focus:outline-none focus:border-platform-500"
+              >
+                <option value="">Select client...</option>
+                {clients?.map((c) => (
+                  <option key={c.id} value={c.id}>{c.name}</option>
+                ))}
+              </select>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="domain">Domain (optional)</Label>
+              <Input
+                id="domain"
+                placeholder="example.com"
+                value={domain}
+                onChange={(e) => setDomain(e.target.value)}
+              />
+            </div>
+          </div>
+          <div className="mt-4 flex justify-end">
+            <Button
+              onClick={handleResearch}
+              disabled={!seedKeywords.trim() || !selectedClientId || researchMutation.isPending}
+            >
+              {researchMutation.isPending ? (
+                "Researching..."
+              ) : (
+                <>
+                  <Search className="w-4 h-4" />
+                  Research Keywords
+                </>
+              )}
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
 
-              {/* Top Opportunities Table */}
-              <div className="glass-panel overflow-hidden">
-                <div className="flex items-center justify-between px-5 py-3 border-b border-surface-border bg-surface-darker/50">
-                  <div className="flex items-center gap-2">
-                    <Target className="w-4 h-4 text-platform-400" />
-                    <h3 className="text-xs font-bold font-mono text-slate-200 uppercase tracking-wider">
-                      Keyword Opportunity Leaderboard
-                    </h3>
-                    <span className="text-[9px] font-mono text-slate-600">
-                      {topOpportunities.length} ranked by opportunity score
-                    </span>
-                  </div>
-                </div>
-                <div className="divide-y divide-surface-border">
-                  {topOpportunities.length === 0 ? (
-                    <div className="p-12 text-center">
-                      <Search className="w-8 h-8 text-slate-700 mx-auto mb-2" />
-                      <p className="text-xs font-mono text-slate-600">No opportunity data yet</p>
-                    </div>
-                  ) : (
-                    topOpportunities.map((opp, i) => {
-                      const oppPct = Math.round(opp.opportunity_score * 100);
-                      return (
-                        <motion.div
-                          key={opp.keyword}
-                          initial={{ opacity: 0, x: -5 }}
-                          animate={{ opacity: 1, x: 0 }}
-                          transition={{ delay: i * 0.02 }}
-                          className="px-5 py-3 hover:bg-surface-border/30 transition-colors flex items-center gap-4"
-                        >
-                          <span className="text-[10px] font-mono text-slate-600 w-6 text-right font-bold">
-                            {i + 1}
+      {hasSearched && (
+        <div className="flex items-center gap-4">
+          <div className="flex items-center gap-1 bg-surface-card border border-surface-border rounded-lg p-1">
+            <button
+              onClick={() => setActiveTab("results")}
+              className={`px-3 py-1.5 text-xs font-medium rounded-md transition-all ${
+                activeTab === "results"
+                  ? "bg-surface-darker text-slate-100 shadow-sm"
+                  : "text-slate-400 hover:text-slate-200"
+              }`}
+            >
+              Results
+            </button>
+            <button
+              onClick={() => setActiveTab("clusters")}
+              className={`px-3 py-1.5 text-xs font-medium rounded-md transition-all ${
+                activeTab === "clusters"
+                  ? "bg-surface-darker text-slate-100 shadow-sm"
+                  : "text-slate-400 hover:text-slate-200"
+              }`}
+            >
+              Cluster View
+            </button>
+            <button
+              onClick={() => setActiveTab("insights")}
+              className={`px-3 py-1.5 text-xs font-medium rounded-md transition-all ${
+                activeTab === "insights"
+                  ? "bg-surface-darker text-slate-100 shadow-sm"
+                  : "text-slate-400 hover:text-slate-200"
+              }`}
+            >
+              Insights
+            </button>
+          </div>
+
+          {activeTab === "results" && (
+            <div className="flex items-center gap-2">
+              <span className="text-xs text-slate-500">Difficulty:</span>
+              {(["", "easy", "medium", "hard"] as const).map((level) => (
+                <button
+                  key={level}
+                  onClick={() => setDifficultyFilter(level)}
+                  className={`px-2 py-1 text-[10px] font-medium rounded transition-all ${
+                    difficultyFilter === level
+                      ? level === "easy"
+                        ? "bg-emerald-500/10 text-emerald-400 border border-emerald-500/20"
+                        : level === "medium"
+                        ? "bg-amber-500/10 text-amber-400 border border-amber-500/20"
+                        : level === "hard"
+                        ? "bg-red-500/10 text-red-400 border border-red-500/20"
+                        : "bg-surface-card text-slate-300 border border-surface-border"
+                      : "text-slate-500 hover:text-slate-300"
+                  }`}
+                >
+                  {level === "" ? "All" : level.charAt(0).toUpperCase() + level.slice(1)}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      {isLoading || researchMutation.isPending ? (
+        <LoadingSpinner size="lg" className="py-20" />
+      ) : !hasSearched || !filteredKeywords ? (
+        <EmptyState
+          icon={<Search className="w-8 h-8" />}
+          title="Start your research"
+          description="Enter seed keywords above to discover keyword opportunities and clusters."
+        />
+      ) : filteredKeywords.length === 0 ? (
+        <EmptyState
+          icon={<Search className="w-8 h-8" />}
+          title="No keywords found"
+          description="Try different seed keywords or adjust your filters."
+        />
+      ) : (
+        <>
+          {activeTab === "results" && (
+            <Card>
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="border-b border-surface-border">
+                      <th className="px-4 py-3 w-10">
+                        <button onClick={toggleSelectAll} className="text-slate-500 hover:text-slate-300">
+                          {selectedIds.size === filteredKeywords.length && filteredKeywords.length > 0 ? (
+                            <CheckSquare className="w-4 h-4 text-platform-400" />
+                          ) : (
+                            <Square className="w-4 h-4" />
+                          )}
+                        </button>
+                      </th>
+                      <SortHeader field="keyword">Keyword</SortHeader>
+                      <SortHeader field="volume">Volume</SortHeader>
+                      <SortHeader field="difficulty">Difficulty</SortHeader>
+                      <SortHeader field="cpc">CPC</SortHeader>
+                      <SortHeader field="intent">Intent</SortHeader>
+                      <SortHeader field="cluster">Cluster</SortHeader>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-surface-border">
+                    {filteredKeywords.map((kw) => (
+                      <tr
+                        key={kw.id}
+                        className={`hover:bg-surface-card/50 transition-colors ${
+                          selectedIds.has(kw.id) ? "bg-platform-500/5" : ""
+                        }`}
+                      >
+                        <td className="px-4 py-3">
+                          <button onClick={() => toggleSelect(kw.id)} className="text-slate-500 hover:text-slate-300">
+                            {selectedIds.has(kw.id) ? (
+                              <CheckSquare className="w-4 h-4 text-platform-400" />
+                            ) : (
+                              <Square className="w-4 h-4" />
+                            )}
+                          </button>
+                        </td>
+                        <td className="px-4 py-3 font-medium text-slate-200">{kw.keyword}</td>
+                        <td className="px-4 py-3 text-slate-300">
+                          <span className="flex items-center gap-1">
+                            <Globe className="w-3 h-3 text-slate-500" />
+                            {formatNumber(kw.volume || 0)}
                           </span>
-                          <div className="flex-1 min-w-0">
-                            <p className="text-sm font-mono text-slate-200 truncate">{opp.keyword}</p>
-                            <div className="flex items-center gap-3 text-[10px] font-mono text-slate-500 mt-0.5">
-                              <span className="flex items-center gap-1">
-                                <Globe className="w-3 h-3" />
-                                {opp.search_volume.toLocaleString()} vol
-                              </span>
-                              <span>difficulty {opp.difficulty}%</span>
-                              {opp.cpc > 0 && <span>CPC ${opp.cpc.toFixed(2)}</span>}
-                              {opp.cluster && (
-                                <span className="text-platform-500/70">{opp.cluster}</span>
-                              )}
-                            </div>
-                          </div>
-                          <div className="flex items-center gap-3 flex-shrink-0">
-                            <div className="w-20 h-2 bg-surface-darker rounded-full overflow-hidden">
-                              <motion.div
-                                initial={{ width: 0 }}
-                                animate={{ width: `${oppPct}%` }}
-                                transition={{ duration: 0.5, delay: i * 0.03 }}
-                                className={`h-full rounded-full ${
-                                  oppPct > 70 ? "bg-emerald-500" :
-                                  oppPct > 50 ? "bg-amber-500" :
-                                  "bg-platform-500"
-                                }`}
-                              />
-                            </div>
-                            <span className={`text-xs font-mono font-bold w-10 text-right ${
-                              oppPct > 70 ? "text-emerald-400" :
-                              oppPct > 50 ? "text-amber-400" :
-                              "text-platform-400"
-                            }`}>
-                              {oppPct}%
-                            </span>
-                          </div>
-                        </motion.div>
-                      );
-                    })
-                  )}
-                </div>
+                        </td>
+                        <td className="px-4 py-3">
+                          <Badge variant={DIFFICULTY_VARIANT[getDifficultyLevel(kw.difficulty || 0)]}>
+                            {kw.difficulty || 0}
+                          </Badge>
+                        </td>
+                        <td className="px-4 py-3 text-slate-300">
+                          <span className="flex items-center gap-1">
+                            <DollarSign className="w-3 h-3 text-slate-500" />
+                            {(kw.cpc || 0).toFixed(2)}
+                          </span>
+                        </td>
+                        <td className="px-4 py-3 text-slate-400 capitalize">{kw.intent || "—"}</td>
+                        <td className="px-4 py-3">
+                          {kw.cluster ? (
+                            <Badge variant="outline">{kw.cluster}</Badge>
+                          ) : (
+                            <span className="text-slate-500">—</span>
+                          )}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
               </div>
-            </>
+            </Card>
+          )}
+
+          {activeTab === "clusters" && (
+            <div className="space-y-4">
+              {clusters.map(([cluster, kws]) => (
+                <Card key={cluster}>
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-sm flex items-center justify-between">
+                      <span className="flex items-center gap-2">
+                        <Target className="w-4 h-4 text-platform-400" />
+                        {cluster}
+                      </span>
+                      <Badge variant="secondary">{kws.length} keywords</Badge>
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="flex flex-wrap gap-2">
+                      {kws.map((kw) => (
+                        <span
+                          key={kw.id}
+                          className="px-2 py-1 text-xs bg-surface-darker border border-surface-border rounded text-slate-300"
+                        >
+                          {kw.keyword}
+                        </span>
+                      ))}
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          )}
+
+          {activeTab === "insights" && insights && (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+              <Card>
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-sm text-slate-400">Total Keywords</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-3xl font-bold text-slate-100">{insights.total}</p>
+                </CardContent>
+              </Card>
+              <Card>
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-sm text-slate-400 flex items-center gap-2">
+                    <Globe className="w-4 h-4" />
+                    Avg. Volume
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-3xl font-bold text-slate-100">{formatNumber(Math.round(insights.avgVolume))}</p>
+                </CardContent>
+              </Card>
+              <Card>
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-sm text-slate-400 flex items-center gap-2">
+                    <TrendingUp className="w-4 h-4" />
+                    Avg. Difficulty
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-3xl font-bold text-slate-100">{Math.round(insights.avgDifficulty)}</p>
+                </CardContent>
+              </Card>
+              <Card>
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-sm text-slate-400 flex items-center gap-2">
+                    <DollarSign className="w-4 h-4" />
+                    Avg. CPC
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-3xl font-bold text-slate-100">${insights.avgCpc.toFixed(2)}</p>
+                </CardContent>
+              </Card>
+
+              <Card className="md:col-span-2">
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-sm text-slate-400">Difficulty Distribution</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="flex items-center gap-4">
+                    <div className="flex-1">
+                      <div className="flex items-center justify-between text-xs mb-1">
+                        <span className="text-emerald-400">Easy</span>
+                        <span className="text-slate-400">{insights.easy}</span>
+                      </div>
+                      <div className="w-full h-3 bg-surface-darker rounded-full overflow-hidden">
+                        <div
+                          className="h-full bg-emerald-500 rounded-full"
+                          style={{ width: `${(insights.easy / insights.total) * 100}%` }}
+                        />
+                      </div>
+                    </div>
+                    <div className="flex-1">
+                      <div className="flex items-center justify-between text-xs mb-1">
+                        <span className="text-amber-400">Medium</span>
+                        <span className="text-slate-400">{insights.medium}</span>
+                      </div>
+                      <div className="w-full h-3 bg-surface-darker rounded-full overflow-hidden">
+                        <div
+                          className="h-full bg-amber-500 rounded-full"
+                          style={{ width: `${(insights.medium / insights.total) * 100}%` }}
+                        />
+                      </div>
+                    </div>
+                    <div className="flex-1">
+                      <div className="flex items-center justify-between text-xs mb-1">
+                        <span className="text-red-400">Hard</span>
+                        <span className="text-slate-400">{insights.hard}</span>
+                      </div>
+                      <div className="w-full h-3 bg-surface-darker rounded-full overflow-hidden">
+                        <div
+                          className="h-full bg-red-500 rounded-full"
+                          style={{ width: `${(insights.hard / insights.total) * 100}%` }}
+                        />
+                      </div>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card className="md:col-span-2">
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-sm text-slate-400">Search Intent Breakdown</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-2">
+                    {Array.from(insights.intents.entries())
+                      .sort((a, b) => b[1] - a[1])
+                      .map(([intent, count]) => (
+                        <div key={intent} className="flex items-center gap-3">
+                          <span className="text-xs text-slate-300 w-24 capitalize">{intent}</span>
+                          <div className="flex-1 h-2 bg-surface-darker rounded-full overflow-hidden">
+                            <div
+                              className="h-full bg-platform-500 rounded-full"
+                              style={{ width: `${(count / insights.total) * 100}%` }}
+                            />
+                          </div>
+                          <span className="text-xs text-slate-500 w-8 text-right">{count}</span>
+                        </div>
+                      ))}
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
           )}
         </>
-      ) : (
-        <div className="space-y-4">
-          <div className="glass-panel overflow-hidden">
-            <div className="p-4 border-b border-surface-border bg-surface-darker/50 flex items-center gap-2">
-              <Search className="w-4 h-4 text-slate-500" />
-              <span className="text-xs font-bold font-mono text-slate-400 uppercase tracking-widest">Research History</span>
-            </div>
-            {loadingHistory ? (
-              <div className="flex justify-center py-12">
-                <Loader2 className="w-6 h-6 text-platform-500 animate-spin" />
-              </div>
-            ) : history.length === 0 ? (
-              <div className="p-12 flex flex-col items-center justify-center text-center">
-                <div className="w-14 h-14 rounded-full bg-surface-darker border border-surface-border flex items-center justify-center mb-3">
-                  <Search className="text-slate-600" size={28} />
-                </div>
-                <h3 className="text-base font-medium text-slate-300">Start Your Research</h3>
-                <p className="text-xs text-slate-500 mt-1 max-w-sm">
-                  Enter a seed keyword to begin AI-powered topical mapping.
-                </p>
-              </div>
-            ) : (
-              <div className="divide-y divide-surface-border">
-                {history.map((h) => (
-                  <div key={h.id} className="p-4 hover:bg-surface-border/30 transition-colors flex items-center justify-between group">
-                    <div className="flex items-center gap-4">
-                      <div className="w-10 h-10 rounded bg-surface-darker border border-surface-border flex items-center justify-center text-emerald-500">
-                        <Sparkles size={18} />
-                      </div>
-                      <div>
-                        <div className="text-sm font-medium text-slate-200">{h.seed_keyword}</div>
-                        <div className="text-[10px] text-slate-500 flex items-center gap-3 mt-0.5 font-mono">
-                          <span>{new Date(h.created_at).toLocaleDateString()}</span>
-                          <span className="uppercase px-1.5 py-0.5 rounded border border-surface-border bg-surface-darker text-[9px]">
-                            {h.status}
-                          </span>
-                        </div>
-                      </div>
-                    </div>
-                    <button
-                      onClick={() => {
-                        setViewMode("intelligence");
-                      }}
-                      className="px-3 py-1.5 bg-surface-darker border border-surface-border text-slate-400 group-hover:text-emerald-400 group-hover:border-emerald-500/30 rounded text-[10px] font-bold font-mono transition-all flex items-center gap-1"
-                    >
-                      VIEW <ArrowUpRight className="w-3 h-3" />
-                    </button>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-        </div>
       )}
     </div>
   );
