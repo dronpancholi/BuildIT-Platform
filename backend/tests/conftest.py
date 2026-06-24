@@ -34,6 +34,21 @@ async def db_engine():
     yield engine
 
 
+@pytest.fixture(autouse=True)
+async def cleanup_database_singletons():
+    yield
+    import seo_platform.core.database as db_mod
+    if db_mod._engine is not None:
+        try:
+            await db_mod._engine.dispose()
+        except Exception:
+            pass
+    db_mod._engine = None
+    db_mod._session_factory = None
+    db_mod._scoped_session = None
+
+
+
 @pytest.fixture
 async def unique_tenant_id():
     """Generate a unique tenant ID for each test."""
@@ -68,3 +83,36 @@ def mocker(request):
         m.stopall()
     request.addfinalizer(_fin)
     return m
+
+
+from seo_platform.core.auth import CurrentUser, current_user_var
+
+
+async def override_get_current_user():
+    user = current_user_var.get()
+    if user is None:
+        from uuid import UUID
+        return CurrentUser(
+            id=UUID("00000000-0000-0000-0000-000000000000"),
+            tenant_id=UUID("00000000-0000-0000-0000-000000000001"),
+            email="test-admin@buildit.local",
+            role="admin",
+        )
+    return user
+
+
+@pytest.fixture
+def app():
+    from seo_platform.main import create_app
+    from seo_platform.core.auth import get_current_user
+    app_instance = create_app()
+    app_instance.dependency_overrides[get_current_user] = override_get_current_user
+    return app_instance
+
+
+@pytest.fixture
+async def client(app):
+    from httpx import AsyncClient, ASGITransport
+    transport = ASGITransport(app=app)
+    async with AsyncClient(transport=transport, base_url="http://testserver") as c:
+        yield c

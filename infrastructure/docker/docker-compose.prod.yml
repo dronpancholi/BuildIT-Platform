@@ -40,7 +40,8 @@ services:
       - TEMPORAL_PORT=7233
       - QDRANT_HOST=qdrant
       - QDRANT_PORT=6333
-      - CORS_ORIGINS=http://localhost,http://localhost:3000,https://${DOMAIN:-localhost}
+      # CORS_ORIGINS=* so frontend works for any trycloudflare URL we get assigned
+      - CORS_ORIGINS=*
       # Internal use — no auth
       - AUTH_PROVIDER=internal
       - DEV_AUTH_BYPASS=true
@@ -63,7 +64,8 @@ services:
     container_name: seo-frontend
     environment:
       - NODE_ENV=production
-      - NEXT_PUBLIC_API_URL=https://${DOMAIN:-localhost}/api/v1
+      # Same-origin relative URL — works with any Cloudflare Tunnel hostname
+      - NEXT_PUBLIC_API_URL=/api/v1
       - NEXT_TELEMETRY_DISABLED=1
     ports:
       - "3000:3000"

@@ -100,7 +100,9 @@ class CrossTenantIntelligenceService:
             logger.warning("list_all_tenants_failed", error=str(e))
             return []
 
-    async def _get_tenant_workflow_metrics(self, tenant_id: UUID) -> dict[str, Any]:
+    async def _get_tenant_workflow_metrics(
+        self, tenant_id: UUID, state: dict[str, Any] | None = None
+    ) -> dict[str, Any]:
         metrics: dict[str, Any] = {
             "workflow_count": 0,
             "success_count": 0,
@@ -109,9 +111,9 @@ class CrossTenantIntelligenceService:
             "active_worker_count": 0,
         }
         try:
-            from seo_platform.services.operational_state import operational_state
-
-            state = await operational_state.get_snapshot()
+            if state is None:
+                from seo_platform.services.operational_state import operational_state
+                state = await operational_state.get_snapshot()
             workflows = state.get("workflows", {})
             workers = state.get("workers", {})
 
@@ -133,8 +135,11 @@ class CrossTenantIntelligenceService:
             tenants = await self._list_all_tenants()
             all_metrics: dict[str, list[float]] = {}
 
+            from seo_platform.services.operational_state import operational_state
+            state = await operational_state.get_snapshot()
+
             for tenant_id in tenants:
-                tm = await self._get_tenant_workflow_metrics(tenant_id)
+                tm = await self._get_tenant_workflow_metrics(tenant_id, state=state)
                 for key, value in tm.items():
                     if metric and key != metric:
                         continue
@@ -176,8 +181,11 @@ class CrossTenantIntelligenceService:
             all_success_rates: list[float] = []
             all_worker_counts: list[int] = []
 
+            from seo_platform.services.operational_state import operational_state
+            state = await operational_state.get_snapshot()
+
             for tenant_id in tenants:
-                tm = await self._get_tenant_workflow_metrics(tenant_id)
+                tm = await self._get_tenant_workflow_metrics(tenant_id, state=state)
                 all_workflow_counts.append(tm["workflow_count"])
                 total_wfs = max(tm["workflow_count"], 1)
                 all_success_rates.append((tm["success_count"] / total_wfs) * 100)
@@ -268,13 +276,16 @@ class CrossTenantIntelligenceService:
 
         try:
             tenants = await self._list_all_tenants()
-            tenant_metrics = await self._get_tenant_workflow_metrics(tenant_id)
+            from seo_platform.services.operational_state import operational_state
+            state = await operational_state.get_snapshot()
+
+            tenant_metrics = await self._get_tenant_workflow_metrics(tenant_id, state=state)
             peer_anomaly_rates: list[float] = []
 
             for peer_id in tenants:
                 if peer_id == tenant_id:
                     continue
-                pm = await self._get_tenant_workflow_metrics(peer_id)
+                pm = await self._get_tenant_workflow_metrics(peer_id, state=state)
                 total = max(pm["workflow_count"], 1)
                 failed_rate = (pm["failed_count"] / total) * 100
                 peer_anomaly_rates.append(failed_rate)
@@ -325,8 +336,11 @@ class CrossTenantIntelligenceService:
             tenants = await self._list_all_tenants()
             worker_utilizations: list[float] = []
 
+            from seo_platform.services.operational_state import operational_state
+            state = await operational_state.get_snapshot()
+
             for tenant_id in tenants:
-                tm = await self._get_tenant_workflow_metrics(tenant_id)
+                tm = await self._get_tenant_workflow_metrics(tenant_id, state=state)
                 if tm["worker_count"] > 0:
                     util = (tm["active_worker_count"] / tm["worker_count"]) * 100
                     worker_utilizations.append(util)
@@ -368,8 +382,11 @@ class CrossTenantIntelligenceService:
             current_values: list[float] = []
             previous_values: list[float] = []
 
+            from seo_platform.services.operational_state import operational_state
+            state = await operational_state.get_snapshot()
+
             for tenant_id in tenants:
-                tm = await self._get_tenant_workflow_metrics(tenant_id)
+                tm = await self._get_tenant_workflow_metrics(tenant_id, state=state)
 
                 if metric == "workflow_count":
                     current_values.append(float(tm["workflow_count"]))
@@ -434,7 +451,9 @@ class CrossTenantIntelligenceService:
 
         try:
             benchmarks = await self.get_anonymized_benchmarks()
-            tenant_metrics = await self._get_tenant_workflow_metrics(tenant_id)
+            from seo_platform.services.operational_state import operational_state
+            state = await operational_state.get_snapshot()
+            tenant_metrics = await self._get_tenant_workflow_metrics(tenant_id, state=state)
 
             for bm in benchmarks:
                 tenant_value = float(tenant_metrics.get(bm.metric, 0))

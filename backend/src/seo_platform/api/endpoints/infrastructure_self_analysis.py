@@ -36,6 +36,7 @@ async def get_workflow_congestion() -> dict:
 
 
 @router.get("/infrastructure-self-analysis/infra-self-analysis/worker-imbalance")
+@router.get("/infra-self-analysis/worker-imbalance")
 async def get_worker_imbalance() -> dict:
     """Return worker allocation imbalance detection."""
     report = await infrastructure_self_analysis.detect_worker_imbalance()
@@ -59,6 +60,7 @@ async def get_degradation_intelligence() -> dict:
 
 
 @router.get("/infrastructure-self-analysis/infra-self-analysis/pressure")
+@router.get("/infra-self-analysis/pressure")
 async def get_operational_pressure() -> dict:
     """Return comprehensive operational pressure analysis."""
     report = await infrastructure_self_analysis.analyze_operational_pressure()

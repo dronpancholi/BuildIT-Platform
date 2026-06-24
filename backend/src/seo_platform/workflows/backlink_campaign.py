@@ -1307,9 +1307,14 @@ class BacklinkCampaignWorkflow:
                 retry_policy=RetryPreset.DATABASE,
             )
 
-            await workflow.wait_condition(
-                lambda: self._approval_decision is not None
-            )
+            try:
+                await workflow.wait_condition(
+                    lambda: self._approval_decision is not None,
+                    timeout=timedelta(hours=24),
+                )
+            except Exception:
+                # Auto-reject on timeout
+                self._approval_decision = "rejected"
 
             if self._approval_decision != "approved":
                 await workflow.execute_activity(

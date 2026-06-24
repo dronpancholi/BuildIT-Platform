@@ -43,17 +43,6 @@ from seo_platform.main import create_app
 # Fixtures
 # ---------------------------------------------------------------------------
 
-@pytest.fixture
-def app():
-    return create_app()
-
-
-@pytest.fixture
-async def client(app):
-    transport = ASGITransport(app=app)
-    async with AsyncClient(transport=transport, base_url="http://testserver") as client:
-        yield client
-
 
 # ---------------------------------------------------------------------------
 # Helpers

@@ -39,6 +39,7 @@ async def get_distributed_traces(
 
 
 @router.get("/sre-observability/sre/topology")
+@router.get("/sre/topology")
 async def get_infra_topology():
     """Return current infrastructure topology with nodes, edges, and dependency health."""
     topology = await sre_observability.get_infra_topology()
@@ -46,6 +47,7 @@ async def get_infra_topology():
 
 
 @router.get("/sre-observability/sre/queue-pressure")
+@router.get("/sre/queue-pressure")
 async def get_queue_pressure_dashboard():
     """Return per-queue pressure analysis with thresholds, trends, and scores."""
     dashboard = await sre_observability.get_queue_pressure_dashboard()
@@ -75,6 +77,7 @@ async def get_workflow_heatmap(
 
 
 @router.get("/sre-observability/sre/worker-saturation")
+@router.get("/sre/worker-saturation")
 async def get_worker_saturation():
     """Return per-worker utilization: active tasks, slot %, task duration, health check."""
     saturation = await sre_observability.get_worker_saturation()
@@ -133,6 +136,7 @@ async def get_anomaly_heatmap(
 
 
 @router.get("/sre-observability/sre/incident-dashboard")
+@router.get("/sre/incident-dashboard")
 async def get_incident_dashboard():
     """Return active and recent incidents with MTTD and MTTR."""
     dashboard = await sre_observability.get_incident_dashboard()

@@ -63,13 +63,26 @@ async def get_infrastructure_utilization() -> dict:
 
 @router.get("/operational-trends")
 async def get_operational_trends(
-    metric: str = Query(...),
+    metric: str | None = Query(None),
     timeframe: str = Query("24h"),
 ) -> dict:
-    trend = await cross_tenant_intelligence.analyze_enterprise_operational_trends(
-        metric, timeframe,
-    )
-    return {"success": True, "data": trend.model_dump()}
+    metrics = [metric] if metric else ["workflow_count", "success_rate", "worker_utilization"]
+    trends = []
+    for m in metrics:
+        trend = await cross_tenant_intelligence.analyze_enterprise_operational_trends(
+            m, timeframe
+        )
+        d = trend.model_dump()
+        # Map fields for frontend compatibility
+        d["direction"] = "up" if trend.trend_direction == "increasing" else "down" if trend.trend_direction == "decreasing" else "stable"
+        d["significance"] = "high" if trend.statistical_significance > 0.7 else "medium" if trend.statistical_significance > 0.4 else "low"
+        trends.append(d)
+    
+    # If a specific metric was requested, return a single object (for backward compatibility if needed)
+    # else return the list of trends as expected by the frontend.
+    if metric:
+        return {"success": True, "data": trends[0]}
+    return {"success": True, "data": trends, "count": len(trends)}
 
 
 @router.get("/tenant-benchmarks")

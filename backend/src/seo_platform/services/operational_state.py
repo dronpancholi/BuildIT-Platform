@@ -316,9 +316,13 @@ class OperationalStateService:
             new_workers: dict[str, WorkerStateEntry] = {}
 
             # 1. Fetch running workflows
+            count = 0
             async for wf in client.list_workflows(
                 query='ExecutionStatus IN ("Running")',
             ):
+                count += 1
+                if count > 100:
+                    break
                 wf_type = wf.workflow_type or "unknown"
                 task_queue = wf.task_queue or ""
                 status = "running"

@@ -30,13 +30,8 @@ async def test_orchestrator_rejects_cross_tenant_goal():
     fake = FakeSession()
     fake.store = {}
 
-    async def fake_session(tenant_id):
-        class Ctx:
-            async def __aenter__(s):
-                return fake
-            async def __aexit__(s, *a):
-                return False
-        return Ctx()
+    def fake_session(tenant_id):
+        return FakeSessionContext(fake)
 
     with patch("seo_platform.services.orchestrator.get_tenant_session", fake_session):
         with pytest.raises(ValueError, match="Goal execution not found"):
@@ -69,13 +64,8 @@ async def test_agent_registry_rejects_cross_tenant():
     agent.id = agent_id
     fake.store = {(AgentDefinition, agent_id): agent}
 
-    async def fake_session(tenant_id):
-        class Ctx:
-            async def __aenter__(s):
-                return fake
-            async def __aexit__(s, *a):
-                return False
-        return Ctx()
+    def fake_session(tenant_id):
+        return FakeSessionContext(fake)
 
     with patch("seo_platform.services.agent_registry.get_tenant_session", fake_session):
         result = await agent_registry.get_agent(tenant_b, agent_id)
@@ -108,13 +98,8 @@ async def test_approval_service_rejects_cross_tenant():
     )
     fake.store = {(ApprovalRequest, approval_id): approval}
 
-    async def fake_session(tenant_id):
-        class Ctx:
-            async def __aenter__(s):
-                return fake
-            async def __aexit__(s, *a):
-                return False
-        return Ctx()
+    def fake_session(tenant_id):
+        return FakeSessionContext(fake)
 
     with patch("seo_platform.services.approval_service.get_tenant_session", fake_session):
         with pytest.raises(ValueError, match="Approval request not found"):
@@ -156,13 +141,8 @@ async def test_action_registry_rejects_cross_tenant():
     )
     fake.store = {(ActionDefinition, action_id): action}
 
-    async def fake_session(tenant_id):
-        class Ctx:
-            async def __aenter__(s):
-                return fake
-            async def __aexit__(s, *a):
-                return False
-        return Ctx()
+    def fake_session(tenant_id):
+        return FakeSessionContext(fake)
 
     with patch("seo_platform.services.action_registry.get_tenant_session", fake_session):
         result = await action_registry_service.get_action(tenant_b, action_id)
@@ -175,51 +155,75 @@ async def test_action_registry_rejects_cross_tenant():
 
 @pytest.mark.asyncio
 async def test_plan_endpoint_cross_tenant_404(client, monkeypatch):
-    """GET /plans/{id} returns 404 when tenant does not own the plan."""
     from seo_platform.models.planning import ExecutionPlan
+    from seo_platform.core.auth import CurrentUser, current_user_var
 
     tenant_a = uuid.uuid4()
     tenant_b = uuid.uuid4()
     plan_id = uuid.uuid4()
 
-    fake = FakeSession()
-    plan = ExecutionPlan(
-        id=plan_id,
-        tenant_id=tenant_a,
-        goal_execution_id=uuid.uuid4(),
-        status=ExecutionPlan.PlanStatus.GENERATED,
-        generated_by="test",
-        plan_graph={},
-        simulation_result={},
-        metadata_json={},
+    fake_user = CurrentUser(
+        id=uuid.uuid4(),
+        tenant_id=tenant_b,
+        email="test@example.com",
+        role="admin",
     )
-    plan.estimated_duration_seconds = 120
-    plan.id = plan_id
-    fake.store = {(ExecutionPlan, plan_id): plan}
+    token = current_user_var.set(fake_user)
 
-    fake_ctx = lambda tid: FakeSessionContext(fake)
-    monkeypatch.setattr("seo_platform.api.endpoints.plans.get_tenant_session", fake_ctx)
+    try:
+        fake = FakeSession()
+        plan = ExecutionPlan(
+            id=plan_id,
+            tenant_id=tenant_a,
+            goal_execution_id=uuid.uuid4(),
+            status=ExecutionPlan.PlanStatus.GENERATED,
+            generated_by="test",
+            plan_graph={},
+            simulation_result={},
+            metadata_json={},
+        )
+        plan.estimated_duration_seconds = 120
+        plan.id = plan_id
+        fake.store = {(ExecutionPlan, plan_id): plan}
 
-    resp = await client.get(f"/api/v1/plans/{plan_id}", params={"tenant_id": str(tenant_b)})
-    assert resp.status_code == 404, "Cross-tenant plan access must return 404"
+        fake_ctx = lambda tid: FakeSessionContext(fake)
+        monkeypatch.setattr("seo_platform.api.endpoints.plans.get_tenant_session", fake_ctx)
+
+        resp = await client.get(f"/api/v1/plans/{plan_id}", params={"tenant_id": str(tenant_b)})
+        assert resp.status_code == 404, "Cross-tenant plan access must return 404"
+    finally:
+        current_user_var.reset(token)
 
 
 @pytest.mark.asyncio
 async def test_goal_endpoint_cross_tenant_404(client, monkeypatch):
     """GET /goals/{id} returns 404 or 403 for cross-tenant lookup."""
+    from seo_platform.core.auth import CurrentUser, current_user_var
+
     tenant_a = uuid.uuid4()
     tenant_b = uuid.uuid4()
     goal_id = uuid.uuid4()
 
-    fake = FakeSession()
-
-    fake_ctx = lambda tid: FakeSessionContext(fake)
-    monkeypatch.setattr("seo_platform.api.endpoints.goals.get_tenant_session", fake_ctx)
-
-    resp = await client.get(
-        f"/api/v1/goals/{goal_id}",
-        params={"tenant_id": str(tenant_b)},
+    fake_user = CurrentUser(
+        id=uuid.uuid4(),
+        tenant_id=tenant_b,
+        email="test@example.com",
+        role="admin",
     )
-    # Without the goal in store, the service raises ValueError -> 500.
-    # The key assertion is that we DO NOT leak cross-tenant data.
-    assert resp.status_code in (403, 404, 500)
+    token = current_user_var.set(fake_user)
+
+    try:
+        fake = FakeSession()
+
+        fake_ctx = lambda tid: FakeSessionContext(fake)
+        monkeypatch.setattr("seo_platform.api.endpoints.goals.get_tenant_session", fake_ctx)
+
+        resp = await client.get(
+            f"/api/v1/goals/{goal_id}",
+            params={"tenant_id": str(tenant_b)},
+        )
+        # Without the goal in store, the service raises ValueError -> 500.
+        # The key assertion is that we DO NOT leak cross-tenant data.
+        assert resp.status_code in (403, 404, 500)
+    finally:
+        current_user_var.reset(token)

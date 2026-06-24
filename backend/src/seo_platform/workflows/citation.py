@@ -56,8 +56,19 @@ async def validate_business_profile(
             if not profile:
                 return {"valid": False, "error": "Profile not found"}
 
-            required_fields = ["business_name", "phone", "address", "city", "state", "zip_code"]
-            missing = [f for f in required_fields if not getattr(profile, f, None)]
+            field_mappings = {
+                "business_name": "business_name",
+                "phone": "phone_number",
+                "address": "street_address",
+                "city": "city",
+                "state": "state_province",
+                "zip_code": "postal_code"
+            }
+            missing = []
+            for validation_field, db_field in field_mappings.items():
+                val = getattr(profile, db_field, None) or getattr(profile, validation_field, None)
+                if not val:
+                    missing.append(validation_field)
 
             if missing:
                 return {"valid": False, "missing_fields": missing}
@@ -121,6 +132,7 @@ async def execute_directory_submission(
     import json
 
     from seo_platform.core.reliability import idempotency_store
+    from seo_platform.config import get_settings
 
     idem_key = f"dir-submit:{tenant_id}:{profile_id}:{adapter_name}"
     cached = await idempotency_store.get(idem_key)
@@ -130,17 +142,72 @@ async def execute_directory_submission(
 
     logger.info("executing_submission", tenant_id=tenant_id, adapter=adapter_name)
 
-    try:
-        if adapter_name == "yellowpages":
-            result = {"success": False, "error": "YellowPages adapter is not available — no real submission path is configured."}
-        elif adapter_name == "yelp":
-            result = {"success": False, "error": "Yelp adapter not implemented"}
-        else:
-            result = {"success": False, "error": f"Unknown adapter: {adapter_name}"}
-
-        if result.get("success"):
-            await idempotency_store.store(idem_key, json.dumps(result), ttl=604800)
+    settings = get_settings()
+    if settings.effective_mock_mode:
+        logger.info("mock_submission_active", adapter=adapter_name)
+        result = {
+            "success": True,
+            "submission_url": f"https://www.{adapter_name}.com/biz/mock-business-listing",
+            "details": "Mock submission completed successfully in mock mode"
+        }
+        await idempotency_store.store(idem_key, json.dumps(result), ttl=604800)
         return result
+
+    try:
+        from sqlalchemy import select
+        from seo_platform.core.database import get_tenant_session
+        from seo_platform.models.citation import BusinessProfile
+        from seo_platform.services.citation_automation import get_automation_service, SubmissionTask
+
+        async with get_tenant_session(uuid.UUID(tenant_id)) as session:
+            db_res = await session.execute(
+                select(BusinessProfile).where(BusinessProfile.id == uuid.UUID(profile_id))
+            )
+            profile = db_res.scalar_one_or_none()
+
+        if not profile:
+            return {"success": False, "error": f"Business profile {profile_id} not found."}
+
+        project_data = {
+            "business_name": profile.business_name,
+            "phone": profile.phone_number,
+            "address": profile.street_address,
+            "city": profile.city,
+            "state": profile.state_province,
+            "zip_code": profile.postal_code,
+            "website": profile.website_url,
+            "category": profile.primary_category,
+            "description": profile.description,
+        }
+
+        site_url = f"https://www.{adapter_name}.com"
+        submission_url = f"https://www.{adapter_name}.com/biz/submit"
+
+        task = SubmissionTask(
+            submission_id=uuid.uuid4(),
+            project_id=profile.client_id,
+            tenant_id=uuid.UUID(tenant_id),
+            site_url=site_url,
+            submission_url=submission_url,
+            site_name=adapter_name.capitalize(),
+            site_slug=adapter_name,
+            project_data=project_data,
+        )
+
+        automation_service = get_automation_service()
+        run_res = await automation_service.run_single_submission(task, auto_submit=True)
+
+        if run_res.success:
+            result = {
+                "success": True,
+                "submission_url": run_res.listing_url or submission_url,
+                "details": f"Submission completed via Playwright: {run_res.page_url}"
+            }
+            await idempotency_store.store(idem_key, json.dumps(result), ttl=604800)
+            return result
+        else:
+            return {"success": False, "error": run_res.error or "Automation execution failed"}
+
     except Exception as e:
         logger.warning("submission_failed", adapter=adapter_name, error=str(e))
         return {"success": False, "error": str(e)}
