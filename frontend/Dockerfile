@@ -24,6 +24,10 @@ COPY . .
 
 ENV NEXT_TELEMETRY_DISABLED=1
 ENV NODE_ENV=production
+# BuildIT Cloudflare Tunnel: bake same-origin API base into the Next.js bundle.
+# Next.js inlines NEXT_PUBLIC_* at build time; process.env wins over .env* files,
+# so this overrides any frontend/.env.local setting.
+ENV NEXT_PUBLIC_API_URL=/api/v1
 
 RUN npm install -g pnpm@10.28.2 && pnpm build
 

@@ -61,6 +61,8 @@ dependencies = [
     "termcolor>=2.4.0",
     "playwright>=1.43.0",
     "boto3>=1.34.0",
+    "scrapling>=0.3.0",
+    "trafilatura>=1.12.0",
 ]
 
 [project.optional-dependencies]

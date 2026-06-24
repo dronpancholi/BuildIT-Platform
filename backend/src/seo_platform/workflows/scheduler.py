@@ -122,14 +122,13 @@ async def gather_active_campaigns(tenant_id: str) -> list[dict[str, Any]]:
 
 
 @activity.defn(name="check_campaign_health")
-async def check_campaign_health(campaign_id: str) -> dict[str, Any]:
+async def check_campaign_health(tenant_id: str, campaign_id: str) -> dict[str, Any]:
     """Check if a campaign needs attention based on activity."""
     from seo_platform.core.database import get_tenant_session
     from seo_platform.models.backlink import BacklinkCampaign
     from sqlalchemy import select
     from uuid import UUID
 
-    tenant_id = "00000000-0000-0000-0000-000000000001"
     async with get_tenant_session(UUID(tenant_id)) as session:
         result = await session.execute(
             select(BacklinkCampaign).where(BacklinkCampaign.id == UUID(campaign_id))
@@ -215,7 +214,7 @@ class OperationalHealthScan:
         for c in campaigns:
             result = await workflow.execute_activity(
                 check_campaign_health,
-                args=[c["id"]],
+                args=[tenant_id, c["id"]],
                 task_queue=TaskQueue.AI_ORCHESTRATION,
                 start_to_close_timeout=timedelta(seconds=15),
                 retry_policy=RetryPreset.DATABASE,
@@ -301,7 +300,7 @@ class OperationalLoopEngine:
             for c in campaigns:
                 health = await workflow.execute_activity(
                     check_campaign_health,
-                    args=[c["id"]],
+                    args=[tenant_id, c["id"]],
                     task_queue=TaskQueue.AI_ORCHESTRATION,
                     start_to_close_timeout=timedelta(seconds=15),
                     retry_policy=RetryPreset.DATABASE,

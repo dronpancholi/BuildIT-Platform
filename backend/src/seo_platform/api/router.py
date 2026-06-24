@@ -37,7 +37,7 @@ from seo_platform.api.endpoints.observability import router as observability_rou
 from seo_platform.api.endpoints.realtime.events import router as realtime_router
 from seo_platform.api.endpoints.realtime.operational import router as operational_realtime_router
 from seo_platform.api.endpoints.realtime.sse import router as sse_router
-from seo_platform.api.endpoints.reports import router as reports_router
+from seo_platform.api.endpoints.reports import router as reports_router, reports_root_router
 from seo_platform.api.endpoints.scale import router as scale_router
 from seo_platform.api.endpoints.seo_intelligence import keyword_intelligence_router
 from seo_platform.api.endpoints.seo_intelligence import router as seo_intelligence_router
@@ -95,7 +95,7 @@ from seo_platform.api.endpoints.platform_stewardship import router as platform_s
 from seo_platform.api.endpoints.realtime_telemetry import router as realtime_telemetry_router
 from seo_platform.api.endpoints.business_intelligence import router as business_intelligence_router
 from seo_platform.api.endpoints.intelligence_queries import router as intelligence_queries_router
-from seo_platform.api.endpoints.providers import router as providers_router
+from seo_platform.api.endpoints.providers import router as providers_router, provider_keys_router
 from seo_platform.api.endpoints.providers_unified import router as providers_unified_router
 from seo_platform.api.endpoints.webhooks import router as webhooks_router
 from seo_platform.api.endpoints.inbound_webhooks import router as inbound_webhooks_router
@@ -172,6 +172,7 @@ api_router.include_router(sse_router, tags=["sse"])
 api_router.include_router(local_seo_router, prefix="/local-seo", tags=["local-seo"])
 api_router.include_router(recommendations_router, prefix="/recommendations", tags=["recommendations"])
 api_router.include_router(semantic_memory_router, prefix="/semantic-memory", tags=["semantic-memory"])
+api_router.include_router(semantic_memory_router, prefix="/memory", tags=["semantic-memory"])
 api_router.include_router(event_infrastructure_router, tags=["event-infrastructure"])
 api_router.include_router(sre_observability_router, tags=["sre-observability"])
 api_router.include_router(workflow_status_router, prefix="/workflow", tags=["workflow-status"])
@@ -191,6 +192,7 @@ api_router.include_router(enterprise_cognition_router, prefix="/enterprise-cogni
 api_router.include_router(orchestration_intelligence_router, prefix="/orchestration-intelligence", tags=["orchestration-intelligence"])
 api_router.include_router(autonomy_orchestrator_router, prefix="/autonomy", tags=["autonomy"])
 api_router.include_router(agents_router, prefix="/autonomous-agents", tags=["autonomous-agents"])
+api_router.include_router(agents_router, prefix="/agents", tags=["autonomous-agents"])
 api_router.include_router(goals_router, prefix="/goals", tags=["goals"])
 api_router.include_router(strategic_growth_router, prefix="/strategic-growth", tags=["strategic-growth"])
 api_router.include_router(governance_service_router, prefix="/governance", tags=["governance"])
@@ -224,6 +226,8 @@ api_router.include_router(demo_scenarios_router, tags=["demo-scenarios"])
 api_router.include_router(campaign_timeline_router, tags=["campaign-timeline"])
 api_router.include_router(search_router, prefix="/search", tags=["search"])
 api_router.include_router(providers_router, prefix="/providers")
+api_router.include_router(provider_keys_router, prefix="/provider-keys", tags=["provider-keys"])
+api_router.include_router(reports_root_router, tags=["reports"])
 api_router.include_router(providers_unified_router, prefix="/providers", tags=["providers-unified"])
 api_router.include_router(webhooks_router)
 

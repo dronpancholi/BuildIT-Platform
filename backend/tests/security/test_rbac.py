@@ -18,19 +18,6 @@ from seo_platform._test_helpers import FakeSession, FakeSessionContext
 # ---------------------------------------------------------------------------
 
 @pytest.fixture
-def app():
-    from seo_platform.main import create_app
-    return create_app()
-
-
-@pytest.fixture
-async def client(app):
-    transport = ASGITransport(app=app)
-    async with AsyncClient(transport=transport, base_url="http://testserver") as c:
-        yield c
-
-
-@pytest.fixture
 def tenant_id():
     return uuid.uuid4()
 
@@ -63,14 +50,21 @@ def mock_viewer(mock_auth):
     return mock_auth("viewer")
 
 
+@pytest.fixture(autouse=True)
+def setup_rbac_user(mock_viewer):
+    from seo_platform.core.auth import current_user_var
+    token = current_user_var.set(mock_viewer)
+    yield
+    current_user_var.reset(token)
+
+
 # ---------------------------------------------------------------------------
 # Plan endpoint RBAC tests
 # ---------------------------------------------------------------------------
 
 @pytest.mark.asyncio
-async def test_list_plans_rejects_viewer(client, tenant_id, monkeypatch, mock_viewer):
-    monkeypatch.setattr("seo_platform.api.endpoints.plans.get_current_user", lambda: mock_viewer)
-    monkeypatch.setattr("seo_platform.api.endpoints.plans.get_tenant_session",
+async def test_list_plans_rejects_viewer(client, tenant_id, monkeypatch):
+    monkeypatch.setattr("seo_platform.core.database.get_tenant_session",
                         lambda tid: FakeSessionContext(FakeSession()))
 
     resp = await client.get("/api/v1/plans", params={"tenant_id": str(tenant_id)})
@@ -78,9 +72,8 @@ async def test_list_plans_rejects_viewer(client, tenant_id, monkeypatch, mock_vi
 
 
 @pytest.mark.asyncio
-async def test_get_plan_rejects_viewer(client, tenant_id, monkeypatch, mock_viewer):
-    monkeypatch.setattr("seo_platform.api.endpoints.plans.get_current_user", lambda: mock_viewer)
-    monkeypatch.setattr("seo_platform.api.endpoints.plans.get_tenant_session",
+async def test_get_plan_rejects_viewer(client, tenant_id, monkeypatch):
+    monkeypatch.setattr("seo_platform.core.database.get_tenant_session",
                         lambda tid: FakeSessionContext(FakeSession()))
 
     resp = await client.get(f"/api/v1/plans/{uuid.uuid4()}", params={"tenant_id": str(tenant_id)})
@@ -88,8 +81,7 @@ async def test_get_plan_rejects_viewer(client, tenant_id, monkeypatch, mock_view
 
 
 @pytest.mark.asyncio
-async def test_approve_plan_rejects_viewer(client, tenant_id, monkeypatch, mock_viewer):
-    monkeypatch.setattr("seo_platform.api.endpoints.plans.get_current_user", lambda: mock_viewer)
+async def test_approve_plan_rejects_viewer(client, tenant_id):
     plan_id = uuid.uuid4()
     resp = await client.post(
         f"/api/v1/plans/{plan_id}/approve",
@@ -99,8 +91,7 @@ async def test_approve_plan_rejects_viewer(client, tenant_id, monkeypatch, mock_
 
 
 @pytest.mark.asyncio
-async def test_reject_plan_rejects_viewer(client, tenant_id, monkeypatch, mock_viewer):
-    monkeypatch.setattr("seo_platform.api.endpoints.plans.get_current_user", lambda: mock_viewer)
+async def test_reject_plan_rejects_viewer(client, tenant_id):
     plan_id = uuid.uuid4()
     resp = await client.post(
         f"/api/v1/plans/{plan_id}/reject",
@@ -110,8 +101,7 @@ async def test_reject_plan_rejects_viewer(client, tenant_id, monkeypatch, mock_v
 
 
 @pytest.mark.asyncio
-async def test_generate_plan_rejects_viewer(client, tenant_id, monkeypatch, mock_viewer):
-    monkeypatch.setattr("seo_platform.api.endpoints.plans.get_current_user", lambda: mock_viewer)
+async def test_generate_plan_rejects_viewer(client, tenant_id):
     resp = await client.post(
         "/api/v1/plans/generate",
         params={"tenant_id": str(tenant_id)},
@@ -125,9 +115,8 @@ async def test_generate_plan_rejects_viewer(client, tenant_id, monkeypatch, mock
 # ---------------------------------------------------------------------------
 
 @pytest.mark.asyncio
-async def test_list_goals_rejects_viewer(client, tenant_id, monkeypatch, mock_viewer):
-    monkeypatch.setattr("seo_platform.api.endpoints.goals.get_current_user", lambda: mock_viewer)
-    monkeypatch.setattr("seo_platform.api.endpoints.goals.get_tenant_session",
+async def test_list_goals_rejects_viewer(client, tenant_id, monkeypatch):
+    monkeypatch.setattr("seo_platform.core.database.get_tenant_session",
                         lambda tid: FakeSessionContext(FakeSession()))
 
     resp = await client.get("/api/v1/goals", params={"tenant_id": str(tenant_id)})
@@ -135,8 +124,7 @@ async def test_list_goals_rejects_viewer(client, tenant_id, monkeypatch, mock_vi
 
 
 @pytest.mark.asyncio
-async def test_create_goal_rejects_viewer(client, tenant_id, monkeypatch, mock_viewer):
-    monkeypatch.setattr("seo_platform.api.endpoints.goals.get_current_user", lambda: mock_viewer)
+async def test_create_goal_rejects_viewer(client, tenant_id):
     resp = await client.post(
         "/api/v1/goals",
         params={"tenant_id": str(tenant_id)},
@@ -150,9 +138,8 @@ async def test_create_goal_rejects_viewer(client, tenant_id, monkeypatch, mock_v
 # ---------------------------------------------------------------------------
 
 @pytest.mark.asyncio
-async def test_list_approvals_rejects_viewer(client, tenant_id, monkeypatch, mock_viewer):
-    monkeypatch.setattr("seo_platform.api.endpoints.approvals.get_current_user", lambda: mock_viewer)
-    monkeypatch.setattr("seo_platform.api.endpoints.approvals.get_tenant_session",
+async def test_list_approvals_rejects_viewer(client, tenant_id, monkeypatch):
+    monkeypatch.setattr("seo_platform.core.database.get_tenant_session",
                         lambda tid: FakeSessionContext(FakeSession()))
 
     resp = await client.get("/api/v1/approvals", params={"tenant_id": str(tenant_id)})
@@ -160,8 +147,7 @@ async def test_list_approvals_rejects_viewer(client, tenant_id, monkeypatch, moc
 
 
 @pytest.mark.asyncio
-async def test_submit_decision_rejects_viewer(client, tenant_id, monkeypatch, mock_viewer):
-    monkeypatch.setattr("seo_platform.api.endpoints.approvals.get_current_user", lambda: mock_viewer)
+async def test_submit_decision_rejects_viewer(client, tenant_id):
     req_id = uuid.uuid4()
     resp = await client.post(
         f"/api/v1/approvals/{req_id}/decide",
@@ -176,9 +162,8 @@ async def test_submit_decision_rejects_viewer(client, tenant_id, monkeypatch, mo
 # ---------------------------------------------------------------------------
 
 @pytest.mark.asyncio
-async def test_list_agents_rejects_viewer(client, tenant_id, monkeypatch, mock_viewer):
-    monkeypatch.setattr("seo_platform.api.endpoints.agents.get_current_user", lambda: mock_viewer)
-    monkeypatch.setattr("seo_platform.api.endpoints.agents.get_tenant_session",
+async def test_list_agents_rejects_viewer(client, tenant_id, monkeypatch):
+    monkeypatch.setattr("seo_platform.core.database.get_tenant_session",
                         lambda tid: FakeSessionContext(FakeSession()))
 
     resp = await client.get("/api/v1/agents", params={"tenant_id": str(tenant_id)})
@@ -190,8 +175,7 @@ async def test_list_agents_rejects_viewer(client, tenant_id, monkeypatch, mock_v
 # ---------------------------------------------------------------------------
 
 @pytest.mark.asyncio
-async def test_search_memory_rejects_viewer(client, monkeypatch, mock_viewer):
-    monkeypatch.setattr("seo_platform.api.endpoints.semantic_memory.get_current_user", lambda: mock_viewer)
+async def test_search_memory_rejects_viewer(client):
     resp = await client.get(
         "/api/v1/memory/search",
         params={"namespace": "workflow"},
@@ -200,8 +184,7 @@ async def test_search_memory_rejects_viewer(client, monkeypatch, mock_viewer):
 
 
 @pytest.mark.asyncio
-async def test_store_memory_rejects_viewer(client, monkeypatch, mock_viewer):
-    monkeypatch.setattr("seo_platform.api.endpoints.semantic_memory.get_current_user", lambda: mock_viewer)
+async def test_store_memory_rejects_viewer(client):
     resp = await client.put(
         "/api/v1/memory",
         json={"namespace": "workflow", "key": "test", "content": {}},
@@ -214,8 +197,7 @@ async def test_store_memory_rejects_viewer(client, monkeypatch, mock_viewer):
 # ---------------------------------------------------------------------------
 
 @pytest.mark.asyncio
-async def test_schedule_execution_rejects_viewer(client, tenant_id, monkeypatch, mock_viewer):
-    monkeypatch.setattr("seo_platform.api.endpoints.execution.get_current_user", lambda: mock_viewer)
+async def test_schedule_execution_rejects_viewer(client, tenant_id):
     resp = await client.post(
         "/api/v1/executions",
         json={"tenant_id": str(tenant_id), "action_name": "test"},
@@ -228,15 +210,13 @@ async def test_schedule_execution_rejects_viewer(client, tenant_id, monkeypatch,
 # ---------------------------------------------------------------------------
 
 @pytest.mark.asyncio
-async def test_list_actions_rejects_viewer(client, tenant_id, monkeypatch, mock_viewer):
-    monkeypatch.setattr("seo_platform.api.endpoints.action_registry.get_current_user", lambda: mock_viewer)
+async def test_list_actions_rejects_viewer(client, tenant_id):
     resp = await client.get("/api/v1/actions", params={"tenant_id": str(tenant_id)})
     assert resp.status_code == 403
 
 
 @pytest.mark.asyncio
-async def test_create_action_rejects_viewer(client, tenant_id, monkeypatch, mock_viewer):
-    monkeypatch.setattr("seo_platform.api.endpoints.action_registry.get_current_user", lambda: mock_viewer)
+async def test_create_action_rejects_viewer(client, tenant_id):
     resp = await client.post(
         "/api/v1/actions",
         params={"tenant_id": str(tenant_id)},

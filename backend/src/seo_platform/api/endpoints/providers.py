@@ -383,3 +383,46 @@ async def disable_provider_by_id(
             raise HTTPException(status_code=404, detail="Provider key not found")
         await session.commit()
     return APIResponse(data={"disabled": True})
+
+
+# --- Root-level provider-keys API support ---
+
+provider_keys_router = APIRouter()
+
+
+@provider_keys_router.get("")
+async def get_provider_keys_root(
+    tenant_id=Depends(get_validated_tenant_id),
+    _auth: None = Depends(RequirePermission("system:read")),
+) -> APIResponse:
+    return await list_provider_keys(tenant_id=tenant_id, _auth=_auth)
+
+
+@provider_keys_router.put("/{provider}")
+async def put_provider_key_root(
+    provider: str,
+    payload: dict[str, Any],
+    tenant_id=Depends(get_validated_tenant_id),
+    _user=Depends(get_current_user_dep_marker),
+    _auth: None = Depends(RequirePermission("system:write")),
+) -> APIResponse:
+    return await set_provider_key(
+        provider=provider,
+        payload=payload,
+        tenant_id=tenant_id,
+        _user=_user,
+        _auth=_auth,
+    )
+
+
+@provider_keys_router.delete("/{provider}")
+async def delete_provider_key_root(
+    provider: str,
+    tenant_id=Depends(get_validated_tenant_id),
+    _auth: None = Depends(RequirePermission("system:write")),
+) -> APIResponse:
+    return await delete_provider_key(
+        provider=provider,
+        tenant_id=tenant_id,
+        _auth=_auth,
+    )

@@ -80,7 +80,7 @@ PERMISSIONS: dict[str, list[Role]] = {
     "goal:read": [Role.SUPER_ADMIN, Role.ADMIN, Role.MANAGER, Role.OPERATOR, Role.VIEWER],
     "goal:write": [Role.SUPER_ADMIN, Role.ADMIN, Role.MANAGER],
     # Memory
-    "memory:read": [Role.SUPER_ADMIN, Role.ADMIN, Role.MANAGER, Role.OPERATOR, Role.VIEWER],
+    "memory:read": [Role.SUPER_ADMIN, Role.ADMIN, Role.MANAGER, Role.OPERATOR],
     "memory:write": [Role.SUPER_ADMIN, Role.ADMIN, Role.MANAGER],
     "memory:delete": [Role.SUPER_ADMIN, Role.ADMIN],
     # Agents

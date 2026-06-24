@@ -29,6 +29,7 @@ The backend is stateless: every request carries its own verified identity.
 
 from __future__ import annotations
 
+from contextvars import ContextVar
 import time
 from typing import Any
 from uuid import UUID
@@ -63,6 +64,9 @@ class CurrentUser(BaseModel):
     clerk_user_id: str | None = None
 
     model_config = {"from_attributes": True}
+
+
+current_user_var: ContextVar[CurrentUser | None] = ContextVar("current_user_var", default=None)
 
 
 # ---------------------------------------------------------------------------

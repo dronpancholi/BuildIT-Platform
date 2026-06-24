@@ -220,6 +220,15 @@ async def cancel_workflow(
         )
         await session.commit()
 
+    # Temporal cancel
+    try:
+        from seo_platform.core.temporal_client import get_temporal_client
+        temporal_client = await get_temporal_client()
+        handle = temporal_client.get_workflow_handle(f"backlink-campaign-{workflow_id}")
+        await handle.cancel()
+    except Exception as e:
+        logger.warning("temporal_cancel_failed", workflow_id=str(workflow_id), error=str(e))
+
     return {
         "success": True,
         "data": {"message": "Workflow cancelled."},
@@ -244,6 +253,15 @@ async def pause_workflow(
         )
         await session.commit()
 
+    # Temporal suspend
+    try:
+        from seo_platform.core.temporal_client import get_temporal_client
+        temporal_client = await get_temporal_client()
+        handle = temporal_client.get_workflow_handle(f"backlink-campaign-{workflow_id}")
+        await handle.suspend()
+    except Exception as e:
+        logger.warning("temporal_suspend_failed", workflow_id=str(workflow_id), error=str(e))
+
     return {
         "success": True,
         "data": {"message": "Workflow paused."},
@@ -267,6 +285,15 @@ async def resume_workflow(
             {"id": str(workflow_id), "tid": str(user.tenant_id)},
         )
         await session.commit()
+
+    # Temporal resume
+    try:
+        from seo_platform.core.temporal_client import get_temporal_client
+        temporal_client = await get_temporal_client()
+        handle = temporal_client.get_workflow_handle(f"backlink-campaign-{workflow_id}")
+        await handle.resume()
+    except Exception as e:
+        logger.warning("temporal_resume_failed", workflow_id=str(workflow_id), error=str(e))
 
     return {
         "success": True,

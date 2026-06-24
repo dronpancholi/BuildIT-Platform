@@ -16,10 +16,11 @@ from sqlalchemy.exc import IntegrityError
 
 from seo_platform.core.auth import CurrentUser, get_validated_tenant_id, validate_tenant_id
 from seo_platform.core.rbac import RequirePermission
+from seo_platform.core.logging import get_logger
 from seo_platform.models.backlink import CampaignStatus
 from seo_platform.schemas import APIResponse, ResponseMeta
-from seo_platform.models.backlink import CampaignStatus
 
+logger = get_logger(__name__)
 router = APIRouter()
 
 
@@ -509,6 +510,16 @@ async def cancel_campaign(
         campaign.updated_at = datetime.now(timezone.utc)
         await session.flush()
         await session.refresh(campaign)
+
+        # Temporal cancel
+        try:
+            from seo_platform.core.temporal_client import get_temporal_client
+            temporal_client = await get_temporal_client()
+            handle = temporal_client.get_workflow_handle(f"backlink-campaign-{campaign_id}")
+            await handle.cancel()
+            logger.info("temporal_workflow_cancelled", campaign_id=str(campaign_id))
+        except Exception as e:
+            logger.warning("temporal_cancel_failed", campaign_id=str(campaign_id), error=str(e))
 
         client_name = campaign.client.name if campaign.client else None
 
@@ -1388,6 +1399,16 @@ async def pause_campaign(
         await session.flush()
         await session.refresh(campaign)
 
+        # Temporal suspend
+        try:
+            from seo_platform.core.temporal_client import get_temporal_client
+            temporal_client = await get_temporal_client()
+            handle = temporal_client.get_workflow_handle(f"backlink-campaign-{campaign_id}")
+            await handle.suspend()
+            logger.info("temporal_workflow_suspended", campaign_id=str(campaign_id))
+        except Exception as e:
+            logger.warning("temporal_suspend_failed", campaign_id=str(campaign_id), error=str(e))
+
         # Audit log
         user_id = str(_auth.id) if hasattr(_auth, "id") else "system"
         await audit_logger.log(
@@ -1448,6 +1469,16 @@ async def resume_campaign(
         _transition_campaign(campaign, CampaignStatus.ACTIVE, _RESUME_ALLOWED_FROM)
         await session.flush()
         await session.refresh(campaign)
+
+        # Temporal resume
+        try:
+            from seo_platform.core.temporal_client import get_temporal_client
+            temporal_client = await get_temporal_client()
+            handle = temporal_client.get_workflow_handle(f"backlink-campaign-{campaign_id}")
+            await handle.resume()
+            logger.info("temporal_workflow_resumed", campaign_id=str(campaign_id))
+        except Exception as e:
+            logger.warning("temporal_resume_failed", campaign_id=str(campaign_id), error=str(e))
 
         # Audit log
         user_id = str(_auth.id) if hasattr(_auth, "id") else "system"
